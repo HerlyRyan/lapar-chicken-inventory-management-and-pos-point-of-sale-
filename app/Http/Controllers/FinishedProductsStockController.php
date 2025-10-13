@@ -42,34 +42,29 @@ class FinishedProductsStockController extends Controller
         // Base query
         $query = FinishedProduct::query()->select('finished_products.*');
 
-        // Compute alias as `center_stock` to keep UI consistent
-        if ($contextBranch) {
-            // Stock for the specific branch context
-            $query->selectRaw('COALESCE(SUM(fbs.quantity), 0) as center_stock')
-                ->leftJoin('finished_branch_stocks as fbs', function ($join) use ($contextBranch) {
-                    $join->on('fbs.finished_product_id', '=', 'finished_products.id')
-                         ->where('fbs.branch_id', $contextBranch->id);
-                });
-        } else {
-            // Aggregate stock across retail branches when no branch context is selected
-            $query->selectRaw('COALESCE(SUM(fbs.quantity), 0) as center_stock')
-                ->leftJoin('finished_branch_stocks as fbs', 'fbs.finished_product_id', '=', 'finished_products.id')
-                ->leftJoin('branches as b', function ($join) {
-                    $join->on('b.id', '=', 'fbs.branch_id')
-                         ->where('b.type', 'branch');
-                });
-        }
+        $query = FinishedProduct::query()
+            ->select('finished_products.*')
+            ->selectSub(function ($sub) use ($contextBranch) {
+                $sub->from('finished_branch_stocks as fbs')
+                    ->selectRaw('COALESCE(SUM(fbs.quantity), 0)')
+                    ->whereColumn('fbs.finished_product_id', 'finished_products.id');
 
-        $query->where('finished_products.is_active', true)
-              ->with(['unit', 'category'])
-              ->groupBy('finished_products.id');
+                if ($contextBranch) {
+                    $sub->where('fbs.branch_id', $contextBranch->id);
+                } else {
+                    $sub->leftJoin('branches as b', 'b.id', '=', 'fbs.branch_id')
+                        ->where('b.type', 'production');
+                }
+            }, 'center_stock')
+            ->where('finished_products.is_active', true)
+            ->with(['unit', 'category']);
 
         // Search by name or code
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('finished_products.name', 'like', "%{$search}%")
-                  ->orWhere('finished_products.code', 'like', "%{$search}%");
+                    ->orWhere('finished_products.code', 'like', "%{$search}%");
             });
         }
 

@@ -37,7 +37,6 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Dev\DevController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\StockOpnameController;
-use App\Models\SemiFinishedProduct;
 
 /*
 |--------------------------------------------------------------------------
@@ -310,7 +309,12 @@ Route::prefix('material-usage-requests')->name('material-usage-requests.')->grou
 // Semi-Finished Usage Requests (alias to Material Usage Requests)
 // This consolidates the feature under the semi-finished section without duplicating logic
 Route::prefix('semi-finished-usage-requests')->name('semi-finished-usage-requests.')->group(function () {
-    Route::resource('{semiFinishedUsageRequest}', SemiFinishedProduct::class);
+    Route::get('/', [SemiFinishedUsageRequestController::class, 'index'])->name('index');
+    Route::get('create', [SemiFinishedUsageRequestController::class, 'create'])->name('create');
+    Route::post('/', [SemiFinishedUsageRequestController::class, 'store'])->name('store');
+    Route::get('{semiFinishedUsageRequest}', [SemiFinishedUsageRequestController::class, 'show'])->name('show');
+    Route::get('{semiFinishedUsageRequest}/edit', [SemiFinishedUsageRequestController::class, 'edit'])->name('edit');
+    Route::put('{semiFinishedUsageRequest}', [SemiFinishedUsageRequestController::class, 'update'])->name('update');
     Route::post('{semiFinishedUsageRequest}/approve', [SemiFinishedUsageRequestController::class, 'approve'])->name('approve');
     Route::post('{semiFinishedUsageRequest}/reject', [SemiFinishedUsageRequestController::class, 'reject'])->name('reject');
     Route::post('{semiFinishedUsageRequest}/process', [SemiFinishedUsageRequestController::class, 'process'])->name('process');

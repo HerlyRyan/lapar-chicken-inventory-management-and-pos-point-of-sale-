@@ -24,38 +24,29 @@ class SemiFinishedStockController extends Controller
         $selectedBranch = $this->resolveSelectedBranch($request);
         $contextBranch = $selectedBranch;
 
-        // Base query
         $query = SemiFinishedProduct::query()
-            ->select('semi_finished_products.*');
+            ->select('semi_finished_products.*')
+            ->selectSub(function ($sub) use ($contextBranch) {
+                $sub->from('semi_finished_branch_stocks as sfbs')
+                    ->selectRaw('COALESCE(SUM(sfbs.quantity), 0)')
+                    ->whereColumn('sfbs.semi_finished_product_id', 'semi_finished_products.id');
 
-        // Compute alias as `center_stock` to keep existing blades unchanged
-        if ($contextBranch) {
-            // Stock for the specific branch context
-            $query->selectRaw('COALESCE(SUM(sfbs.quantity), 0) as center_stock')
-                ->leftJoin('semi_finished_branch_stocks as sfbs', function ($join) use ($contextBranch) {
-                    $join->on('sfbs.semi_finished_product_id', '=', 'semi_finished_products.id')
-                         ->where('sfbs.branch_id', $contextBranch->id);
-                });
-        } else {
-            // Aggregate stock across production centers (legacy center behavior)
-            $query->selectRaw('COALESCE(SUM(sfbs.quantity), 0) as center_stock')
-                ->leftJoin('semi_finished_branch_stocks as sfbs', 'sfbs.semi_finished_product_id', '=', 'semi_finished_products.id')
-                ->leftJoin('branches as b', function ($join) {
-                    $join->on('b.id', '=', 'sfbs.branch_id')
-                         ->where('b.type', 'production');
-                });
-        }
-
-        $query->where('semi_finished_products.is_active', true)
-              ->with(['unit', 'category'])
-              ->groupBy('semi_finished_products.id');
+                if ($contextBranch) {
+                    $sub->where('sfbs.branch_id', $contextBranch->id);
+                } else {
+                    $sub->leftJoin('branches as b', 'b.id', '=', 'sfbs.branch_id')
+                        ->where('b.type', 'production');
+                }
+            }, 'center_stock')
+            ->where('semi_finished_products.is_active', true)
+            ->with(['unit', 'category']);
 
         // Search by name or code
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('semi_finished_products.name', 'like', "%{$search}%")
-                  ->orWhere('semi_finished_products.code', 'like', "%{$search}%");
+                    ->orWhere('semi_finished_products.code', 'like', "%{$search}%");
             });
         }
 
