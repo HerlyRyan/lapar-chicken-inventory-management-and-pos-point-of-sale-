@@ -1,0 +1,551 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\{SemiFinishedProduct, SemiFinishedBranchStock, Branch, Unit, Category};
+use App\Helpers\{ImageHelper, CodeGeneratorHelper};
+use App\Traits\TableFilterTrait;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+
+class SemiFinishedProductController extends Controller
+{
+    use TableFilterTrait;
+    public function __construct()
+    {
+        // Constructor without BranchStockService dependency
+    }
+
+    public function index()
+    {
+        $selectedBranchId = request('branch_id');
+        $selectedBranch = null;
+        $branchForStock = null;
+        $showBranchSelector = true;
+
+        // Determine which branch to use for stock calculation
+        if ($selectedBranchId) {
+            $selectedBranch = Branch::find($selectedBranchId);
+            $branchForStock = $selectedBranch;
+        } elseif (auth()->check() && auth()->user()->branch) {
+            $branchForStock = auth()->user()->branch;
+        }
+
+        $query = SemiFinishedProduct::with(['unit', 'category']);
+
+        // Load semi-finished branch stocks for the specific branch if selected
+        if ($branchForStock) {
+            $query = $query->with(['semiFinishedBranchStocks' => function($q) use ($branchForStock) {
+                $q->where('branch_id', $branchForStock->id)->with('branch');
+            }]);
+        } else {
+            // Load all semi-finished branch stocks if no specific branch
+            $query = $query->with(['semiFinishedBranchStocks' => function($q) {
+                $q->with('branch');
+            }]);
+        }
+        
+        // Define searchable and sortable columns
+        $searchableColumns = ['name', 'code', 'description'];
+        $sortableColumns = ['name', 'code', 'created_at', 'updated_at', 'production_cost', 'minimum_stock'];
+        
+        // Handle is_active status filtering separately since it's a boolean
+        if (request('status') === 'active') {
+            $query->where('is_active', true);
+        } elseif (request('status') === 'inactive') {
+            $query->where('is_active', false);
+        }
+        
+        // Apply the standard filtering, sorting, and pagination
+        $semiFinishedProducts = $this->applyFilterSortPaginate(
+            $query, 
+            $searchableColumns, 
+            $sortableColumns, 
+            'name', // default sort column
+            'asc'   // default sort direction
+        );
+        
+        // Get current sort parameters for the view
+        $sortColumn = request('sort', 'name');
+        $sortDirection = request('direction', 'asc');
+
+        // Initialize branch stock for products that don't have it and calculate display stock
+        foreach ($semiFinishedProducts as $product) {
+            if ($branchForStock) {
+                // Initialize stock for specific branch if it doesn't exist
+                if ($product->semiFinishedBranchStocks->isEmpty()) {
+                    $product->initializeStockForBranch($branchForStock->id);
+                    $product->loadMissing(['semiFinishedBranchStocks' => function($q) use ($branchForStock) {
+                        $q->where('branch_id', $branchForStock->id);
+                    }]);
+                }
+                
+                // Calculate display stock for specific branch
+                $branchStock = $product->semiFinishedBranchStocks->first();
+                $product->display_stock_quantity = $branchStock ? $branchStock->quantity : 0;
+            } else {
+                // Calculate total stock across all branches
+                $product->display_stock_quantity = $product->semiFinishedBranchStocks->sum('quantity');
+            }
+        }
+        
+        return view('semi-finished-products.index', compact(
+            'semiFinishedProducts', 
+            'selectedBranch', 
+            'branchForStock', 
+            'showBranchSelector',
+            'sortColumn',
+            'sortDirection'
+        ));
+    }
+
+    public function create()
+    {
+        $units = Unit::active()->orderBy('unit_name')->get();
+        
+        // Get categories filtered by material type for semi-finished products
+        $categories = Category::where('is_active', true)->orderBy('name')->get();
+
+        if ($units->count() == 0) {
+            $message = 'Sebelum menambah bahan setengah jadi, Anda wajib mengisi data satuan terlebih dahulu. ' .
+                      '<a href="' . route('units.index') . '" class="alert-link">Kelola satuan</a>.';
+            $branchId = request('branch_id') ?: session('selected_branch_id');
+            return redirect()->route('semi-finished-products.index', $branchId ? ['branch_id' => $branchId] : [])->with('warning', $message);
+        }
+
+        // Get branch context for stock initialization
+        $selectedBranch = null;
+        $currentBranch = null;
+        
+        // Only set branch if explicitly selected via branch_id parameter
+        // If no branch_id is provided, we're in "overview semua cabang" mode
+        if (request('branch_id')) {
+            $selectedBranch = Branch::where('is_active', true)->find(request('branch_id'));
+        }
+        
+        // Do NOT automatically use session or user branch for create form
+        // This ensures "overview semua cabang" mode works correctly
+
+        // Get all branches for selector
+        $branches = Branch::where('is_active', true)->orderBy('name')->get();
+        
+        // Get permission info
+        $canSwitchBranch = auth()->check() && auth()->user()->is_superadmin;
+
+        return view('semi-finished-products.create', compact('units', 'categories', 'selectedBranch', 'currentBranch', 'branches', 'canSwitchBranch'))->with('showBranchSelector', true);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => $request->filled('code') ? 'string|max:50|unique:semi_finished_products,code' : '',
+            'description' => 'nullable|string|max:500',
+            'category_id' => 'required|exists:categories,id',
+            'unit_id' => 'required|exists:units,id',
+            'production_cost' => 'nullable|numeric|min:0',
+            'minimum_stock' => 'nullable|numeric|min:0',
+            'stock_quantity' => 'nullable|numeric|min:0',
+            'stock_mode' => 'nullable|string|in:selected,all',
+            'header_branch_id' => 'nullable|exists:branches,id',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'is_active' => 'boolean',
+        ], [
+            'name.required' => 'Nama bahan setengah jadi wajib diisi.',
+            'category_id.required' => 'Kategori wajib dipilih.',
+            'category_id.exists' => 'Kategori tidak valid.',
+            'unit_id.required' => 'Satuan wajib dipilih.',
+            'unit_id.exists' => 'Satuan tidak valid.',
+            'production_cost.numeric' => 'Biaya produksi harus berupa angka.',
+            'production_cost.min' => 'Biaya produksi minimal 0.',
+            'minimum_stock.numeric' => 'Stok minimum harus berupa angka.',
+            'minimum_stock.min' => 'Stok minimum minimal 0.',
+            'image.image' => 'File harus berupa gambar.',
+            'image.mimes' => 'Format gambar harus jpeg, png, jpg, atau gif.',
+            'image.max' => 'Ukuran gambar maksimal 2MB.',
+        ]);
+
+        $data = $validated;
+        $data['is_active'] = $request->has('is_active');
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            $data['image'] = ImageHelper::storeProductImage($request->file('image'), 'semi-finished');
+        }
+        
+        // Generate unique code if not provided
+        if (!$request->filled('code')) {
+            $data['code'] = CodeGeneratorHelper::generateProductCode('SF', $data['name'], SemiFinishedProduct::class);
+        }
+
+        $semiFinishedProduct = SemiFinishedProduct::create($data);
+
+        // Handle stock initialization
+        $stockQuantity = $validated['stock_quantity'] ?? 0;
+        $stockMode = $validated['stock_mode'] ?? 'all';
+        $branchId = $validated['header_branch_id'] ?? null;
+        
+        // Debug logging
+        \Log::info('Stock initialization debug:', [
+            'stock_quantity' => $stockQuantity,
+            'stock_mode' => $stockMode,
+            'branch_id' => $branchId,
+            'header_branch_id' => $validated['header_branch_id'] ?? 'not set',
+            'request_branch_id' => request('branch_id'),
+        ]);
+        
+        if ($stockQuantity > 0) {
+            if ($stockMode === 'selected' && $branchId) {
+                // Initialize stock for specific branch only
+                $semiFinishedProduct->initializeStockForBranch($branchId, $stockQuantity);
+                \Log::info('Initialized stock for specific branch: ' . $branchId);
+            } else {
+                // Initialize stock for all branches (default behavior)
+                $branches = Branch::where('is_active', true)->get();
+                foreach ($branches as $branch) {
+                    $semiFinishedProduct->initializeStockForBranch($branch->id, $stockQuantity);
+                }
+                \Log::info('Initialized stock for all branches: ' . $branches->count() . ' branches');
+            }
+        } else {
+            // Always initialize stock with zero for all active branches
+            $branches = Branch::where('is_active', true)->get();
+            foreach ($branches as $branch) {
+                $semiFinishedProduct->initializeStockForBranch($branch->id, 0);
+            }
+            \Log::info('Initialized zero stock for all branches: ' . $branches->count() . ' branches');
+        }
+
+        return redirect()
+            ->route('semi-finished-products.index')
+            ->with('success', 'Bahan setengah jadi berhasil ditambahkan.');
+    }
+
+    /**
+     * Update stock for a semi-finished product in a specific branch
+     */
+    public function updateStock(Request $request)
+    {
+        $validated = $request->validate([
+            'product_id' => 'required|exists:semi_finished_products,id',
+            'branch_id' => 'required|exists:branches,id',
+            'stock_type' => 'required|in:in,out,return',
+            'quantity' => 'required|numeric|min:0.01',
+            'unit_cost' => 'nullable|numeric|min:0',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $product = SemiFinishedProduct::findOrFail($validated['product_id']);
+        $branch = Branch::findOrFail($validated['branch_id']);
+        
+        // Get or create branch stock record
+        $branchStock = SemiFinishedBranchStock::firstOrCreate(
+            [
+                'branch_id' => $validated['branch_id'],
+                'semi_finished_product_id' => $validated['product_id']
+            ],
+            [
+                'quantity' => 0,
+                'average_cost' => 0 // Not used anymore, using product-level production_cost instead
+            ]
+        );
+
+        $oldQuantity = $branchStock->quantity;
+        $quantityChange = $validated['quantity'];
+        
+        // Calculate new quantity based on stock type
+        switch ($validated['stock_type']) {
+            case 'in':
+            case 'return':
+                $newQuantity = $oldQuantity + $quantityChange;
+                break;
+            case 'out':
+                if ($oldQuantity < $quantityChange) {
+                    return redirect()->back()->with('error', 'Stok tidak mencukupi. Stok saat ini: ' . number_format((float)$oldQuantity, 2));
+                }
+                $newQuantity = $oldQuantity - $quantityChange;
+                break;
+            default:
+                return redirect()->back()->with('error', 'Jenis stok tidak valid.');
+        }
+
+        // No longer updating average_cost as we're using product-level pricing (production_cost)
+        // If unit_cost is provided, we could potentially update the product's production_cost if needed
+        // But for now, we'll keep the product-level pricing separate from stock operations
+
+        // Update stock quantity
+        $branchStock->quantity = $newQuantity;
+        $branchStock->last_updated = now();
+        $branchStock->save();
+        
+        $stockTypeText = [
+            'in' => 'Stok Masuk',
+            'out' => 'Stok Keluar', 
+            'return' => 'Stok Return'
+        ][$validated['stock_type']];
+
+        $message = $stockTypeText . ' berhasil diproses. Stok ' . $product->name . ' di ' . $branch->name . ' sekarang: ' . number_format($newQuantity, 2);
+
+        return redirect()->back()->with('success', $message);
+    }
+
+    public function show(SemiFinishedProduct $semiFinishedProduct)
+    {
+        $selectedBranchId = request('branch_id');
+        $selectedBranch = null;
+        $branchForStock = null;
+        $showBranchSelector = true;
+
+        // First, explicitly load the unit relationship to ensure it's available
+        $semiFinishedProduct->load('unit');
+        
+        // Check if unit exists and load it if not
+        if (!$semiFinishedProduct->unit && $semiFinishedProduct->unit_id) {
+            $unit = Unit::find($semiFinishedProduct->unit_id);
+            if ($unit) {
+                $semiFinishedProduct->setRelation('unit', $unit);
+            }
+        }
+
+        // Determine which branch to use for stock calculation
+        if ($selectedBranchId) {
+            $selectedBranch = Branch::find($selectedBranchId);
+            $branchForStock = $selectedBranch;
+        } elseif (auth()->check() && auth()->user()->branch) {
+            $branchForStock = auth()->user()->branch;
+        }
+
+        // Load branch stocks, unit, and category relation
+        if ($branchForStock) {
+            $semiFinishedProduct->load([
+                'semiFinishedBranchStocks' => function($q) use ($branchForStock) {
+                    $q->where('branch_id', $branchForStock->id)->with('branch');
+                },
+                'category',
+            ]);
+            
+            // Initialize stock if it doesn't exist
+            if ($semiFinishedProduct->semiFinishedBranchStocks->isEmpty()) {
+                $semiFinishedProduct->initializeStockForBranch($branchForStock->id);
+                // Re-load the relation after initialization
+                $semiFinishedProduct->load([
+                    'semiFinishedBranchStocks' => function($q) use ($branchForStock) {
+                        $q->where('branch_id', $branchForStock->id)->with('branch');
+                    },
+                ]);
+            }
+            
+            $displayStockQuantity = $semiFinishedProduct->semiFinishedBranchStocks->first()->quantity ?? 0;
+        } else {
+            $semiFinishedProduct->load(['semiFinishedBranchStocks.branch']);
+            $displayStockQuantity = $semiFinishedProduct->semiFinishedBranchStocks->sum('quantity');
+        }
+
+        // Get the minimum stock value from the product
+        $displayMinimumStock = $semiFinishedProduct->minimum_stock ?? 0;
+        
+        return view('semi-finished-products.show', [
+            'semiFinishedProduct' => $semiFinishedProduct,
+            'selectedBranch' => $selectedBranch,
+            'branchForStock' => $branchForStock,
+            'displayStockQuantity' => $displayStockQuantity,
+            'displayMinimumStock' => $displayMinimumStock,
+            'showBranchSelector' => $showBranchSelector
+        ]);
+    }
+
+    public function edit(SemiFinishedProduct $semiFinishedProduct)
+    {
+        $selectedBranchId = request('branch_id');
+        $selectedBranch = null;
+        $branchForStock = null;
+        $showBranchSelector = true;
+
+        // Determine which branch to use for stock calculation
+        if ($selectedBranchId) {
+            $selectedBranch = Branch::find($selectedBranchId);
+            $branchForStock = $selectedBranch;
+        } elseif (auth()->check() && auth()->user()->branch) {
+            $branchForStock = auth()->user()->branch;
+        }
+
+        // Load branch stocks and unit relation
+        if ($branchForStock) {
+            $semiFinishedProduct->load([
+                'semiFinishedBranchStocks' => function($q) use ($branchForStock) {
+                    $q->where('branch_id', $branchForStock->id)->with('branch');
+                },
+                'unit'
+            ]);
+            
+            // Initialize stock if it doesn't exist
+            if ($semiFinishedProduct->semiFinishedBranchStocks->isEmpty()) {
+                $semiFinishedProduct->initializeStockForBranch($branchForStock->id);
+                // Re-load the relation after initialization
+                $semiFinishedProduct->load([
+                    'semiFinishedBranchStocks' => function($q) use ($branchForStock) {
+                        $q->where('branch_id', $branchForStock->id)->with('branch');
+                    },
+                    'unit'
+                ]);
+            }
+            
+            $displayStockQuantity = $semiFinishedProduct->semiFinishedBranchStocks->first()->quantity ?? 0;
+        } else {
+            $semiFinishedProduct->load(['semiFinishedBranchStocks.branch', 'unit']);
+            $displayStockQuantity = $semiFinishedProduct->semiFinishedBranchStocks->sum('quantity');
+        }
+
+        // Get all units for the dropdown
+        $units = Unit::active()->orderBy('unit_name')->get();
+        
+        // Get categories filtered by material type for semi-finished products
+        $categories = Category::where('is_active', true)->orderBy('name')->get();
+
+        // Calculate minimum stock value for the form (always use product-level)
+        $minStockValue = $semiFinishedProduct->minimum_stock ?? 0;
+
+        return view('semi-finished-products.edit', [
+            'semiFinishedProduct' => $semiFinishedProduct,
+            'selectedBranch' => $selectedBranch,
+            'branchForStock' => $branchForStock,
+            'displayStockQuantity' => $displayStockQuantity,
+            'showBranchSelector' => $showBranchSelector,
+            'units' => $units,
+            'minStockValue' => $minStockValue,
+            'categories' => $categories
+        ]);
+    }
+
+    public function update(Request $request, SemiFinishedProduct $semiFinishedProduct)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'nullable|string|max:50',
+            'description' => 'nullable|string|max:500',
+            'category_id' => 'required|exists:categories,id',
+            'unit_id' => 'required|exists:units,id',
+            'production_cost' => 'nullable|numeric|min:0',
+            'minimum_stock' => 'nullable|numeric|min:0',
+            'stock_quantity' => 'nullable|numeric|min:0',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'is_active' => 'boolean',
+        ], [
+            'name.required' => 'Nama bahan setengah jadi wajib diisi.',
+            'category_id.required' => 'Kategori wajib dipilih.',
+            'category_id.exists' => 'Kategori tidak valid.',
+            'unit_id.required' => 'Satuan wajib dipilih.',
+            'unit_id.exists' => 'Satuan tidak valid.',
+            'production_cost.numeric' => 'Biaya produksi harus berupa angka.',
+            'production_cost.min' => 'Biaya produksi minimal 0.',
+            'minimum_stock.numeric' => 'Stok minimum harus berupa angka.',
+            'minimum_stock.min' => 'Stok minimum minimal 0.',
+            'stock_quantity.numeric' => 'Stok harus berupa angka.',
+            'stock_quantity.min' => 'Stok minimal 0.',
+            'image.image' => 'File harus berupa gambar.',
+            'image.mimes' => 'Format gambar harus jpeg, png, jpg, atau gif.',
+            'image.max' => 'Ukuran gambar maksimal 2MB.',
+        ]);
+
+        $validated['is_active'] = $request->has('is_active');
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($semiFinishedProduct->image && file_exists(public_path($semiFinishedProduct->image))) {
+                unlink(public_path($semiFinishedProduct->image));
+            }
+            
+            $image = $request->file('image');
+            $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+            $image->move(public_path('img/semi-finished-products'), $imageName);
+            $validated['image'] = 'img/semi-finished-products/' . $imageName;
+        }
+
+        // Update the product details
+        $semiFinishedProduct->update($validated);
+
+        // Handle stock quantity update if provided and branch is selected
+        if (isset($validated['stock_quantity'])) {
+            $branchId = $request->input('branch_id');
+            
+            // Only update stock if a specific branch is selected
+            if ($branchId) {
+                // Get or create branch stock record
+                $branchStock = $semiFinishedProduct->semiFinishedBranchStocks()
+                    ->where('branch_id', $branchId)
+                    ->first();
+                
+                if ($branchStock) {
+                    // Update existing stock record (quantity only)
+                    $branchStock->quantity = $validated['stock_quantity'];
+                    $branchStock->save();
+                } else {
+                    // Create new stock record if it doesn't exist
+                    $semiFinishedProduct->initializeStockForBranch(
+                        $branchId, 
+                        $validated['stock_quantity'] ?? 0
+                    );
+                }
+            }
+        }
+
+        // Get branch_id from request or session
+        $branchId = request('branch_id') ?: session('selected_branch_id');
+        return redirect()->route('semi-finished-products.index', $branchId ? ['branch_id' => $branchId] : [])
+            ->with('success', 'Bahan setengah jadi berhasil diperbarui.');
+    }
+
+    public function destroy(SemiFinishedProduct $semiFinishedProduct)
+    {
+        // Delete image file if exists
+        if ($semiFinishedProduct->image && file_exists(public_path($semiFinishedProduct->image))) {
+            unlink(public_path($semiFinishedProduct->image));
+        }
+
+        $semiFinishedProduct->delete();
+
+        // Get branch_id from request or session
+        $branchId = request('branch_id') ?: session('selected_branch_id');
+        return redirect()->route('semi-finished-products.index', $branchId ? ['branch_id' => $branchId] : [])
+            ->with('success', 'Bahan setengah jadi berhasil dihapus.');
+    }
+
+    /**
+     * API endpoint to get semi-finished products list
+     */
+    public function apiIndex()
+    {
+        $semiFinishedProducts = SemiFinishedProduct::with(['unit:id,unit_name,abbreviation'])
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'unit_id']);
+
+        $result = $semiFinishedProducts->map(function ($p) {
+            // Use relation explicitly to avoid conflict with getUnitAttribute() accessor
+            $unitRel = $p->relationLoaded('unit') ? $p->getRelation('unit') : null;
+            return [
+                'id' => $p->id,
+                'name' => $p->name,
+                'unit' => $unitRel ? [
+                    'id' => $unitRel->id,
+                    'unit_name' => $unitRel->unit_name,
+                    'abbreviation' => $unitRel->abbreviation,
+                ] : null,
+            ];
+        });
+
+        return response()->json($result);
+    }
+
+    /**
+     * Toggle the active status of the specified resource.
+     */
+    public function toggleStatus(SemiFinishedProduct $semiFinishedProduct)
+    {
+        $semiFinishedProduct->update(['is_active' => !$semiFinishedProduct->is_active]);
+        $status = $semiFinishedProduct->is_active ? 'diaktifkan' : 'dinonaktifkan';
+        return redirect()->route('semi-finished-products.index')
+                        ->with('success', "Bahan setengah jadi berhasil {$status}.");
+    }
+}

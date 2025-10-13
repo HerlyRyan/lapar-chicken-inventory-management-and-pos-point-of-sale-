@@ -1,0 +1,85 @@
+/* Custom styles for standardized tables */
+.standard-table-container {
+    max-height: calc(100vh - 300px); /* Adjust based on your layout */
+    overflow-y: auto;
+    position: relative;
+}
+
+/* Sticky header */
+.standard-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 2px solid var(--primary-red) !important;
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+    font-weight: 600 !important;
+    color: #333 !important;
+    padding: 0.75rem;
+}
+
+/* Hover effect */
+.standard-table tbody tr:hover {
+    background-color: rgba(220, 38, 38, 0.05) !important;
+    cursor: pointer;
+}
+
+/* Striped rows */
+.standard-table tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.01);
+}
+
+/* Sort icons */
+.sort-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-left: 5px;
+    color: #999;
+}
+
+.sort-active {
+    color: var(--primary-red);
+}
+
+/* Filter form styling */
+.table-filter-form .form-control:focus,
+.table-filter-form .form-select:focus {
+    border-color: var(--primary-red);
+    box-shadow: 0 0 0 0.2rem rgba(220, 38, 38, 0.25);
+}
+
+.table-filter-form .input-group-text {
+    background-color: #fff;
+}
+
+/* Pagination styling */
+.pagination .page-item.active .page-link {
+    background-color: var(--primary-red);
+    border-color: var(--primary-red);
+}
+
+.pagination .page-link {
+    color: var(--primary-red);
+}
+
+.pagination .page-link:focus {
+    box-shadow: 0 0 0 0.2rem rgba(220, 38, 38, 0.25);
+}
+
+/* Table action buttons */
+.table-action-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .standard-table-container {
+        overflow-x: auto;
+    }
+}

@@ -1,0 +1,58 @@
+name: DB Safety scan
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-db-safetiness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        run: git fetch origin ${{ github.event.pull_request.base.ref }}
+
+      - name: Get changed files
+        id: changes
+        run: |
+          echo "CHANGED=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD)" >> $GITHUB_ENV
+          echo "Changed files:" 
+          git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD || true
+
+      - name: Fail on DROP/TRUNCATE in changed files
+        run: |
+          set -euo pipefail
+          PATTERN='\b(DROP|TRUNCATE)\b'
+          FOUND=0
+          ALLOWFILE='.githooks/allow-sql-approval.txt'
+          ALLOW_PATTERNS=''
+          # If allowlist file exists in the PR, read non-comment lines and build alternation
+          if git show HEAD:"$ALLOWFILE" >/dev/null 2>&1; then
+            ALLOW_PATTERNS=$(git show HEAD:"$ALLOWFILE" | grep -vE '^\s*#' | sed '/^\s*$/d' | paste -sd '|' - || true)
+          fi
+
+          for f in $(git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD); do
+            # skip binary and vendor files
+            if [[ "$f" =~ ^(vendor/|public/|node_modules/|storage/) ]]; then
+              continue
+            fi
+            # if file matches allowlist patterns, skip
+            if [ -n "$ALLOW_PATTERNS" ] && echo "$f" | grep -Eq "$ALLOW_PATTERNS"; then
+              continue
+            fi
+            if git show origin/${{ github.event.pull_request.base.ref }}:./"$f" >/dev/null 2>&1; then
+              # compare file in PR
+              git diff origin/${{ github.event.pull_request.base.ref }}...HEAD -- "${f}" | grep -nE "$PATTERN" && FOUND=1 || true
+            else
+              # new file
+              git show HEAD:"$f" | grep -nE "$PATTERN" && FOUND=1 || true
+            fi
+          done
+          if [ "$FOUND" -ne 0 ]; then
+            echo "Error: Found DROP/TRUNCATE in changed files. Please remove or request approval."
+            exit 1
+          fi

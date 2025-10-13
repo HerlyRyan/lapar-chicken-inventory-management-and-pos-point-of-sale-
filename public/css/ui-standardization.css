@@ -1,0 +1,327 @@
+/**
+ * UI Standardization CSS for Lapar Chicken Inventory & Sales
+ * Fixes text overflow issues and provides consistent styling across all pages
+ */
+
+/* ===== TEXT OVERFLOW FIXES ===== */
+.text-truncate-custom {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.text-wrap-cell {
+    word-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+    max-width: 300px;
+}
+
+.address-cell {
+    max-width: 250px;
+    word-wrap: break-word;
+    white-space: normal;
+    line-height: 1.4;
+}
+
+.description-cell {
+    max-width: 200px;
+    word-wrap: break-word;
+    white-space: normal;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+/* ===== STANDARDIZED CARD STYLING ===== */
+.standard-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.standard-card-header {
+    background: linear-gradient(135deg, #dc2626 0%, #ea580c 50%, #eab308 100%);
+    color: white;
+    padding: 1.25rem;
+    border: none;
+}
+
+.standard-card-header h5 {
+    margin: 0;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.standard-card-body {
+    padding: 1.5rem;
+    background: white;
+}
+
+/* ===== STANDARDIZED BUTTON STYLING ===== */
+.btn-standard-primary {
+    background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    padding: 0.625rem 1.5rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-standard-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+    color: white;
+}
+
+.btn-standard-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    padding: 0.625rem 1.5rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-standard-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+    color: white;
+}
+
+/* ===== STANDARDIZED TABLE STYLING ===== */
+.standard-table-wrapper {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.standard-table {
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.standard-table thead th {
+    background: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+    padding: 1rem 0.75rem;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.standard-table tbody td {
+    padding: 1rem 0.75rem;
+    border-bottom: 1px solid #f1f3f5;
+    vertical-align: middle;
+    font-size: 0.95rem;
+}
+
+.standard-table tbody tr:hover {
+    background-color: #f8f9fa;
+    transition: background-color 0.2s ease;
+}
+
+.standard-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ===== STANDARDIZED FORM STYLING ===== */
+.standard-form-group {
+    margin-bottom: 1.5rem;
+}
+
+.standard-form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.standard-form-control {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.standard-form-control:focus {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 0.2rem rgba(220, 38, 38, 0.1);
+}
+
+/* ===== STANDARDIZED BADGE STYLING ===== */
+.badge-standard-active {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+    border-radius: 20px;
+}
+
+.badge-standard-inactive {
+    background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
+    color: white;
+    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+    border-radius: 20px;
+}
+
+.badge-standard-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: white;
+    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+    border-radius: 20px;
+}
+
+/* ===== STANDARDIZED ALERT STYLING ===== */
+.alert-standard-success {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    border: 1px solid #b8dabd;
+    color: #155724;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.alert-standard-error {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    border: 1px solid #f1aeb5;
+    color: #721c24;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+/* ===== STANDARDIZED FILTER FORM ===== */
+.filter-form-wrapper {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #e9ecef;
+}
+
+.filter-form-wrapper .form-control,
+.filter-form-wrapper .form-select {
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+}
+
+.filter-form-wrapper .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    border-radius: 6px;
+}
+
+/* ===== RESPONSIVE FIXES ===== */
+@media (max-width: 768px) {
+    .text-truncate-custom {
+        max-width: 120px;
+    }
+    
+    .address-cell {
+        max-width: 150px;
+    }
+    
+    .description-cell {
+        max-width: 120px;
+    }
+    
+    .standard-card-body {
+        padding: 1rem;
+    }
+    
+    .standard-table thead th,
+    .standard-table tbody td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* ===== CONTAINER LAYOUT FIXES ===== */
+.main-content {
+    overflow-x: auto;
+    padding-right: 15px;
+}
+
+.table-responsive {
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+/* ===== ACTION BUTTONS STANDARDIZATION ===== */
+.action-buttons-wrapper {
+    display: flex;
+    gap: 0.25rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.action-buttons-wrapper .btn {
+    min-width: 32px;
+    height: 32px;
+    padding: 0.25rem 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ===== PAGE HEADER STANDARDIZATION ===== */
+.page-header-standard {
+    background: white;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border-left: 4px solid #dc2626;
+}
+
+.page-header-standard h1 {
+    color: #dc2626;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    font-size: 1.75rem;
+}
+
+.page-header-standard p {
+    color: #6c757d;
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+/* ===== LOADING AND EMPTY STATE STYLING ===== */
+.empty-state-wrapper {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: #6c757d;
+}
+
+.empty-state-wrapper i {
+    font-size: 4rem;
+    color: #dee2e6;
+    margin-bottom: 1rem;
+}
+
+.empty-state-wrapper h5 {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state-wrapper p {
+    color: #6c757d;
+    margin-bottom: 1.5rem;
+}

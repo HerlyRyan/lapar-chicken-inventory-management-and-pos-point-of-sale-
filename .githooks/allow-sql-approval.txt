@@ -1,0 +1,6 @@
+# List files (paths or regex) that are allowed to contain destructive SQL keywords (DROP/TRUNCATE).
+# Usage: add a line with the file path or a regex pattern, and optionally a comment after '#'
+# Example:
+# database/migrations/2024_01_01_create_example_table.php  # allowed for migration change X
+
+# Add approved exceptions below:

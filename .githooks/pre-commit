@@ -1,0 +1,58 @@
+#!/bin/sh
+# Simple pre-commit hook: scan staged changes for dangerous SQL keywords
+# To enable locally:
+#   git config core.hooksPath .githooks
+# Make executable (on Windows with Git Bash): chmod +x .githooks/pre-commit
+
+STAGED_FILES=$(git diff --cached --name-only -z | tr '\0' '\n')
+if [ -z "$STAGED_FILES" ]; then
+  exit 0
+fi
+
+# Ignore vendor and public build folders
+GREP_FILES="$(echo "$STAGED_FILES" | grep -Ev '^(vendor/|public/|node_modules/|storage/)' || true)"
+if [ -z "$GREP_FILES" ]; then
+  exit 0
+fi
+
+FOUND=0
+# optional allowlist file: each line is a file path or pattern that has approved SQL operations
+ALLOWFILE=".githooks/allow-sql-approval.txt"
+ALLOW_PATTERNS=""
+if [ -f "$ALLOWFILE" ]; then
+  # build a grep -E alternation pattern from non-empty, non-comment lines
+  ALLOW_PATTERNS=$(grep -vE '^\s*#' "$ALLOWFILE" | sed '/^\s*$/d' | awk '{print $0}' | paste -sd '|' -)
+fi
+
+for f in $GREP_FILES; do
+  # skip binary files
+  if ! file "$f" | grep -q text; then
+    continue
+  fi
+
+  # if file matches allowlist patterns, skip it
+  if [ -n "$ALLOW_PATTERNS" ] && echo "$f" | grep -Eq "$ALLOW_PATTERNS"; then
+    continue
+  fi
+
+  # handle staged content (works for new and modified files)
+  if git show :"$f" >/dev/null 2>&1; then
+    CONTENT=$(git show :"$f")
+  else
+    CONTENT=$(git show HEAD:"$f" 2>/dev/null || true)
+  fi
+
+  if echo "$CONTENT" | grep -nE '\b(DROP|TRUNCATE)\b' >/dev/null; then
+    echo "ERROR: Potentially destructive SQL in staged file: $f"
+    echo "$CONTENT" | grep -nE --color=always '\b(DROP|TRUNCATE)\b' || true
+    FOUND=1
+  fi
+done
+
+if [ "$FOUND" -ne 0 ]; then
+  echo "Commit rejected. Remove or get approval for destructive SQL operations (DROP/TRUNCATE)."
+  echo "If this change is intentional, add the path to '$ALLOWFILE' with a short justification (comments allowed) and ask a reviewer to approve."
+  exit 1
+fi
+
+exit 0

@@ -1,0 +1,165 @@
+/* Purchase Order Form Custom Styles */
+
+/* Button hover animation */
+.pulse-on-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pulse-on-hover:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Form card enhancements */
+.card-modern {
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.3s ease;
+}
+
+.card-modern:hover {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.card-modern .card-header {
+    background: linear-gradient(to right, #f8f9fa, #ffffff);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    font-weight: 600;
+}
+
+/* Enhanced table styling */
+.table-items {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.table-items thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+    font-weight: 600;
+    color: #495057;
+    padding: 12px 8px;
+}
+
+.table-items tbody td {
+    padding: 12px 8px;
+    vertical-align: middle;
+}
+
+.table-items tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table-items tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.03);
+}
+
+/* Form control enhancements */
+.form-control-modern {
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    padding: 8px 12px;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.form-control-modern:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Select2 customization */
+.select2-container--bootstrap .select2-selection--single {
+    height: 38px;
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+/* Form sections */
+.form-section {
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #eef0f2;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+}
+
+/* Status badges */
+.badge-draft {
+    background-color: #6c757d;
+    color: white;
+}
+
+.badge-sent {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.badge-received {
+    background-color: #28a745;
+    color: white;
+}
+
+/* Price fields */
+.price-field {
+    font-weight: 600;
+    color: #495057;
+}
+
+/* Buttons */
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Row delete button */
+.delete-row-btn {
+    transition: color 0.2s ease;
+}
+
+.delete-row-btn:hover {
+    color: #dc3545;
+}
+
+/* Supplier info box */
+.supplier-info {
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-left: 3px solid #17a2b8;
+}
+
+/* Summary card */
+.summary-card {
+    background-color: #f8f9fa;
+    border-left: 3px solid #28a745;
+    padding: 1rem;
+    border-radius: 6px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.summary-row.total {
+    font-weight: 700;
+    font-size: 1.1em;
+    border-top: 1px solid #dee2e6;
+    padding-top: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .form-section {
+        padding: 1rem;
+    }
+}

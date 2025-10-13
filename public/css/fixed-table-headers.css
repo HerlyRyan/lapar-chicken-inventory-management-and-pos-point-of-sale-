@@ -1,0 +1,111 @@
+/* Fixed Table Headers CSS - Applied across all tables */
+
+/* Table container styles */
+.standard-table-container,
+.table-responsive {
+    position: relative;
+    max-height: 70vh;
+    overflow-y: auto;
+    border-radius: 0.25rem;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+/* Sticky header styles for both standard-table and regular bootstrap tables */
+.standard-table-header,
+.table thead,
+thead.sticky-top,
+.table > thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f8f9fa; /* Lighter background */
+}
+
+/* Apply to all th elements */
+.standard-table thead th,
+.table thead th,
+thead.sticky-top th,
+.table > thead > tr > th,
+th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #f8f9fa; /* Matches Bootstrap light background */
+    box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1);
+    border-bottom-width: 2px;
+    background-clip: padding-box;
+}
+
+/* Fix for table header borders */
+thead th:after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background-color: rgba(0,0,0,0.1);
+}
+
+/* Style for sortable columns */
+.sortable-column {
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+/* Table styles for all tables */
+.table {
+    margin-bottom: 0;
+    width: 100%;
+}
+
+/* Add some padding to prevent content from being hidden under sticky header when scrolling */
+.standard-table-container,
+.table-responsive {
+    scroll-padding-top: 50px;
+}
+
+/* Improve visual indication that the table is scrollable */
+.standard-table-container:after,
+.table-responsive:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.05), transparent);
+    pointer-events: none;
+}
+
+/* Ensure table header colors match design */
+.table-light,
+thead.sticky-top,
+.table > thead {
+    background: linear-gradient(to right, #f8f9fa, #f0f0f0);
+}
+
+/* Ensure proper spacing in all tables */
+.table td, .table th {
+    padding: 0.75rem;
+    vertical-align: middle;
+}
+
+/* Zebra striping that doesn't interfere with the sticky header */
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+    background-color: rgba(0,0,0,0.02);
+    --bs-table-accent-bg: none;
+}
+
+/* Table header text color and weight */
+thead th {
+    font-weight: 600;
+    color: #333;
+}
+
+/* Fix for when table is in a card */
+.card .table-responsive,
+.card .standard-table-container {
+    border: none;
+    border-radius: 0;
+}

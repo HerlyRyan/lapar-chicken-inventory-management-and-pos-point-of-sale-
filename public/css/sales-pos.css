@@ -1,0 +1,122 @@
+/* Sales POS specific styles */
+
+/* Out of stock product styling */
+.product-card.out-of-stock {
+    opacity: 0.75;
+    position: relative;
+}
+
+.product-card.out-of-stock::after {
+    content: 'STOK HABIS';
+    position: absolute;
+    top: 40%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    background-color: rgba(220, 53, 69, 0.8);
+    color: white;
+    padding: 5px;
+    font-weight: bold;
+    transform: rotate(-10deg);
+    z-index: 10;
+}
+
+.product-card.out-of-stock img {
+    filter: grayscale(80%);
+}
+
+/* Stock change animation */
+@keyframes stockPulse {
+    0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(25, 135, 84, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
+}
+
+.stock-changed {
+    animation: stockPulse 1.5s ease-out;
+    animation-iteration-count: 3;
+}
+
+/* Stock update alert */
+.stock-update-alert {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 1050;
+    max-width: 350px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-left: 4px solid #ffc107;
+    animation: slideInRight 0.5s, fadeOut 0.5s 4.5s;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+.product-card .card-body {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.product-card .product-img {
+    height: 150px;
+    object-fit: contain;
+    background-color: #f8f9fa;
+}
+
+/* Fix for image container overflow */
+.product-image-container {
+    height: 150px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+}
+
+.product-image-container img {
+    max-width: 100%;
+    max-height: 150px;
+    object-fit: contain;
+}
+
+.product-card {
+    overflow: hidden;
+}
+
+/* Lock panel styles */
+.product-panel.locked, .checkout-panel.locked {
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.lock-overlay {
+    pointer-events: all;
+}
+.lock-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.lock-panel i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
