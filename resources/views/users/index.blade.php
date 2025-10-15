@@ -9,50 +9,13 @@
 @section('content')
     <div class="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30">
         {{-- Page Header --}}
-        <div class="bg-white border-b border-gray-200 shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-                <div class="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div class="flex-1">
-                        <div class="flex items-center gap-2 sm:gap-3 mb-2">
-                            <div
-                                class="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg">
-                                <svg class="w-4 h-4 sm:w-6 sm:h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                </svg>
-                            </div>
-                            <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Data Pengguna</h1>
-                        </div>
-                        <p class="text-gray-600 text-sm lg:text-base">Kelola data pengguna sistem</p>
-                    </div>
-                    <div class="flex-shrink-0">
-                        <a href="{{ route('users.create') }}"
-                            class="w-full sm:w-auto inline-flex items-center justify-center px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-semibold rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 text-sm sm:text-base">
-                            <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                            <span class="hidden sm:inline">Tambah Pengguna</span>
-                            <span class="sm:hidden">Tambah</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <x-index.header title="Pengguna" addRoute="{{ route('users.create') }}" />
 
         {{-- Main Content --}}
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
             <div class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
                 {{-- Card Header --}}
-                <div class="bg-gradient-to-r from-orange-600 via-orange-700 to-red-700 px-4 sm:px-6 py-4 sm:py-6">
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white mr-2 sm:mr-3" fill="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                        <h2 class="text-lg sm:text-xl font-bold text-white">Daftar Pengguna</h2>
-                    </div>
-                </div>
+                <x-index.card-header title="Pengguna" />
 
                 {{-- Filter Section --}}
                 <x-filter-bar :action="route('users.index')" :selects="$selects" searchPlaceholder="Cari nama atau email..." />
@@ -65,25 +28,19 @@
                                 <tr>
                                     <th
                                         class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-16">
-                                        #</th>
-                                    <th
-                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                        Nama</th>
-                                    <th
-                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                        Email</th>
-                                    <th
-                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                        Cabang</th>
-                                    <th
-                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                        Role</th>
-                                    <th
-                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                        Status</th>
+                                        No
+                                    </th>
+
+                                    @foreach ($columns as $column)
+                                        <th
+                                            class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                            {{ str_replace('_', ' ', $column) }}</th>
+                                    @endforeach
+
                                     <th
                                         class="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                        Aksi</th>
+                                        Aksi
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
@@ -182,7 +139,7 @@
                                             @endif
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-center">
-                                            <x-action-buttons :viewUrl="route('users.show', $user)" :editUrl="route('users.edit', $user)" :deleteUrl="$user->deletable() ? route('users.destroy', $user) : ''"
+                                            <x-index.action-buttons :viewUrl="route('users.show', $user)" :editUrl="route('users.edit', $user)" :deleteUrl="$user->deletable() ? route('users.destroy', $user) : ''"
                                                 :showDelete="$user->deletable()" itemName="pengguna {{ $user->name }}" />
                                         </td>
                                     </tr>
@@ -299,9 +256,11 @@
                                                     @endif
 
                                                     {{-- Actions --}}
-                                                    <x-action-buttons :viewUrl="route('users.show', $user)" :editUrl="route('users.edit', $user)" :deleteUrl="$user->deletable() ? route('users.destroy', $user) : ''"
-                                                        :showDelete="$user->deletable()" itemName="pengguna {{ $user->name }}"
-                                                        size="sm" />
+                                                    <x-index.action-buttons :viewUrl="route('users.show', $user)" :editUrl="route('users.edit', $user)"
+                                                        :deleteUrl="$user->deletable()
+                                                            ? route('users.destroy', $user)
+                                                            : ''" :showDelete="$user->deletable()"
+                                                        itemName="pengguna {{ $user->name }}" size="sm" />
                                                 </div>
                                             </div>
                                         </div>
@@ -324,51 +283,7 @@
                     @endforelse
                 </div>
 
-                {{-- Pagination --}}
-                @if ($users->hasPages())
-                    <div class="bg-white px-4 sm:px-6 py-4 border-t border-gray-200">
-                        <div class="flex items-center justify-between">
-                            <div class="flex-1 flex justify-between sm:hidden">
-                                @if ($users->onFirstPage())
-                                    <span
-                                        class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 cursor-default leading-5 rounded-md">
-                                        Sebelumnya
-                                    </span>
-                                @else
-                                    <a href="{{ $users->previousPageUrl() }}"
-                                        class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 leading-5 rounded-md hover:text-gray-500 focus:outline-none focus:ring ring-gray-300 focus:border-blue-300 active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
-                                        Sebelumnya
-                                    </a>
-                                @endif
-
-                                @if ($users->hasMorePages())
-                                    <a href="{{ $users->nextPageUrl() }}"
-                                        class="relative inline-flex items-center px-4 py-2 ml-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 leading-5 rounded-md hover:text-gray-500 focus:outline-none focus:ring ring-gray-300 focus:border-blue-300 active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
-                                        Selanjutnya
-                                    </a>
-                                @else
-                                    <span
-                                        class="relative inline-flex items-center px-4 py-2 ml-3 text-sm font-medium text-gray-500 bg-white border border-gray-300 cursor-default leading-5 rounded-md">
-                                        Selanjutnya
-                                    </span>
-                                @endif
-                            </div>
-
-                            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                                <div>
-                                    <p class="text-sm text-gray-700">
-                                        Menampilkan <span class="font-medium">{{ $users->firstItem() ?? 0 }}</span> sampai
-                                        <span class="font-medium">{{ $users->lastItem() ?? 0 }}</span> dari <span
-                                            class="font-medium">{{ $users->total() }}</span> hasil
-                                    </p>
-                                </div>
-                                <div>
-                                    {{ $users->appends(request()->query())->links() }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                @endif
+                {{ $users->links('vendor.pagination.tailwind') }}
             </div>
         </div>
     </div>

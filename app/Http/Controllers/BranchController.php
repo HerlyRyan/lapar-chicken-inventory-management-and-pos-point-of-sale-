@@ -48,8 +48,30 @@ class BranchController extends Controller
         // Get current sort parameters for the view
         $sortColumn = request('sort', 'name');
         $sortDirection = request('direction', 'asc');
+
+        $statuses = [
+            1 => 'Aktif',
+            0 => 'Nonaktif',
+        ];
+
+        // Gabungkan semua ke dalam array untuk komponen filter
+        $selects = [
+            [
+                'name' => 'type',
+                'label' => 'Semua Tipe',
+                'options' => [
+                    'branch' => 'Cabang',
+                    'production' => 'Produksi',
+                ],
+            ],
+            [
+                'name' => 'is_active',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+        ];
         
-        return view('branches.index', compact('branches', 'sortColumn', 'sortDirection'));
+        return view('branches.index', compact('branches', 'sortColumn', 'sortDirection', 'selects'));
     }
 
     /**

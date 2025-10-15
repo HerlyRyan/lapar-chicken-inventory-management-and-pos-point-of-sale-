@@ -8,6 +8,7 @@ use App\Models\Role;
 use App\Models\Permission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -21,6 +22,23 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $query = User::with(['branch', 'roles']);
+
+        // for column selection
+        $columns = collect(Schema::getColumnListing('users'))
+            ->reject(fn($col) => in_array($col, ['id', 'password', 'remember_token', 'updated_at', 'created_at', 'avatar', 'phone', 'email_verified_at']))
+            ->values()
+            ->toArray();
+
+        // for labelling column
+        $labelMap = config('column_labels');
+
+        // add column relation
+        $columns = array_merge($columns, ['role_id']);
+
+        // Mapping columns to their labels
+        $columns = collect($columns)->mapWithKeys(fn($col) => [
+            $col => $labelMap[$col] ?? ucfirst(str_replace('_', ' ', $col))
+        ])->toArray();
 
         // Search filter
         if ($request->filled('search')) {
@@ -55,7 +73,7 @@ class UserController extends Controller
             ->pluck('name', 'id')
             ->toArray();
 
-        $roles = \App\Models\Role::where('is_active', true)
+        $roles = Role::where('is_active', true)
             ->orderBy('name')
             ->pluck('name', 'id')
             ->toArray();
@@ -84,7 +102,7 @@ class UserController extends Controller
             ],
         ];
 
-        return view('users.index', compact('users', 'selects'));
+        return view('users.index', compact('users', 'selects', 'columns'));
     }
 
     /**
@@ -113,7 +131,7 @@ class UserController extends Controller
             $phone = '62' . $phone;
         }
         $request->merge(['phone' => $phone]);
-        
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
@@ -145,7 +163,7 @@ class UserController extends Controller
         }
 
         $user = User::create($userData);
-        
+
         // Assign role to user
         $user->roles()->attach($request->role_id);
 
@@ -161,7 +179,7 @@ class UserController extends Controller
     public function show(User $user)
     {
         $user->load(['branch', 'roles.permissions']);
-        $permissions = Permission::orderBy('name')->get()->groupBy(function($item) {
+        $permissions = Permission::orderBy('name')->get()->groupBy(function ($item) {
             return explode(' ', $item->name)[0]; // Group by first word of permission name
         });
         return view('users.show', compact('user', 'permissions'));
@@ -195,7 +213,7 @@ class UserController extends Controller
             $phone = '62' . $phone;
         }
         $request->merge(['phone' => $phone]);
-        
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => [
@@ -234,7 +252,7 @@ class UserController extends Controller
             if ($user->avatar) {
                 Storage::disk('public')->delete($user->avatar);
             }
-            
+
             $avatar = $request->file('avatar');
             $filename = 'avatar_' . time() . '.' . $avatar->getClientOriginalExtension();
             $path = $avatar->storeAs('avatars', $filename, 'public');
@@ -242,7 +260,7 @@ class UserController extends Controller
         }
 
         $user->update($userData);
-        
+
         // Update user role
         $user->roles()->sync([$request->role_id]);
 

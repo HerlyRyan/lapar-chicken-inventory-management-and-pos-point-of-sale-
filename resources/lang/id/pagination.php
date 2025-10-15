@@ -12,7 +12,11 @@ return [
     |
     */
 
-    'previous' => '&laquo; Sebelumnya',
-    'next' => 'Selanjutnya &raquo;',
+    'previous' => 'Sebelumnya',
+    'next' => 'Berikutnya',
+    'Showing' => 'Menampilkan',
+    'to' => 'hingga',
+    'of' => 'dari',
+    'results' => 'hasil',
 
 ];
