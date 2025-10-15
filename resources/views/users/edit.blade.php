@@ -4,292 +4,438 @@
 @section('title', 'Edit Pengguna')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 fw-bold mb-1" style="color: var(--primary-red);">
-            <i class="bi bi-person-gear me-2"></i>Edit Pengguna
-        </h1>
-        <p class="text-muted mb-0">Edit data user: {{ $user->name }}</p>
-    </div>
-    <div class="d-flex gap-2">
-        <a href="{{ route('users.show', $user) }}" class="btn btn-outline-info">
-            <i class="bi bi-eye me-2"></i>Lihat Detail
-        </a>
-        <a href="{{ route('users.index') }}" class="btn btn-outline-primary">
-            <i class="bi bi-arrow-left me-2"></i>Kembali
-        </a>
-    </div>
-</div>
-
-<div class="row justify-content-center">
-    <div class="col-lg-8">
-        <div class="card border-0 shadow-lg">
-            <div class="card-header text-white text-center py-3" style="background: linear-gradient(135deg, #dc2626 0%, #ea580c 50%, #eab308 100%);">
-                <h5 class="mb-0 fw-bold">
-                    <i class="bi bi-pencil-square me-2"></i>Form Edit Pengguna
-                </h5>
-            </div>
-            <div class="card-body p-4">
-                @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                @endif
-
-                <form action="{{ route('users.update', $user) }}" method="POST" enctype="multipart/form-data" id="userForm" onsubmit="return preparePhoneNumber()">
-                    @csrf
-                    @method('PUT')
-                    <div class="row g-3">
-                        <div class="col-md-12">
-                            <label for="name" class="form-label fw-semibold">
-                                Nama Lengkap <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" name="name" id="name" class="form-control @error('name') is-invalid @enderror" 
-                                   value="{{ old('name', $user->name) }}" required placeholder="Masukkan nama lengkap">
-                            <div class="form-text">
-                                <i class="bi bi-info-circle me-1"></i>Nama lengkap pengguna
+    <div class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 py-6">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            {{-- Header Section --}}
+            <div class="mb-8">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div
+                                class="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
+                                <i class="bi bi-person-gear text-white text-lg"></i>
                             </div>
-                            @error('name')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="col-md-12">
-                            <label for="email" class="form-label fw-semibold">
-                                Email <span class="text-danger">*</span>
-                            </label>
-                            <input type="email" name="email" id="email" class="form-control @error('email') is-invalid @enderror" 
-                                   value="{{ old('email', $user->email) }}" required placeholder="Masukkan alamat email">
-                            <div class="form-text">
-                                <i class="bi bi-info-circle me-1"></i>Email untuk login dan komunikasi
-                            </div>
-                            @error('email')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="col-md-12">
-                            <label for="phone" class="form-label fw-semibold">
-                                Nomor Telepon <span class="text-danger">*</span>
-                            </label>
-                            <div class="input-group">
-                                <span class="input-group-text">62</span>
-                                <input type="text" name="phone" id="phone" class="form-control @error('phone') is-invalid @enderror" 
-                                       value="{{ old('phone', ltrim($user->phone, '62')) }}" required placeholder="813xxxxxxxx" 
-                                       oninput="formatPhoneNumber(this)" maxlength="15">
-                            </div>
-                            <div class="form-text">
-                                <i class="bi bi-info-circle me-1"></i>Format: 62 diikuti 8-13 digit angka (untuk WhatsApp)
-                            </div>
-                            @error('phone')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="col-md-12">
-                            <label for="avatar" class="form-label fw-semibold">
-                                Foto Profil
-                            </label>
-                            <input type="file" name="avatar" id="avatar" class="form-control @error('avatar') is-invalid @enderror" 
-                                   accept="image/*" onchange="previewAvatar(this)">
-                            <div class="form-text">
-                                <i class="bi bi-info-circle me-1"></i>Format: JPEG, PNG, JPG, GIF. Maksimal 2MB
-                            </div>
-                            @error('avatar')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <div class="mt-2">
-                                @if($user->avatar)
-                                    <div class="current-avatar mb-2">
-                                        <small class="text-muted">Foto saat ini:</small><br>
-                                        <img src="{{ Storage::url($user->avatar) }}" alt="Current Avatar" class="img-thumbnail" style="max-width: 150px;">
-                                    </div>
-                                @endif
-                                <div id="new-avatar-container" style="display: none;" class="mt-2">
-                                    <small class="text-muted">Foto baru:</small><br>
-                                    <img id="avatar-preview" src="#" alt="Preview Foto Baru" class="img-thumbnail" style="max-width: 150px;">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="password" class="form-label fw-semibold">Kata Sandi Baru</label>
-                            <input type="password" name="password" id="password" class="form-control @error('password') is-invalid @enderror" 
-                                   placeholder="Kosongkan jika tidak ingin mengubah password">
-                            <div class="form-text">
-                                <i class="bi bi-info-circle me-1"></i>Minimal 8 karakter (kosongkan jika tidak ingin mengubah)
-                            </div>
-                            @error('password')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="password_confirmation" class="form-label fw-semibold">Konfirmasi Kata Sandi Baru</label>
-                            <input type="password" name="password_confirmation" id="password_confirmation" class="form-control" 
-                                   placeholder="Ulangi password baru">
-                            <div class="form-text">
-                                <i class="bi bi-info-circle me-1"></i>Konfirmasi password yang sama
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="branch_id" class="form-label fw-semibold">Cabang</label>
-                            <select name="branch_id" id="branch_id" class="form-select @error('branch_id') is-invalid @enderror">
-                                <option value="">- Pilih Cabang -</option>
-                                @foreach($branches as $branch)
-                                    <option value="{{ $branch->id }}" {{ old('branch_id', $user->branch_id) == $branch->id ? 'selected' : '' }}>
-                                        {{ $branch->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <div class="form-text">
-                                <i class="bi bi-info-circle me-1"></i>Cabang tempat user bekerja
-                            </div>
-                            @error('branch_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Role <span class="text-danger">*</span></label>
-                            <div class="border rounded p-3 @error('role_id') is-invalid @enderror" style="max-height: 200px; overflow-y: auto;">
-                                @foreach($roles as $role)
-                                    <div class="form-check mb-2">
-                                        <input type="radio" name="role_id" id="role_{{ $role->id }}" class="form-check-input" 
-                                               value="{{ $role->id }}" 
-                                               {{ old('role_id', $user->roles->first()?->id) == $role->id ? 'checked' : '' }}>
-                                        <label class="form-check-label fw-semibold" for="role_{{ $role->id }}">
-                                            {{ $role->name }}
-                                        </label>
-                                        @if($role->description)
-                                            <div class="form-text small text-muted ms-3">
-                                                {{ $role->description }}
-                                            </div>
-                                        @endif
-                                    </div>
-                                @endforeach
-                            </div>
-                            <div class="form-text">
-                                <i class="bi bi-info-circle me-1"></i>Pilih satu role untuk user ini
-                            </div>
-                            @error('role_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="col-md-12">
-                            <div class="form-check">
-                                <input type="checkbox" name="is_active" id="is_active" class="form-check-input" 
-                                       value="1" {{ old('is_active', $user->is_active) ? 'checked' : '' }}>
-                                <label class="form-check-label fw-semibold" for="is_active">
-                                    Pengguna Aktif
-                                </label>
-                                <div class="form-text">
-                                    <i class="bi bi-info-circle me-1"></i>Centang untuk mengaktifkan user
-                                </div>
+                            <div>
+                                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">
+                                    Edit Pengguna
+                                </h1>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Edit data user: <span class="font-semibold text-gray-800">{{ $user->name }}</span>
+                                </p>
                             </div>
                         </div>
                     </div>
-
-                    <hr class="my-4" style="border-color: var(--primary-orange); opacity: 0.3;">
-
-                    <div class="d-flex justify-content-end gap-2">
-                        <a href="{{ route('users.index') }}" class="btn btn-outline-secondary px-4">
-                            Batal
+                    <div class="flex-shrink-0 flex gap-3">
+                        <a href="{{ route('users.show', $user) }}"
+                            class="inline-flex items-center px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-xl text-sm font-medium text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md">
+                            <i class="bi bi-eye mr-2"></i>
+                            Lihat Detail
                         </a>
-                        <button type="submit" class="btn btn-success px-5">
-                            Update
-                        </button>
+                        <a href="{{ route('users.index') }}"
+                            class="inline-flex items-center px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm hover:shadow-md">
+                            <i class="bi bi-arrow-left mr-2"></i>
+                            Kembali
+                        </a>
                     </div>
-                </form>
+                </div>
+            </div>
+
+            {{-- Main Form Card --}}
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+                {{-- Card Header --}}
+                <div class="bg-gradient-to-r from-orange-600 via-orange-700 to-red-700 px-6 py-6">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center mr-3">
+                            <i class="bi bi-pencil-square text-white"></i>
+                        </div>
+                        <h2 class="text-xl font-bold text-white">Form Edit Pengguna</h2>
+                    </div>
+                </div>
+
+                {{-- Card Body --}}
+                <div class="p-6 sm:p-8">
+                    {{-- Success Alert --}}
+                    @if (session('success'))
+                        <div class="mb-6 bg-green-50 border border-green-200 rounded-xl p-4">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                    <i class="bi bi-check-circle text-green-600"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-green-800 font-medium">{{ session('success') }}</p>
+                                </div>
+                                <button type="button" class="text-green-400 hover:text-green-600"
+                                    onclick="this.parentElement.parentElement.parentElement.remove()">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                    @endif
+
+                    <form action="{{ route('users.update', $user) }}" method="POST" enctype="multipart/form-data" id="userForm"
+                        onsubmit="return preparePhoneNumber()">
+                        @csrf
+                        @method('PUT')
+
+                        {{-- Personal Information Section --}}
+                        <div class="mb-8">
+                            <div class="flex items-center mb-6">
+                                <div
+                                    class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="bi bi-person text-white text-sm"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900">Informasi Personal</h3>
+                            </div>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {{-- Full Name --}}
+                                <div class="lg:col-span-2">
+                                    <label for="name" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Nama Lengkap <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="text" name="name" id="name"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('name') border-red-300 ring-2 ring-red-200 @enderror"
+                                        value="{{ old('name', $user->name) }}" required placeholder="Masukkan nama lengkap">
+                                    <p class="mt-2 text-sm text-gray-600">
+                                        <i class="bi bi-info-circle mr-1"></i>Nama lengkap pengguna
+                                    </p>
+                                    @error('name')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                {{-- Email --}}
+                                <div>
+                                    <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Email <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="email" name="email" id="email"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('email') border-red-300 ring-2 ring-red-200 @enderror"
+                                        value="{{ old('email', $user->email) }}" required placeholder="nama@contoh.com">
+                                    <p class="mt-2 text-sm text-gray-600">
+                                        <i class="bi bi-info-circle mr-1"></i>Email untuk login dan komunikasi
+                                    </p>
+                                    @error('email')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                {{-- Phone Number --}}
+                                <div>
+                                    <label for="phone" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Nomor Telepon <span class="text-red-500">*</span>
+                                    </label>
+                                    <div
+                                        class="flex rounded-xl border focus-within:ring-2 focus-within:ring-orange-500 focus-within:border-orange-500 transition-all duration-200 @error('phone') border-red-300 ring-2 ring-red-200 @enderror">
+                                        <span
+                                            class="inline-flex items-center px-4 text-gray-500 bg-gray-50 border-r border-gray-300 rounded-l-xl text-sm font-medium">
+                                            +62
+                                        </span>
+                                        <input type="text" name="phone" id="phone"
+                                            class="flex-1 px-4 py-3 border-0 rounded-r-xl focus:ring-0 focus:outline-none"
+                                            value="{{ old('phone', ltrim($user->phone, '62')) }}" required placeholder="813xxxxxxxx"
+                                            oninput="formatPhoneNumber(this)" maxlength="15">
+                                    </div>
+                                    <p class="mt-2 text-sm text-gray-600">
+                                        <i class="bi bi-info-circle mr-1"></i>Format: 8-13 digit angka (untuk WhatsApp)
+                                    </p>
+                                    @error('phone')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Security Section --}}
+                        <div class="mb-8">
+                            <div class="flex items-center mb-6">
+                                <div
+                                    class="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="bi bi-shield-lock text-white text-sm"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900">Keamanan</h3>
+                            </div>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {{-- Password --}}
+                                <div>
+                                    <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Kata Sandi Baru
+                                    </label>
+                                    <input type="password" name="password" id="password"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('password') border-red-300 ring-2 ring-red-200 @enderror"
+                                        placeholder="Kosongkan jika tidak ingin mengubah">
+                                    <p class="mt-2 text-sm text-gray-600">
+                                        <i class="bi bi-info-circle mr-1"></i>Minimal 8 karakter (kosongkan jika tidak ingin mengubah)
+                                    </p>
+                                    @error('password')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                {{-- Password Confirmation --}}
+                                <div>
+                                    <label for="password_confirmation"
+                                        class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Konfirmasi Kata Sandi Baru
+                                    </label>
+                                    <input type="password" name="password_confirmation" id="password_confirmation"
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
+                                        placeholder="Ulangi password baru">
+                                    <p class="mt-2 text-sm text-gray-600">
+                                        <i class="bi bi-info-circle mr-1"></i>Konfirmasi password yang sama
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Role & Branch Section --}}
+                        <div class="mb-8">
+                            <div class="flex items-center mb-6">
+                                <div
+                                    class="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="bi bi-person-gear text-white text-sm"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900">Role & Cabang</h3>
+                            </div>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {{-- Branch --}}
+                                <div>
+                                    <label for="branch_id" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Cabang
+                                    </label>
+                                    <select name="branch_id" id="branch_id"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('branch_id') border-red-300 ring-2 ring-red-200 @enderror">
+                                        <option value="">- Pilih Cabang -</option>
+                                        @foreach ($branches as $branch)
+                                            <option value="{{ $branch->id }}"
+                                                {{ old('branch_id', $user->branch_id) == $branch->id ? 'selected' : '' }}>
+                                                {{ $branch->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <p class="mt-2 text-sm text-gray-600">
+                                        <i class="bi bi-info-circle mr-1"></i>Cabang tempat user bekerja
+                                    </p>
+                                    @error('branch_id')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                {{-- Role --}}
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Role <span class="text-red-500">*</span>
+                                    </label>
+                                    <div
+                                        class="border rounded-xl p-4 max-h-48 overflow-y-auto bg-gray-50 @error('role_id') border-red-300 ring-2 ring-red-200 @enderror">
+                                        @foreach ($roles as $role)
+                                            <div class="flex items-start mb-3 last:mb-0">
+                                                <input type="radio" name="role_id" id="role_{{ $role->id }}"
+                                                    class="mt-1 w-4 h-4 text-orange-600 border-gray-300 focus:ring-orange-500"
+                                                    value="{{ $role->id }}"
+                                                    {{ old('role_id', $user->roles->first()?->id) == $role->id ? 'checked' : '' }}>
+                                                <label class="ml-3 flex-1" for="role_{{ $role->id }}">
+                                                    <span
+                                                        class="block text-sm font-semibold text-gray-900">{{ $role->name }}</span>
+                                                    @if ($role->description)
+                                                        <span
+                                                            class="block text-xs text-gray-600 mt-1">{{ $role->description }}</span>
+                                                    @endif
+                                                </label>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    <p class="mt-2 text-sm text-gray-600">
+                                        <i class="bi bi-info-circle mr-1"></i>Pilih satu role untuk user ini
+                                    </p>
+                                    @error('role_id')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Profile Photo Section --}}
+                        <div class="mb-8">
+                            <div class="flex items-center mb-6">
+                                <div
+                                    class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="bi bi-image text-white text-sm"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900">Foto Profil</h3>
+                            </div>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                                {{-- File Input --}}
+                                <div>
+                                    <label for="avatar" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Upload Foto Baru
+                                    </label>
+                                    <input type="file" name="avatar" id="avatar"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('avatar') border-red-300 ring-2 ring-red-200 @enderror"
+                                        accept="image/*" onchange="previewAvatar(this)">
+                                    <p class="mt-2 text-sm text-gray-600">
+                                        <i class="bi bi-info-circle mr-1"></i>Format: JPEG, PNG, JPG, GIF. Maksimal 2MB
+                                    </p>
+                                    @error('avatar')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                {{-- Current & New Photo Preview --}}
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Foto Saat Ini & Preview
+                                    </label>
+                                    
+                                    {{-- Current Photo --}}
+                                    @if($user->avatar)
+                                        <div class="mb-4">
+                                            <p class="text-xs text-gray-500 mb-2">Foto saat ini:</p>
+                                            <div class="w-full h-32 bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
+                                                <img src="{{ Storage::url($user->avatar) }}" alt="Current Avatar" 
+                                                     class="w-full h-full object-cover">
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    {{-- New Photo Preview --}}
+                                    <div id="new-avatar-container" 
+                                         class="{{ $user->avatar ? '' : 'mt-0' }}">
+                                        <p class="text-xs text-gray-500 mb-2" id="preview-label" 
+                                           style="{{ $user->avatar ? 'display: none;' : '' }}">
+                                            {{ $user->avatar ? 'Foto baru:' : 'Preview foto:' }}
+                                        </p>
+                                        <div class="w-full h-32 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center overflow-hidden"
+                                             id="avatar-preview-container">
+                                            <div class="text-center text-gray-500" id="avatar-preview-text">
+                                                <i class="bi bi-person-circle text-3xl mb-1 block"></i>
+                                                <span class="text-xs">{{ $user->avatar ? 'Preview foto baru' : 'Preview foto akan tampil di sini' }}</span>
+                                            </div>
+                                            <img id="avatar-preview" src="#" alt="Preview Foto Baru"
+                                                 class="hidden w-full h-full object-cover">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Status Section --}}
+                        <div class="mb-8">
+                            <div class="flex items-center mb-6">
+                                <div
+                                    class="w-8 h-8 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="bi bi-toggle-on text-white text-sm"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900">Status</h3>
+                            </div>
+
+                            <div class="bg-gray-50 rounded-xl p-4">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="checkbox" name="is_active" id="is_active"
+                                        class="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                                        value="1" {{ old('is_active', $user->is_active) ? 'checked' : '' }}>
+                                    <span class="ml-3">
+                                        <span class="text-sm font-semibold text-gray-900">Pengguna Aktif</span>
+                                        <span class="block text-xs text-gray-600 mt-1">
+                                            <i class="bi bi-info-circle mr-1"></i>Centang untuk mengaktifkan user
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {{-- Form Actions --}}
+                        <div class="border-t border-gray-200 pt-6">
+                            <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
+                                <a href="{{ route('users.index') }}"
+                                    class="inline-flex items-center justify-center px-6 py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm hover:shadow-md">
+                                    Batal
+                                </a>
+                                <button type="submit"
+                                    class="inline-flex items-center justify-center px-8 py-3 bg-gradient-to-r from-orange-600 to-red-600 border border-transparent rounded-xl text-sm font-medium text-white hover:from-orange-700 hover:to-red-700 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                                    <i class="bi bi-check-circle mr-2"></i>
+                                    Update Pengguna
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
 @endsection
 
-@section('styles')
-<style>
-    :root {
-        --primary-red: #dc2626;
-        --primary-orange: #ea580c;
-        --primary-yellow: #eab308;
-    }
-    
-    .btn-primary {
-        background: linear-gradient(135deg, var(--primary-red) 0%, var(--primary-orange) 50%, var(--primary-yellow) 100%);
-        border: none;
-        transition: all 0.3s ease;
-    }
-    
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-        background: linear-gradient(135deg, #b91c1c 0%, #c2410c 50%, #ca8a04 100%);
-    }
-</style>
+@push('scripts')
+    <script>
+        // Preview avatar image when selected
+        function previewAvatar(input) {
+            const file = input.files[0];
+            const preview = document.getElementById('avatar-preview');
+            const previewText = document.getElementById('avatar-preview-text');
+            const previewLabel = document.getElementById('preview-label');
 
-<script>
-function previewAvatar(input) {
-    if (input.files && input.files[0]) {
-        var reader = new FileReader();
-        var container = document.getElementById('new-avatar-container');
-        var preview = document.getElementById('avatar-preview');
-        
-        reader.onload = function(e) {
-            preview.src = e.target.result;
-            container.style.display = 'block';
-        }
-        reader.readAsDataURL(input.files[0]);
-    }
-}
-
-// Format phone number to ensure it contains only digits
-function formatPhoneNumber(input) {
-    // Remove any non-numeric characters
-    let value = input.value.replace(/\D/g, '');
-    
-    // Ensure it's only digits
-    input.value = value;
-    
-    // Update the form field with the formatted value
-    if (value.length > 0) {
-        // Check if it meets the pattern (8-13 digits)
-        const isValid = /^\d{8,13}$/.test(value);
-        
-        // Visual feedback
-        if (isValid) {
-            input.classList.remove('is-invalid');
-            input.classList.add('is-valid');
-        } else {
-            input.classList.remove('is-valid');
-            if (value.length > 0) {
-                input.classList.add('is-invalid');
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.classList.remove('hidden');
+                    previewText.classList.add('hidden');
+                    previewLabel.style.display = 'block';
+                    previewLabel.textContent = 'Foto baru:';
+                };
+                reader.readAsDataURL(file);
             } else {
-                input.classList.remove('is-invalid');
+                preview.classList.add('hidden');
+                previewText.classList.remove('hidden');
+                previewLabel.style.display = @if($user->avatar) 'none' @else 'block' @endif;
+                preview.src = '#';
             }
         }
-    } else {
-        input.classList.remove('is-valid');
-        input.classList.remove('is-invalid');
-    }
-}
 
-// Prepare the phone number before form submission
-function preparePhoneNumber() {
-    const phoneInput = document.getElementById('phone');
-    if (phoneInput && phoneInput.value) {
-        // Create a hidden input to store the full number with 62 prefix
-        const hiddenInput = document.createElement('input');
-        hiddenInput.type = 'hidden';
-        hiddenInput.name = 'full_phone';
-        hiddenInput.value = '62' + phoneInput.value;
-        
-        // Replace the original phone value with the full number
-        phoneInput.value = '62' + phoneInput.value;
-    }
-    return true;
-}
-</script>
+        // Format phone number to ensure it contains only digits
+        function formatPhoneNumber(input) {
+            // Remove any non-numeric characters
+            let value = input.value.replace(/\D/g, '');
+
+            // Ensure it's only digits
+            input.value = value;
+
+            // Update the form field with the formatted value
+            if (value.length > 0) {
+                // Check if it meets the pattern (8-13 digits)
+                const isValid = /^\d{8,13}$/.test(value);
+
+                // Visual feedback with Tailwind classes
+                const parentDiv = input.closest('.flex');
+                if (isValid) {
+                    parentDiv.classList.remove('border-red-300', 'ring-2', 'ring-red-200');
+                    parentDiv.classList.add('border-green-300', 'ring-2', 'ring-green-200');
+                } else {
+                    parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200');
+                    if (value.length > 0) {
+                        parentDiv.classList.add('border-red-300', 'ring-2', 'ring-red-200');
+                    } else {
+                        parentDiv.classList.remove('border-red-300', 'ring-2', 'ring-red-200');
+                    }
+                }
+            } else {
+                const parentDiv = input.closest('.flex');
+                parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200', 'border-red-300', 'ring-2',
+                    'ring-red-200');
+            }
+        }
+
+        // Prepare the phone number before form submission
+        function preparePhoneNumber() {
+            const phoneInput = document.getElementById('phone');
+            if (phoneInput && phoneInput.value) {
+                // Replace the original phone value with the full number
+                phoneInput.value = '62' + phoneInput.value;
+            }
+            return true;
+        }
+    </script>
+@endpush

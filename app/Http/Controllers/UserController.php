@@ -23,10 +23,10 @@ class UserController extends Controller
         $query = User::with(['branch', 'roles']);
 
         // Search filter
-        if ($request->filled('q')) {
+        if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->q . '%')
-                  ->orWhere('email', 'like', '%' . $request->q . '%');
+                $q->where('name', 'like', '%' . $request->search . '%')
+                    ->orWhere('email', 'like', '%' . $request->search . '%');
             });
         }
 
@@ -48,9 +48,43 @@ class UserController extends Controller
         }
 
         $users = $query->paginate(10);
-        $branches = Branch::where('is_active', true)->orderBy('name')->get();
 
-        return view('users.index', compact('users', 'branches'));
+        // Ambil data untuk filter dari database
+        $branches = Branch::where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->toArray();
+
+        $roles = \App\Models\Role::where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->toArray();
+
+        $statuses = [
+            1 => 'Aktif',
+            0 => 'Nonaktif',
+        ];
+
+        // Gabungkan semua ke dalam array untuk komponen filter
+        $selects = [
+            [
+                'name' => 'branch_id',
+                'label' => 'Semua Cabang',
+                'options' => $branches,
+            ],
+            [
+                'name' => 'role_id',
+                'label' => 'Semua Role',
+                'options' => $roles,
+            ],
+            [
+                'name' => 'is_active',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+        ];
+
+        return view('users.index', compact('users', 'selects'));
     }
 
     /**
