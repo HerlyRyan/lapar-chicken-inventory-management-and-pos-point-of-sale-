@@ -78,6 +78,9 @@
             ]"
             :pagination="$roles"
             :searchable="false"
+            :sortable="true"
+            :sortColumn="request('sort', 'name')"
+            :sortDirection="request('direction', 'asc')"
         >
                     @forelse($roles as $role)
                     <tr>
@@ -105,7 +108,7 @@
                             @endif
                         </td>
                         <td class="text-center">
-                            <x-action-buttons
+                            <x-index.action-buttons
                                 :viewUrl="route('roles.show', $role)" 
                                 :editUrl="!$role->isPrimarySuperAdmin() ? route('roles.edit', $role) : null"
                                 :deleteUrl="!$role->isPrimarySuperAdmin() ? route('roles.destroy', $role) : null" 

@@ -6,9 +6,9 @@ use App\Models\User;
 use App\Models\Branch;
 use App\Models\Role;
 use App\Models\Permission;
+use App\Traits\TableFilterTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -19,51 +19,20 @@ class UserController extends Controller
      *
      * @return \Illuminate\Contracts\View\View
      */
-    public function index(Request $request)
+    use TableFilterTrait;
+
+    public function index()
     {
         $query = User::with(['branch', 'roles']);
 
         // for column selection
-        $columns = collect(Schema::getColumnListing('users'))
-            ->reject(fn($col) => in_array($col, ['id', 'password', 'remember_token', 'updated_at', 'created_at', 'avatar', 'phone', 'email_verified_at']))
-            ->values()
-            ->toArray();
-
-        // for labelling column
-        $labelMap = config('column_labels');
-
-        // add column relation
-        $columns = array_merge($columns, ['role_id']);
-
-        // Mapping columns to their labels
-        $columns = collect($columns)->mapWithKeys(fn($col) => [
-            $col => $labelMap[$col] ?? ucfirst(str_replace('_', ' ', $col))
-        ])->toArray();
-
-        // Search filter
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                    ->orWhere('email', 'like', '%' . $request->search . '%');
-            });
-        }
-
-        // Branch filter
-        if ($request->filled('branch_id')) {
-            $query->where('branch_id', $request->branch_id);
-        }
-
-        // Role filter
-        if ($request->filled('role_id')) {
-            $query->whereHas('roles', function ($q) use ($request) {
-                $q->where('roles.id', $request->role_id);
-            });
-        }
-
-        // Status filter
-        if ($request->filled('is_active')) {
-            $query->where('is_active', $request->is_active);
-        }
+        $columns = [
+            ['key' => 'name', 'label' => 'Nama'],
+            ['key' => 'email', 'label' => 'Email'],
+            ['key' => 'branch', 'label' => 'Cabang'],
+            ['key' => 'role', 'label' => 'Role'],
+            ['key' => 'is_active', 'label' => 'Status'],
+        ];
 
         $users = $query->paginate(10);
 
@@ -83,7 +52,7 @@ class UserController extends Controller
             0 => 'Nonaktif',
         ];
 
-        // Gabungkan semua ke dalam array untuk komponen filter
+        // Array untuk komponen filter
         $selects = [
             [
                 'name' => 'branch_id',
@@ -102,7 +71,12 @@ class UserController extends Controller
             ],
         ];
 
-        return view('users.index', compact('users', 'selects', 'columns'));
+        return view('users.index', [
+            'users' => $users->items(),
+            'selects' => $selects,
+            'columns' => $columns,
+            'pagination' => $users, // tetap simpan pagination untuk tampilkan links
+        ]);
     }
 
     /**

@@ -27,7 +27,7 @@
 
 <body class="min-h-screen bg-orange-50 text-gray-800">
     {{-- Success Alert --}}
-    <x-toast/>
+    <x-toast />
     <div x-data="{
         sidebarOpen: false,
         handleResize() {
@@ -51,42 +51,55 @@
 </body>
 
 {{-- Delete Confirmation Modal --}}
-@if (auth()->check() && isset($user) && auth()->id() !== $user->id)
 <div id="deleteModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
         <div class="p-6 text-center">
             <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4
+                           c-.77-.833-1.732-.833-2.464 0L4.732 16.5
+                           c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
             </div>
             <h3 class="text-xl font-bold text-gray-800 mb-2">Konfirmasi Penghapusan</h3>
-            <p class="text-gray-600 mb-6">
-                Apakah Anda yakin ingin menghapus pengguna <strong>{{ $user->name ?? '' }}</strong>?
-                Tindakan ini tidak dapat dibatalkan.
+            <p id="deleteMessage" class="text-gray-600 mb-6">
+                Apakah Anda yakin ingin menghapus data ini?
             </p>
             <div class="flex space-x-3">
-                <button onclick="closeDeleteModal()" class="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl font-medium transition-colors">
+                <button type="button" onclick="closeDeleteModal()"
+                    class="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl font-medium transition-colors">
                     Batal
                 </button>
-                @if (isset($user))
-                <form action="{{ route('users.destroy', $user) }}" method="POST" class="flex-1">
+
+                <form id="deleteForm" method="POST" class="flex-1">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors">
+                    <button type="submit"
+                        class="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors">
                         Hapus
                     </button>
                 </form>
-                @endif
             </div>
         </div>
     </div>
-</div> @endif
+</div>
 
 <script>
-    function confirmDelete() {
+    function confirmDelete(url, name = 'data ini') {
         const modal = document.getElementById('deleteModal');
+        const form = document.getElementById('deleteForm');
+        const message = document.getElementById('deleteMessage');
+
+        if (!modal || !form) {
+            console.error('Modal konfirmasi tidak ditemukan');
+            return;
+        }
+
+        // Update action dan pesan
+        form.action = url;
+        message.innerHTML = `Apakah Anda yakin ingin menghapus <strong>${name}</strong>?`;
+
+        // Tampilkan modal
         modal.classList.remove('hidden');
         modal.classList.add('flex');
     }
@@ -97,12 +110,11 @@
         modal.classList.remove('flex');
     }
 
-    // Close modal on escape key
+    // Tutup modal dengan tombol Escape
     document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            closeDeleteModal();
-        }
+        if (event.key === 'Escape') closeDeleteModal();
     });
 </script>
+
 
 </html>

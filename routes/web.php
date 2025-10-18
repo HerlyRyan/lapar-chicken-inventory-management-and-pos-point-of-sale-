@@ -71,6 +71,8 @@ Route::redirect('/dashboard/index', '/dashboard')->name('dashboard.index');
 
 // User and Role Management
 Route::resource('users', UserController::class);
+Route::get('/users/data', [UserController::class, 'data'])->name('users.data'); // untuk ajax
+
 Route::resource('roles', RoleController::class);
 Route::resource('permissions', PermissionController::class);
 

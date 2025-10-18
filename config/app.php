@@ -15,7 +15,7 @@ return [
     |
     */
 
-'name' => env('APP_NAME', 'Lapar Chicken InvetPOS'),
+    'name' => env('APP_NAME', 'Lapar Chicken InvetPOS'),
 
     /*
     |--------------------------------------------------------------------------
@@ -180,6 +180,7 @@ return [
         Illuminate\Translation\TranslationServiceProvider::class,
         Illuminate\Validation\ValidationServiceProvider::class,
         Illuminate\View\ViewServiceProvider::class,
+        Yajra\DataTables\DataTablesServiceProvider::class,
 
         /*
          * Package Service Providers...

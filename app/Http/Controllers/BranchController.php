@@ -19,6 +19,16 @@ class BranchController extends Controller
     public function index()
     {
         $query = Branch::query();
+
+        // For column selection
+        $columns = [
+            ['key' => 'name', 'label' => 'Nama Cabang'],
+            ['key' => 'code', 'label' => 'Kode'],
+            ['key' => 'type', 'label' => 'Tipe'],
+            ['key' => 'address', 'label' => 'Alamat'],
+            ['key' => 'phone', 'label' => 'Telepon'],
+            ['key' => 'is_active', 'label' => 'Status'],
+        ];
         
         // Define searchable and sortable columns
         $searchableColumns = ['name', 'address', 'phone', 'code'];
@@ -71,7 +81,7 @@ class BranchController extends Controller
             ],
         ];
         
-        return view('branches.index', compact('branches', 'sortColumn', 'sortDirection', 'selects'));
+        return view('branches.index', compact('branches', 'sortColumn', 'sortDirection', 'selects', 'columns'));
     }
 
     /**
