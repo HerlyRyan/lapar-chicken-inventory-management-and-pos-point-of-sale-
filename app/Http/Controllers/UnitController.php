@@ -12,28 +12,68 @@ class UnitController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $query = Unit::query();
-        
-        // Define searchable and sortable columns
-        $searchableColumns = ['unit_name', 'abbreviation', 'description'];
-        $sortableColumns = ['unit_name', 'abbreviation', 'created_at', 'updated_at'];
-        
-        // Apply the standard filtering, sorting, and pagination
-        $units = $this->applyFilterSortPaginate(
-            $query, 
-            $searchableColumns, 
-            $sortableColumns, 
-            'unit_name', // default sort column
-            'asc'       // default sort direction
-        );
-        
-        // Get current sort parameters for the view
-        $sortColumn = request('sort', 'unit_name');
-        $sortDirection = request('direction', 'asc');
-        
-        return view('units.index', compact('units', 'sortColumn', 'sortDirection'));
+
+        // for column selection
+        $columns = [
+            ['key' => 'unit_name', 'label' => 'Nama Satuan'],
+            ['key' => 'abbreviation', 'label' => 'Singkatan'],
+            ['key' => 'description', 'label' => 'Deskripsi'],
+            ['key' => 'is_active', 'label' => 'Status'],
+        ];
+
+        // Search global
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('unit_name', 'like', "%{$search}%")
+                    ->orWhere('abbreviation', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter status
+        if ($status = $request->get('is_active')) {
+            $query->where('is_active', $status);
+        }
+
+        // Sorting
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $units */
+        $units = $query->paginate(10);
+
+        $statuses = [
+            1 => 'Aktif',
+            0 => 'Nonaktif',
+        ];
+
+        // Array untuk komponen filter
+        $selects = [
+            [
+                'name' => 'is_active',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+        ];
+
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $units->items(),
+                'links' => (string) $units->links('vendor.pagination.tailwind'),
+            ]);
+        }
+
+        return view('units.index', [
+            'units' => $units->items(),
+            'selects' => $selects,
+            'columns' => $columns,
+            'pagination' => $units, // tetap simpan pagination untuk tampilkan links
+        ]);
     }
 
     /**

@@ -247,7 +247,11 @@
                     </template>
                 </div>
 
-                {{ $pagination->links('vendor.pagination.tailwind') }}
+                <template x-if="sortedRows.length !== 0">
+                    <div class="pagination-wrapper">
+                        {{ $pagination->links('vendor.pagination.tailwind') }}
+                    </div>
+                </template>
             </div>
         </div>
     </div>

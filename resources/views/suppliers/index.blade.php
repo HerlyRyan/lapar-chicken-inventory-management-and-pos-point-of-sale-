@@ -1,219 +1,186 @@
 @extends('layouts.app')
 
-@section('title', 'Supplier')
+@section('title', 'Data Supplier')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 fw-bold mb-1" style="color: var(--primary-red);">
-            <i class="bi bi-building-fill-gear me-2"></i>Supplier
-        </h1>
-        <p class="text-muted mb-0">Kelola data supplier bahan mentah</p>
-    </div>
-    <a href="{{ route('suppliers.create') }}" class="btn btn-primary shadow px-4 d-flex align-items-center" style="min-width: 160px; white-space: nowrap;">
-        <i class="bi bi-plus-circle me-2"></i>
-        <span>Tambah Supplier</span>
-    </a>
-</div>
+    <div class="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30">
+        {{-- Page Header --}}
+        <x-index.header title="Supplier" subtitle="Kelola data supplier bahan mentah"
+            addRoute="{{ route('suppliers.create') }}" addText="Tambah Supplier" />
 
-<div class="card border-0 shadow-lg" style="max-width: 100%; overflow-x: hidden;">
-    <div class="card-header text-white py-3" style="background: linear-gradient(135deg, #dc2626 0%, #ea580c 50%, #eab308 100%);">
-        <h5 class="mb-0 fw-bold">
-            <i class="bi bi-list-ul me-2"></i>Daftar Supplier
-        </h5>
-    </div>
-    <div class="card-body">
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+        {{-- Main Content --}}
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+            <div x-data="sortableTable(@js($suppliers))" @sort-column.window="sortBy($event.detail)"
+                class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
+                {{-- Card Header --}}
+                <x-index.card-header title="Daftar Supplier" />
 
-        @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+                {{-- Filter Section --}}
+                <x-filter-bar searchPlaceholder="Cari nama, kode, atau alamat supplier..." :selects="$selects" />
 
-        <!-- Search Filter -->
-        <form method="GET" action="{{ route('suppliers.index') }}" class="row g-3 mb-4 table-filter-form">
-            <div class="col-md-6">
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama, kode, atau alamat supplier..." class="form-control">
+                {{-- Desktop Table --}}
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <x-index.table-head :columns="$columns" />
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template x-for="(supplier, index) in sortedRows" :key="supplier.id">
+                                <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="index + 1"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+                                        x-text="supplier.code"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-medium text-gray-900" x-text="supplier.name"></div>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-900">
+                                        <div class="max-w-xs truncate" :title="supplier.address" x-text="supplier.address">
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <div class="flex items-center gap-2">
+                                            <span x-text="supplier.phone"></span>
+                                            <template x-if="supplier.phone">
+                                                <div class="flex gap-1">
+                                                    <a :href="'tel:+' + supplier.phone"
+                                                        class="inline-flex items-center justify-center w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-sm transition-all duration-200"
+                                                        title="Telepon">
+                                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path
+                                                                d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                                                        </svg>
+                                                    </a>
+                                                    <a :href="'https://wa.me/' + supplier.phone" target="_blank"
+                                                        class="inline-flex items-center justify-center w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-sm transition-all duration-200"
+                                                        title="WhatsApp">
+                                                        <x-whatsapp-logo />
+                                                    </a>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <template x-if="supplier.is_active">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <div class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+                                                Aktif
+                                            </span>
+                                        </template>
+                                        <template x-if="!supplier.is_active">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                <div class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
+                                                Tidak Aktif
+                                            </span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <div x-data="{
+                                            viewUrl: '/suppliers/' + supplier.id,
+                                            editUrl: '/suppliers/' + supplier.id + '/edit',
+                                            deleteUrl: '/suppliers/' + supplier.id,
+                                            toggleUrl: '/suppliers/' + supplier.id + '/toggle-status',
+                                            itemName: 'supplier ' + supplier.name,
+                                            isActive: supplier.is_active
+                                        }">
+                                            <x-index.action-buttons :view="true" :edit="true" :delete="true"
+                                                :toggle="true" />
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-if="sortedRows.length === 0">
+                                <x-index.none-data />
+                            </template>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <select name="status" class="form-select">
-                    <option value="all">Semua Status</option>
-                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Aktif</option>
-                    <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Tidak Aktif</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-outline-primary">
-                        <i class="bi bi-filter me-1"></i>Filter
-                    </button>
-                    @if(request('search') || request('status') != 'all')
-                        <a href="{{ route('suppliers.index') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-clockwise me-1"></i>Reset
-                        </a>
-                    @endif
-                </div>
-            </div>
-        </form>
 
-        <!-- Table with sortable columns -->
-        <div class="table-responsive">
-            <table class="table table-hover table-striped standard-table mb-0">
-                <thead>
-                    <tr>
-                        <th width="80px">{!! sortColumn('code', 'Kode', $sortColumn, $sortDirection) !!}</th>
-                        <th width="180px">{!! sortColumn('name', 'Nama', $sortColumn, $sortDirection) !!}</th>
-                        <th width="250px">Alamat</th>
-                        <th width="130px">{!! sortColumn('phone', 'No. Telepon', $sortColumn, $sortDirection) !!}</th>
-                        <th width="100px">Status</th>
-                        <th width="150px" class="text-center">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($suppliers as $supplier)
-                    @php
-                        $supplierObj = is_object($supplier) ? $supplier : null;
-                        $code = $supplierObj ? $supplierObj->code ?? '' : '';
-                        $name = $supplierObj ? $supplierObj->name ?? '' : '';
-                        $address = $supplierObj ? $supplierObj->address ?? '' : '';
-                        $phone = $supplierObj ? $supplierObj->phone ?? '' : '';
-                        $is_active = $supplierObj ? $supplierObj->is_active ?? false : false;
-                        $id = $supplierObj ? $supplierObj->id ?? 0 : 0;
-                    @endphp
-                    <tr>
-                        <td>{{ $code }}</td>
-                        <td class="fw-semibold">{{ $name }}</td>
-                        <td>
-                            <div class="text-truncate" style="max-width: 250px;" title="{{ $address }}">
-                                {{ $address }}
-                            </div>
-                        </td>
-                        <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <span>{{ $phone }}</span>
-                                <div class="d-flex gap-1">
-                                    <a href="tel:+{{ $phone }}" class="btn btn-sm btn-outline-secondary">
-                                        <i class="bi bi-telephone"></i>
-                                    </a>
-                                    <a href="https://wa.me/{{ $phone }}" target="_blank" class="btn btn-sm btn-success">
-                                        <i class="bi bi-whatsapp"></i>
-                                    </a>
+                {{-- Mobile Cards --}}
+                <div class="md:hidden divide-y divide-gray-200">
+                    <template x-for="(supplier, index) in sortedRows" :key="supplier.id">
+                        <div class="p-4 hover:bg-gray-50 transition-colors duration-150">
+                            {{-- Supplier Header --}}
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-sm font-medium text-gray-900 truncate" x-text="supplier.name"></h3>
+                                        <span class="text-xs text-gray-500 ml-2" x-text="supplier.code"></span>
+                                    </div>
+                                    <p class="text-sm text-gray-500 truncate mt-1" x-text="supplier.address"></p>
                                 </div>
                             </div>
-                        </td>
-                        <td>
-                            @if($is_active)
-                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Aktif</span>
-                            @else
-                                <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Tidak Aktif</span>
-                            @endif
-                        </td>
-                        <td class="text-center">
-                            <x-action-buttons
-                                :viewUrl="route('suppliers.show', $id)" 
-                                :editUrl="route('suppliers.edit', $id)"
-                                :deleteUrl="route('suppliers.destroy', $id)" 
-                                :toggleUrl="route('suppliers.toggle-status', $id)"
-                                :isActive="$is_active"
-                                :showToggle="true"
-                                itemName="supplier {{$name}}"
-                            />
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="6" class="text-center py-5">
-                            <div class="d-flex flex-column align-items-center">
-                                <i class="bi bi-inbox fs-1 text-muted mb-3"></i>
-                                <h5 class="fw-bold text-muted">Belum ada data supplier</h5>
-                                <p class="text-muted">Tambahkan supplier baru untuk mengelola data supplier</p>
-                                <a href="{{ route('suppliers.create') }}" class="btn btn-primary px-4 mt-2">
-                                    <i class="bi bi-plus-circle me-2"></i>Tambah Supplier
-                                </a>
+
+                            {{-- Supplier Details --}}
+                            <div class="space-y-2">
+                                {{-- Phone --}}
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Telepon:</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm text-gray-900" x-text="supplier.phone"></span>
+                                        <template x-if="supplier.phone">
+                                            <div class="flex gap-1">
+                                                <a :href="'tel:+' + supplier.phone"
+                                                    class="inline-flex items-center justify-center w-5 h-5 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-sm transition-all duration-200"
+                                                    title="Telepon">
+                                                    <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path
+                                                            d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                                                    </svg>
+                                                </a>
+                                                <a :href="'https://wa.me/' + supplier.phone" target="_blank"
+                                                    class="inline-flex items-center justify-center w-5 h-5 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-sm transition-all duration-200"
+                                                    title="WhatsApp">
+                                                    <x-whatsapp-logo class="w-2.5 h-2.5" />
+                                                </a>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                {{-- Status --}}
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Status:</span>
+                                    <template x-if="supplier.is_active">
+                                        <span
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <div class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+                                            Aktif
+                                        </span>
+                                    </template>
+                                    <template x-if="!supplier.is_active">
+                                        <span
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            <div class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
+                                            Tidak Aktif
+                                        </span>
+                                    </template>
+                                </div>
                             </div>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        
-        <!-- Pagination -->
-        <div class="d-flex justify-content-between align-items-center mt-4">
-            <div>
-                @if($suppliers instanceof \Illuminate\Pagination\LengthAwarePaginator)
-                    <p class="text-muted mb-0">Menampilkan {{ $suppliers->firstItem() ?? 0 }}-{{ $suppliers->lastItem() ?? 0 }} dari {{ $suppliers->total() }} data</p>
-                @else
-                    <p class="text-muted mb-0">Menampilkan {{ count($suppliers) }} data</p>
-                @endif
-            </div>
-            <div>
-                @if($suppliers instanceof \Illuminate\Pagination\LengthAwarePaginator)
-                    {{ $suppliers->withQueryString()->links() }}
-                @endif
+
+                            {{-- Actions --}}
+                            <div class="mt-4 pt-3 border-t border-gray-200">
+                                <div x-data="{
+                                    viewUrl: '/suppliers/' + supplier.id,
+                                    editUrl: '/suppliers/' + supplier.id + '/edit',
+                                    deleteUrl: '/suppliers/' + supplier.id,
+                                    toggleUrl: '/suppliers/' + supplier.id + '/toggle-status',
+                                    itemName: 'supplier ' + supplier.name,
+                                    isActive: supplier.is_active
+                                }">
+                                    <x-index.action-buttons :view="true" :edit="true" :delete="true"
+                                        :toggle="true" />
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <template x-if="sortedRows.length !== 0">
+                    <div class="pagination-wrapper">
+                        {{ $pagination->links('vendor.pagination.tailwind') }}
+                    </div>
+                </template>
             </div>
         </div>
     </div>
-</div>
-
-<!-- Delete Form -->
-<form id="delete-form" method="POST" style="display: none;">
-    @csrf
-    @method('DELETE')
-</form>
-
-<style>
-/* Table responsiveness */
-.table-responsive {
-    width: 100%;
-    transition: all 0.3s ease; /* Match the sidebar transition speed */
-}
-
-.btn-success {
-    background: linear-gradient(135deg, #25d366, #128c7e);
-    border: none;
-    transition: all 0.3s ease;
-}
-
-.btn-success:hover {
-    background: linear-gradient(135deg, #128c7e, #075e54);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(37, 211, 102, 0.3);
-}
-</style>
-
 @endsection
-
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-    function confirmDelete(id, name) {
-        Swal.fire({
-            title: 'Hapus Supplier?',
-            text: `Anda yakin ingin menghapus supplier "${name}"?`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Ya, Hapus!',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const form = document.getElementById('delete-form');
-                form.action = `{{ url('suppliers') }}/${id}`;
-                form.submit();
-            }
-        });
-    }
-</script>
-@endpush

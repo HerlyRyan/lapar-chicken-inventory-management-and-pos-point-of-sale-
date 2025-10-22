@@ -3,147 +3,138 @@
 @section('title', 'Master Data Kategori')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 fw-bold mb-1" style="color: var(--primary-red);">
-            <i class="bi bi-tags me-2"></i>Data Kategori
-        </h1>
-        <p class="text-muted mb-0">Kelola kategori produk siap jual</p>
-    </div>
-    <a href="{{ route('categories.create') }}" class="btn btn-primary shadow px-4 d-flex align-items-center" style="min-width: 160px; white-space: nowrap;">
-        <i class="bi bi-plus-circle me-2"></i>
-        <span>Tambah Kategori</span>
-    </a>
-</div>
+    <div class="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30">
+        {{-- Page Header --}}
+        <x-index.header title="Kategori" subtitle="Kelola kategori produk siap jual"
+            addRoute="{{ route('categories.create') }}" addText="Tambah Kategori" />
 
-<div class="container-fluid px-0">
-    <!-- Alert Messages -->
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
+        {{-- Main Content --}}
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+            <div x-data="sortableTable(@js($categories))" @sort-column.window="sortBy($event.detail)"
+                class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
+                {{-- Card Header --}}
+                <x-index.card-header title="Daftar Kategori" />
 
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
+                {{-- Filter Section --}}
+                <x-filter-bar searchPlaceholder="Cari kode atau nama kategori..." :selects="$selects ?? []" />
 
-    <!-- Categories Table -->
-    <div class="card border-0 shadow-lg">
-        <div class="card-header text-white py-3" style="background: linear-gradient(135deg, #dc2626 0%, #ea580c 50%, #eab308 100%);">
-            <h5 class="mb-0 fw-bold">
-                <i class="bi bi-list-ul me-2"></i>Daftar Kategori
-                <span class="badge bg-white text-dark ms-2">
-                    @if($categories instanceof \Illuminate\Pagination\LengthAwarePaginator)
-                        {{ $categories->total() }}
-                    @else
-                        {{ count($categories) }}
-                    @endif
-                </span>
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover border">
-                    <thead class="table-light">
-                        <tr>
-                            <th scope="col" width="50">#</th>
-                            <th scope="col">Kode</th>
-                            <th scope="col">Nama Kategori</th>
-                            <th scope="col">Deskripsi</th>
-                            <th scope="col">Status</th>
-                            <th scope="col" class="text-center" width="150">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    @if(count($categories) > 0)
-                        @foreach($categories as $index => $category)
-                        <tr>
-                            <td>
-                                @if($categories instanceof \Illuminate\Pagination\LengthAwarePaginator)
-                                    {{ $categories->firstItem() + $index }}
-                                @else
-                                    {{ $index + 1 }}
-                                @endif
-                            </td>
-                            <td>
-                                <span class="badge bg-secondary fw-bold">
-                                    {{ $category->code }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <strong>{{ $category->name }}</strong>
-                                </div>
-                            </td>
-                            <td>
-                                <small class="text-muted">{{ Str::limit($category->description, 50) ?: '-' }}</small>
-                            </td>
-                            
-                            <td>
-                                @if($category->is_active)
-                                    <span class="badge bg-success">Aktif</span>
-                                @else
-                                    <span class="badge bg-danger">Nonaktif</span>
-                                @endif
-                            </td>
-                                    <td class="text-center">
-                                <x-action-buttons
-                                    :viewUrl="route('categories.show', $category)" 
-                                    :editUrl="route('categories.edit', $category)"
-                                    :deleteUrl="$category->finished_products_count == 0 ? route('categories.destroy', $category) : null" 
-                                    :toggleUrl="route('categories.toggle-status', $category)"
-                                    :isActive="$category->is_active"
-                                    :showToggle="true"
-                                    itemName="kategori {{$category->name}}"
-                                />
-                            </td>
-                        @endforeach
-                    @else
-                        <tr>
-                            <td colspan="6" class="text-center py-4">
-                                <div class="d-flex flex-column align-items-center">
-                                    <i class="bi bi-inbox fs-1 text-muted mb-2"></i>
-                                    <h5>Belum ada kategori</h5>
-                                    <p class="text-muted">Mulai dengan menambah kategori pertama Anda</p>
-                                </div>
-                            </td>
-                        </tr>
-                    @endif
-                    </tbody>
-                </table>
-            </div>
-            
-            @if($categories->hasPages())
-                <div class="px-4 py-3 border-top">
-                    {{ $categories->appends(request()->query())->links() }}
+                {{-- Desktop Table --}}
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <x-index.table-head :columns="$columns" />
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template x-for="(category, index) in sortedRows" :key="category.id">
+                                <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="index + 1"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800" x-text="category.code"></span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-medium text-gray-900" x-text="category.name"></div>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-900">
+                                        <div class="max-w-xs truncate" :title="category.description" x-text="category.description || '-'">
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <template x-if="category.is_active">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <div class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+                                                Aktif
+                                            </span>
+                                        </template>
+                                        <template x-if="!category.is_active">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                <div class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
+                                                Nonaktif
+                                            </span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <div x-data="{
+                                            viewUrl: '/categories/' + category.id,
+                                            editUrl: '/categories/' + category.id + '/edit',
+                                            deleteUrl: category.finished_products_count == 0 ? '/categories/' + category.id : null,
+                                            toggleUrl: '/categories/' + category.id + '/toggle-status',
+                                            itemName: 'kategori ' + category.name,
+                                            isActive: category.is_active
+                                        }">
+                                            <x-index.action-buttons :view="true" :edit="true" :delete="true"
+                                                :toggle="true" />
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-if="sortedRows.length === 0">
+                                <x-index.none-data />
+                            </template>
+                        </tbody>
+                    </table>
                 </div>
-            @endif
+
+                {{-- Mobile Cards --}}
+                <div class="md:hidden divide-y divide-gray-200">
+                    <template x-for="(category, index) in sortedRows" :key="category.id">
+                        <div class="p-4 hover:bg-gray-50 transition-colors duration-150">
+                            {{-- Category Header --}}
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-sm font-medium text-gray-900 truncate" x-text="category.name"></h3>
+                                        <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 ml-2" x-text="category.code"></span>
+                                    </div>
+                                    <p class="text-sm text-gray-500 truncate mt-1" x-text="category.description || 'Tidak ada deskripsi'"></p>
+                                </div>
+                            </div>
+
+                            {{-- Category Details --}}
+                            <div class="space-y-2">
+                                {{-- Status --}}
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Status:</span>
+                                    <template x-if="category.is_active">
+                                        <span
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <div class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+                                            Aktif
+                                        </span>
+                                    </template>
+                                    <template x-if="!category.is_active">
+                                        <span
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            <div class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
+                                            Nonaktif
+                                        </span>
+                                    </template>
+                                </div>
+                            </div>
+
+                            {{-- Actions --}}
+                            <div class="mt-4 pt-3 border-t border-gray-200">
+                                <div x-data="{
+                                    viewUrl: '/categories/' + category.id,
+                                    editUrl: '/categories/' + category.id + '/edit',
+                                    deleteUrl: category.finished_products_count == 0 ? '/categories/' + category.id : null,
+                                    toggleUrl: '/categories/' + category.id + '/toggle-status',
+                                    itemName: 'kategori ' + category.name,
+                                    isActive: category.is_active
+                                }">
+                                    <x-index.action-buttons :view="true" :edit="true" :delete="true"
+                                        :toggle="true" />
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <template x-if="sortedRows.length !== 0">
+                    <div class="pagination-wrapper">
+                        {{ $pagination->links('vendor.pagination.tailwind') }}
+                    </div>
+                </template>
+            </div>
         </div>
     </div>
-</div>
-
-<style>
-.btn-group-sm .btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
-}
-
-.badge.bg-secondary {
-    background-color: #6c757d !important;
-    color: white;
-}
-
-.badge.bg-success {
-    background-color: #198754 !important;
-}
-
-.badge.bg-danger {
-    background-color: #dc3545 !important;
-}
-</style>
 @endsection

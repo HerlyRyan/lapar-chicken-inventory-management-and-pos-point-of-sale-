@@ -21,32 +21,85 @@ class SalesPackageController extends Controller
     public function index(Request $request)
     {
         $query = SalesPackage::with(['packageItems.finishedProduct', 'creator', 'category']);
-        
-        // Search functionality
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
+
+        $columns = [
+            ['key' => 'name', 'label' => 'Paket'],
+            ['key' => 'category', 'label' => 'Kategori'],
+            ['key' => 'package_items', 'label' => 'Komponen'],
+            ['key' => 'base_price', 'label' => 'Harga Dasar'],
+            ['key' => 'discount_amount', 'label' => 'Diskon'],
+            ['key' => 'additional_charge', 'label' => 'Tambahan Harga'],
+            ['key' => 'final_price', 'label' => 'Harga Jual'],
+            ['key' => 'is_active', 'label' => 'Status'],
+        ];
+
+        // === SEARCH ===
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhereHas('category', fn($q2) => $q2->where('name', 'like', "%{$search}%"));
             });
         }
-        
-        // Status filter
-        if ($request->filled('status')) {
-            $isActive = $request->status === 'active';
-            $query->where('is_active', $isActive);
+
+        // === FILTER STATUS ===
+        if ($status = $request->get('is_active')) {
+            $query->where('is_active', $status);
         }
-        
-        // Category filter
-        if ($request->filled('category')) {
-            $categoryId = $request->category;
-            $query->where('category_id', $categoryId);
+
+        // === SORTING ===
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
+
+            // 🧩 Deteksi kolom relasi
+            switch ($sortBy) {
+                case 'category':
+                    $query->leftjoin('categories', 'categories.id', '=', 'sales_packages.category_id')
+                        ->orderBy('categories.name', $sortDir)
+                        ->select('sales_packages.*');
+                    break;
+
+                case 'package_items':
+                    // Sort berdasarkan jumlah item dalam paket
+                    $query->withCount('packageItems')
+                        ->orderBy('package_items_count', $sortDir);
+                    break;
+
+                default:
+                    $query->orderBy($sortBy, $sortDir);
+            }
         }
-        
-        $salesPackages = $query->orderBy('created_at', 'desc')->paginate(15);
-        
-        return view('sales-packages.index', compact('salesPackages'));
+
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $salesPackages */
+        $salesPackages = $query->paginate(10);
+
+        $statuses = [
+            1 => 'Aktif',
+            0 => 'Nonaktif',
+        ];
+
+        $selects = [
+            [
+                'name' => 'is_active',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+        ];
+
+        // === RESPONSE ===
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $salesPackages->items(),
+                'links' => (string) $salesPackages->links('vendor.pagination.tailwind'),
+            ]);
+        }
+
+        return view('sales-packages.index', [
+            'salesPackages' => $salesPackages->items(),
+            'selects' => $selects,
+            'columns' => $columns,
+            'pagination' => $salesPackages,
+        ]);
     }
 
     /**
@@ -58,11 +111,11 @@ class SalesPackageController extends Controller
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
-            
+
         $categories = Category::where('is_active', true)
             ->orderBy('name')
             ->get();
-            
+
         return view('sales-packages.create', compact('finishedProducts', 'categories'));
     }
 
@@ -106,23 +159,23 @@ class SalesPackageController extends Controller
         // Validate discount (either percentage or amount, not both)
         if ($request->filled('discount_percentage') && $request->filled('discount_amount')) {
             return back()->withErrors(['discount' => 'Pilih antara diskon persentase atau nominal, bukan keduanya.'])
-                        ->withInput();
+                ->withInput();
         }
 
         // Additional validation for empty price fields
         if ($request->filled('discount_amount') && !is_numeric($request->discount_amount)) {
             return back()->withErrors(['discount_amount' => 'Diskon (Rp) harus diisi dengan angka.'])
-                        ->withInput();
+                ->withInput();
         }
-        
+
         if ($request->filled('discount_percentage') && !is_numeric($request->discount_percentage)) {
             return back()->withErrors(['discount_percentage' => 'Diskon (%) harus diisi dengan angka.'])
-                        ->withInput();
+                ->withInput();
         }
-        
+
         if ($request->filled('additional_charge') && !is_numeric($request->additional_charge)) {
             return back()->withErrors(['additional_charge' => 'Biaya tambahan harus diisi dengan angka.'])
-                        ->withInput();
+                ->withInput();
         }
 
         DB::beginTransaction();
@@ -155,7 +208,7 @@ class SalesPackageController extends Controller
                 $finishedProduct = FinishedProduct::find($item['finished_product_id']);
                 $unitPrice = $finishedProduct->price;
                 $totalPrice = $item['quantity'] * $unitPrice;
-                
+
                 SalesPackageItem::create([
                     'sales_package_id' => $salesPackage->id,
                     'finished_product_id' => $item['finished_product_id'],
@@ -163,7 +216,7 @@ class SalesPackageController extends Controller
                     'unit_price' => $unitPrice,
                     'total_price' => $totalPrice
                 ]);
-                
+
                 $basePrice += $totalPrice;
             }
 
@@ -173,14 +226,13 @@ class SalesPackageController extends Controller
             $salesPackage->save();
 
             DB::commit();
-            
+
             return redirect()->route('sales-packages.index')
-                           ->with('success', 'Paket penjualan berhasil dibuat.');
-                           
+                ->with('success', 'Paket penjualan berhasil dibuat.');
         } catch (\Exception $e) {
             DB::rollback();
             return back()->withErrors(['error' => 'Terjadi kesalahan: ' . $e->getMessage()])
-                        ->withInput();
+                ->withInput();
         }
     }
 
@@ -190,26 +242,26 @@ class SalesPackageController extends Controller
     public function show($id)
     {
         $salesPackage = SalesPackage::with(['packageItems.finishedProduct', 'creator', 'category'])->findOrFail($id);
-        
+
         // Calculate branch availability
         $branches = Branch::all();
         $branchAvailability = [];
-        
+
         foreach ($branches as $branch) {
             $canMake = true;
             $minQuantity = PHP_INT_MAX;
-            
+
             // Check each package item
             foreach ($salesPackage->packageItems as $packageItem) {
                 $finishedProduct = $packageItem->finishedProduct;
-                
+
                 // Get current stock for this branch
                 $currentStock = FinishedBranchStock::where('finished_product_id', $finishedProduct->id)
                     ->where('branch_id', $branch->id)
                     ->sum('quantity');
-                    
+
                 $requiredQuantity = $packageItem->quantity;
-                
+
                 if ($currentStock < $requiredQuantity) {
                     $canMake = false;
                     $minQuantity = 0;
@@ -219,14 +271,14 @@ class SalesPackageController extends Controller
                     $minQuantity = min($minQuantity, $possiblePackages);
                 }
             }
-            
+
             $branchAvailability[$branch->id] = [
                 'name' => $branch->name,
                 'is_available' => $canMake,
                 'available_quantity' => $canMake ? $minQuantity : 0
             ];
         }
-        
+
         return view('sales-packages.show', compact('salesPackage', 'branchAvailability'));
     }
 
@@ -240,11 +292,11 @@ class SalesPackageController extends Controller
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
-            
+
         $categories = Category::where('is_active', true)
             ->orderBy('name')
             ->get();
-        
+
         return view('sales-packages.edit', compact('salesPackage', 'finishedProducts', 'categories'));
     }
 
@@ -262,7 +314,7 @@ class SalesPackageController extends Controller
             'user_id' => auth()->id(),
             'ip_address' => $request->ip()
         ]);
-        
+
         // Debug: Log ALL incoming request data in detail
         \Log::info('COMPLETE REQUEST DATA:', [
             'all_data' => $request->all(),
@@ -289,7 +341,7 @@ class SalesPackageController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'items' => 'required|array|min:1',
         ]);
-        
+
         // Custom validation for items array (supports both numeric and string keys)
         foreach ($request->get('items', []) as $key => $item) {
             $request->validate([
@@ -299,23 +351,23 @@ class SalesPackageController extends Controller
         }
 
         \Log::info('Validation passed successfully');
-        
+
         \Log::info('Starting discount validation...');
         // FIXED: Validate discount - only trigger when BOTH have meaningful non-zero values
         $hasDiscountPercentage = $request->filled('discount_percentage') && (float)$request->discount_percentage > 0;
         $hasDiscountAmount = $request->filled('discount_amount') && (float)$request->discount_amount > 0;
-        
+
         \Log::info('Discount check:', [
             'discount_percentage' => $request->discount_percentage,
             'discount_amount' => $request->discount_amount,
             'hasDiscountPercentage' => $hasDiscountPercentage,
             'hasDiscountAmount' => $hasDiscountAmount
         ]);
-        
+
         if ($hasDiscountPercentage && $hasDiscountAmount) {
             \Log::warning('Discount validation failed - both meaningful percentage and amount provided');
             return back()->withErrors(['discount' => 'Pilih antara diskon persentase atau nominal, bukan keduanya.'])
-                        ->withInput();
+                ->withInput();
         }
         \Log::info('Discount validation passed');
 
@@ -323,7 +375,7 @@ class SalesPackageController extends Controller
         DB::beginTransaction();
         try {
             \Log::info('Inside database transaction try block');
-            
+
             // Handle image upload
             \Log::info('Starting image upload handling...');
             if ($request->hasFile('image')) {
@@ -354,7 +406,7 @@ class SalesPackageController extends Controller
                 'final_price' => (float) ($request->final_price ?? 0),
             ];
             \Log::info('Update data prepared:', $updateData);
-            
+
             $salesPackage->update($updateData);
             \Log::info('Sales package basic info updated successfully');
 
@@ -370,18 +422,18 @@ class SalesPackageController extends Controller
             $itemIndex = 0;
             foreach ($request->items as $key => $item) {
                 \Log::info("Processing item {$itemIndex} (key: {$key}):", $item);
-                
+
                 $finishedProduct = FinishedProduct::find($item['finished_product_id']);
                 if (!$finishedProduct) {
                     \Log::error('Finished product not found for ID: ' . $item['finished_product_id']);
                     throw new \Exception('Finished product not found');
                 }
                 \Log::info('Found finished product:', ['id' => $finishedProduct->id, 'name' => $finishedProduct->name, 'price' => $finishedProduct->price]);
-                
+
                 $unitPrice = $finishedProduct->price;
                 $totalPrice = $item['quantity'] * $unitPrice;
                 \Log::info('Calculated prices:', ['unit_price' => $unitPrice, 'quantity' => $item['quantity'], 'total_price' => $totalPrice]);
-                
+
                 $packageItemData = [
                     'sales_package_id' => $salesPackage->id,
                     'finished_product_id' => $item['finished_product_id'],
@@ -390,10 +442,10 @@ class SalesPackageController extends Controller
                     'total_price' => $totalPrice
                 ];
                 \Log::info('Creating package item with data:', $packageItemData);
-                
+
                 $newPackageItem = SalesPackageItem::create($packageItemData);
                 \Log::info('Package item created successfully with ID: ' . $newPackageItem->id);
-                
+
                 $basePrice += $totalPrice;
                 $itemIndex++;
             }
@@ -413,12 +465,11 @@ class SalesPackageController extends Controller
             ]);
 
             DB::commit();
-            
+
             \Log::info('Database transaction committed successfully');
-            
+
             return redirect()->route('sales-packages.index')
-                           ->with('success', 'Paket penjualan berhasil diperbarui.');
-                           
+                ->with('success', 'Paket penjualan berhasil diperbarui.');
         } catch (\Exception $e) {
             DB::rollback();
             \Log::error('Sales Package Update Failed:', [
@@ -427,7 +478,7 @@ class SalesPackageController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             return back()->withErrors(['error' => 'Terjadi kesalahan: ' . $e->getMessage()])
-                        ->withInput();
+                ->withInput();
         }
     }
 
@@ -441,12 +492,11 @@ class SalesPackageController extends Controller
             if ($salesPackage->image) {
                 Storage::disk('public')->delete($salesPackage->image);
             }
-            
+
             $salesPackage->delete();
-            
+
             return redirect()->route('sales-packages.index')
-                           ->with('success', 'Paket penjualan berhasil dihapus.');
-                           
+                ->with('success', 'Paket penjualan berhasil dihapus.');
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]);
         }
@@ -460,12 +510,11 @@ class SalesPackageController extends Controller
         try {
             $salesPackage->is_active = !$salesPackage->is_active;
             $salesPackage->save();
-            
+
             $status = $salesPackage->is_active ? 'diaktifkan' : 'dinonaktifkan';
-            
+
             return redirect()->back()
-                           ->with('success', "Paket penjualan berhasil {$status}.");
-                           
+                ->with('success', "Paket penjualan berhasil {$status}.");
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]);
         }
@@ -477,11 +526,11 @@ class SalesPackageController extends Controller
     public function getPackagesForBranch(Request $request)
     {
         $branchId = $request->branch_id;
-        
+
         $packages = SalesPackage::with(['packageItems.finishedProduct'])
             ->where('is_active', true)
             ->get()
-            ->map(function($package) use ($branchId) {
+            ->map(function ($package) use ($branchId) {
                 return [
                     'id' => $package->id,
                     'name' => $package->name,
@@ -490,7 +539,7 @@ class SalesPackageController extends Controller
                     'available_quantity' => $package->getAvailableQuantityInBranch($branchId),
                     'is_available' => $package->isAvailableInBranch($branchId),
                     'description' => $package->description,
-                    'components' => $package->packageItems->map(function($item) {
+                    'components' => $package->packageItems->map(function ($item) {
                         return [
                             'name' => $item->finishedProduct->name,
                             'quantity' => $item->quantity,
@@ -499,11 +548,11 @@ class SalesPackageController extends Controller
                     })
                 ];
             })
-            ->filter(function($package) {
+            ->filter(function ($package) {
                 return $package['is_available'];
             })
             ->values();
-            
+
         return response()->json([
             'success' => true,
             'packages' => $packages

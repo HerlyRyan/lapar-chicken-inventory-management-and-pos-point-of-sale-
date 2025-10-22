@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Supplier;
 use Illuminate\Http\Request;
 use App\Traits\TableFilterTrait;
 
@@ -13,42 +14,70 @@ class SupplierController extends Controller
      */
     public function index(Request $request)
     {
-        try {
-            // Base query
-            $query = \App\Models\Supplier::query();
-            
-            // Define searchable and sortable columns
-            $searchableColumns = ['name', 'address', 'phone', 'email', 'code', 'contact_person'];
-            $sortableColumns = ['name', 'code', 'phone', 'created_at', 'updated_at'];
-            
-            // Handle status filtering
-            if ($request->status === 'active') {
-                $query->where('is_active', true);
-            } elseif ($request->status === 'inactive') {
-                $query->where('is_active', false);
-            }
-            
-            // Apply the standard filtering, sorting, and pagination
-            $suppliers = $this->applyFilterSortPaginate(
-                $query, 
-                $searchableColumns, 
-                $sortableColumns, 
-                'name', // default sort column
-                'asc'   // default sort direction
-            );
-            
-            // Get current sort parameters for the view
-            $sortColumn = $request->get('sort', 'name');
-            $sortDirection = $request->get('direction', 'asc');
-            
-            return view('suppliers.index', compact('suppliers', 'sortColumn', 'sortDirection'));
-        } catch (\Exception $e) {
-            return view('suppliers.index', [
-                'suppliers' => \Illuminate\Support\Collection::make([]),
-                'sortColumn' => 'name',
-                'sortDirection' => 'asc'
+
+        // Base query
+        $query = Supplier::query();
+
+        // for column selection
+        $columns = [
+            ['key' => 'code', 'label' => 'Kode'],
+            ['key' => 'name', 'label' => 'Nama'],
+            ['key' => 'address', 'label' => 'Alamat'],
+            ['key' => 'phone', 'label' => 'No Telepon'],
+            ['key' => 'is_active', 'label' => 'Status'],
+        ];
+
+        // Search global
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhere('address', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter status
+        if ($status = $request->get('is_active')) {
+            $query->where('is_active', $status);
+        }
+
+        // Sorting
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $suppliers */
+        $suppliers = $query->paginate(10);
+
+        $statuses = [
+            1 => 'Aktif',
+            0 => 'Nonaktif',
+        ];
+
+        // Array untuk komponen filter
+        $selects = [
+            [
+                'name' => 'is_active',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+        ];
+
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $suppliers->items(),
+                'links' => (string) $suppliers->links('vendor.pagination.tailwind'),
             ]);
         }
+
+        return view('suppliers.index', [
+            'suppliers' => $suppliers->items(),
+            'selects' => $selects,
+            'columns' => $columns,
+            'pagination' => $suppliers, // tetap simpan pagination untuk tampilkan links
+        ]);
     }
 
     /**

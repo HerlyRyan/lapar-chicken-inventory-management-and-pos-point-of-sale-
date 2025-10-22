@@ -21,63 +21,92 @@ class UserController extends Controller
      */
     use TableFilterTrait;
 
-    public function index()
+    public function index(Request $request)
     {
         $query = User::with(['branch', 'roles']);
 
-        // for column selection
         $columns = [
             ['key' => 'name', 'label' => 'Nama'],
             ['key' => 'email', 'label' => 'Email'],
             ['key' => 'branch', 'label' => 'Cabang'],
-            ['key' => 'role', 'label' => 'Role'],
+            ['key' => 'roles', 'label' => 'Role'],
             ['key' => 'is_active', 'label' => 'Status'],
         ];
 
+        // === SEARCH ===
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhereHas('branch', fn($b) => $b->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('roles', fn($r) => $r->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        // === FILTER STATUS ===
+        if ($status = $request->get('is_active')) {
+            $query->where('is_active', $status);
+        }
+
+        // === SORTING ===
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
+
+            switch ($sortBy) {
+                case 'branch':
+                    // gunakan LEFT JOIN supaya null branch tetap muncul
+                    $query->leftJoin('branches', 'branches.id', '=', 'users.branch_id')
+                        ->orderBy('branches.name', $sortDir)
+                        ->select('users.*');
+                    break;
+
+                case 'roles':
+                    // LEFT JOIN pivot dan roles supaya user tanpa role tetap muncul
+                    $query->leftJoin('user_roles', 'user_roles.user_id', '=', 'users.id')
+                        ->leftJoin('roles', 'roles.id', '=', 'user_roles.role_id')
+                        ->select('users.*')
+                        ->groupBy('users.id')
+                        ->orderByRaw("COALESCE(MIN(roles.name), '') $sortDir");
+                    break;
+
+                default:
+                    $query->orderBy($sortBy, $sortDir);
+            }
+        }
+
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $users */
         $users = $query->paginate(10);
 
-        // Ambil data untuk filter dari database
-        $branches = Branch::where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->toArray();
-
-        $roles = Role::where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->toArray();
+        // === FILTER OPTIONS ===
+        $branches = Branch::where('is_active', true)->orderBy('name')->pluck('name', 'id')->toArray();
+        $roles = Role::where('is_active', true)->orderBy('name')->pluck('name', 'id')->toArray();
 
         $statuses = [
             1 => 'Aktif',
             0 => 'Nonaktif',
         ];
 
-        // Array untuk komponen filter
         $selects = [
-            [
-                'name' => 'branch_id',
-                'label' => 'Semua Cabang',
-                'options' => $branches,
-            ],
-            [
-                'name' => 'role_id',
-                'label' => 'Semua Role',
-                'options' => $roles,
-            ],
-            [
-                'name' => 'is_active',
-                'label' => 'Semua Status',
-                'options' => $statuses,
-            ],
+            ['name' => 'branch_id', 'label' => 'Semua Cabang', 'options' => $branches],
+            ['name' => 'role_id', 'label' => 'Semua Role', 'options' => $roles],
+            ['name' => 'is_active', 'label' => 'Semua Status', 'options' => $statuses],
         ];
+
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $users->items(),
+                'links' => (string) $users->links('vendor.pagination.tailwind'),
+            ]);
+        }
 
         return view('users.index', [
             'users' => $users->items(),
             'selects' => $selects,
             'columns' => $columns,
-            'pagination' => $users, // tetap simpan pagination untuk tampilkan links
+            'pagination' => $users,
         ]);
     }
+
 
     /**
      * Show the form for creating a new user.

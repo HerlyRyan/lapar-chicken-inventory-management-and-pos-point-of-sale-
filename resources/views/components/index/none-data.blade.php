@@ -2,7 +2,7 @@
 
 @if (!$mobile)
     <tr>
-        <td colspan="7" class="px-6 py-12 text-center">
+        <td class="px-6 py-12 text-center">
             <div class="flex flex-col items-center">
                 <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"

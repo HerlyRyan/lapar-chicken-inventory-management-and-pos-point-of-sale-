@@ -2,37 +2,72 @@ import './bootstrap';
 import Alpine from 'alpinejs';
 window.Alpine = Alpine;
 
-// Komponen global untuk tabel sortable
-Alpine.data('sortableTable', (data) => ({
-    rows: data || [],
+// === UNIVERSAL TABLE COMPONENT ===
+Alpine.data('sortableTable', (initialData) => ({
+    rows: initialData || [],
     sortColumn: '',
     sortDirection: 'asc',
+    isLoading: false,
+    endpoint: window.location.pathname, // gunakan URL halaman aktif
+
+    async fetchData() {
+        this.isLoading = true;
+        window.dispatchEvent(new CustomEvent('loading:start'))
+        try {
+            const params = new URLSearchParams({
+                search: Alpine.store('table').search || '',
+                sort_by: this.sortColumn || '',
+                sort_dir: this.sortDirection || 'asc',
+                ...Alpine.store('table').filters,
+            });
+            const response = await fetch(`${this.endpoint}?${params.toString()}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const result = await response.json();
+            this.rows = result.data || [];
+            const pagination = document.querySelector('.pagination-wrapper');
+            if (pagination) pagination.innerHTML = result.links || '';
+        } catch (error) {
+            console.error('Fetch error:', error);
+        } finally {
+            this.isLoading = false;
+            window.dispatchEvent(new CustomEvent('loading:end'));
+        }
+    },
 
     get filteredRows() {
-        const search = Alpine.store('table').search.toLowerCase()
-        const filters = Alpine.store('table').filters
+        // tetap dukung filter frontend
+        const search = Alpine.store('table').search.toLowerCase();
+        const filters = Alpine.store('table').filters;
 
         return this.rows.filter(row => {
-            // 🔍 Search logic (cek semua kolom string)
             const matchesSearch = !search || Object.values(row).some(value => {
-                if (typeof value === 'string') return value.toLowerCase().includes(search)
-                if (typeof value === 'object' && value !== null && value.name)
-                    return value.name.toLowerCase().includes(search)
-                return false
-            })
+                if (typeof value === 'string') return value.toLowerCase().includes(search);
+                if (typeof value === 'object' && value?.name)
+                    return value.name.toLowerCase().includes(search);
+                return false;
+            });
 
-            // 🎯 Filter logic (cek berdasarkan filters aktif)
             const matchesFilters = Object.entries(filters).every(([key, val]) => {
-                if (!val) return true
+                if (val === '' || val === null || val === undefined) return true
                 const column = row[key]
-                if (typeof column === 'string') return column.toLowerCase() === val.toLowerCase()
-                if (typeof column === 'object' && column !== null)
-                    return column.name && column.name.toLowerCase() === val.toLowerCase()
-                return false
-            })
 
-            return matchesSearch && matchesFilters
-        })
+                // 🧩 Konversi nilai ke bentuk string yang seragam
+                let normalizedColumn = column
+                if (typeof column === 'boolean') normalizedColumn = column ? '1' : '0'
+                else if (typeof column === 'number') normalizedColumn = String(column)
+                else if (typeof column === 'string') normalizedColumn = column.toLowerCase()
+                else if (typeof column === 'object' && column !== null && column.name)
+                    normalizedColumn = column.name.toLowerCase()
+                else normalizedColumn = String(column ?? '').toLowerCase()
+
+                const normalizedFilter = String(val).toLowerCase()
+
+                return normalizedColumn === normalizedFilter
+            });
+
+            return matchesSearch && matchesFilters;
+        });
     },
 
     get sortedRows() {
@@ -50,41 +85,44 @@ Alpine.data('sortableTable', (data) => ({
 
     getValue(row, column) {
         let value = row[column];
-
-        // Jika value adalah array (misal: roles), ambil gabungan nama
-        if (Array.isArray(value)) {
-            return value.map(v => v.name || '').join(', ').toLowerCase();
-        }
-
-        // Jika value adalah object (misal: branch)
-        if (typeof value === 'object' && value !== null) {
-            return value.name ? value.name.toLowerCase() : '';
-        }
-
-        // String atau number
+        if (Array.isArray(value)) return value.map(v => v.name || '').join(', ').toLowerCase();
+        if (typeof value === 'object' && value) return value.name?.toLowerCase() || '';
         if (typeof value === 'string') return value.toLowerCase();
         if (typeof value === 'number') return value.toString();
-
         return '';
     },
 
     sortBy(column) {
-        if (this.sortColumn === column) {
-            this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc'
-        } else {
-            this.sortColumn = column
-            this.sortDirection = 'asc'
-        }
-    }
-}))
+        this.sortDirection = (this.sortColumn === column && this.sortDirection === 'asc') ? 'desc' : 'asc';
+        this.sortColumn = column;
+        this.fetchData(); // 🔁 trigger backend sort
+    },
+
+    init() {
+        this.$watch('$store.table.search', () => this.debouncedFetch());
+        this.$watch('$store.table.filters', () => this.fetchData(), { deep: true });
+    },
+
+    debouncedFetch: Alpine.debounce(function () {
+        this.fetchData();
+    }, 400)
+}));
 
 Alpine.store('table', {
     search: '',
     filters: {},
     reset() {
-        this.search = ''
-        this.filters = {}
+        this.search = '';
+        for (const key in this.filters) this.filters[key] = '';
     }
-})
+});
+
+// === GLOBAL LOADING EVENT HELPER ===
+function showGlobalLoading(show = true) {
+    window.dispatchEvent(new CustomEvent(show ? 'loading:start' : 'loading:end'));
+}
+
+// Tambahkan ke global supaya bisa dipanggil dari mana pun
+window.showGlobalLoading = showGlobalLoading;
 
 Alpine.start();

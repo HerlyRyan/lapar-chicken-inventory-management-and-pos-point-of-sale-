@@ -3,129 +3,172 @@
 @section('title', 'Role & Hak Akses')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 fw-bold mb-1" style="color: var(--primary-red);">
-            <i class="bi bi-shield-check-fill me-2"></i>Role & Hak Akses
-        </h1>
-        <p class="text-muted mb-0">Kelola role dan permission user</p>
-    </div>
-    <a href="{{ route('roles.create') }}" class="btn btn-primary shadow px-4 d-flex align-items-center" style="min-width: 160px; white-space: nowrap;">
-        <i class="bi bi-plus-circle me-2"></i>
-        <span>Tambah Role</span>
-    </a>
-</div>
+    <div class="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30">
+        {{-- Page Header --}}
+        <x-index.header title="Role & Hak Akses" addRoute="{{ route('roles.create') }}" />
 
-<div class="card border-0 shadow-lg">
-    <div class="card-header text-white py-3" style="background: linear-gradient(135deg, #dc2626 0%, #ea580c 50%, #eab308 100%);">
-        <h5 class="mb-0 fw-bold">
-            <i class="bi bi-list-ul me-2"></i>Daftar Role
-        </h5>
-    </div>
-    <div class="card-body">
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+        {{-- Main Content --}}
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+            <div x-data="sortableTable(@js($roles))" @sort-column.window="sortBy($event.detail)"
+                class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
+                {{-- Card Header --}}
+                <x-index.card-header title="Daftar Role" />
 
-        @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+                {{-- Filter Section --}}
+                <x-filter-bar searchPlaceholder="Cari role..." :selects="$selects" />
 
-        <!-- Filter Form -->
-        <form method="GET" action="" class="row g-2 mb-4">
-            <div class="col-lg-4 col-md-6">
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari role..." class="form-control">
+                {{-- Desktop Table --}}
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <x-index.table-head :columns="$columns" />
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template x-for="(role, index) in sortedRows" :key="role.id">
+                                <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="index + 1"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div>
+                                            <div class="text-sm font-medium text-gray-900" x-text="role.name"></div>
+                                            <div class="text-sm text-gray-500" x-text="role.code"></div>
+                                            <template x-if="role.description">
+                                                <div class="text-sm text-gray-500" x-text="role.description"></div>
+                                            </template>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <div>
+                                            <span class="font-semibold text-gray-900" x-text="role.users_count"></span>
+                                            <small class="text-gray-500 block">users</small>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <div>
+                                            <span class="font-semibold text-gray-900"
+                                                x-text="role.permissions_count"></span>
+                                            <small class="text-gray-500 block">permissions</small>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <template x-if="role.is_active">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <div class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+                                                Aktif
+                                            </span>
+                                        </template>
+                                        <template x-if="!role.is_active">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                <div class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
+                                                Nonaktif
+                                            </span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{-- Actions --}}
+                                        <div x-data="{
+                                            viewUrl: '/roles/' + role.id,
+                                            editUrl: role.is_primary_super_admin ? null : '/roles/' + role.id + '/edit',
+                                            deleteUrl: role.is_primary_super_admin ? null : '/roles/' + role.id,
+                                            toggleUrl: null,
+                                            itemName: 'Role ' + role.name,
+                                            isActive: role.is_active
+                                        }">
+                                            <x-index.action-buttons :view="true" :edit="true" :delete="true"
+                                                :toggle="false" />
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-if="sortedRows.length === 0">
+                                <x-index.none-data />
+                            </template>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
-            <div class="col-lg-2 col-md-3 col-6">
-                <select name="is_active" class="form-select">
-                    <option value="">Semua Status</option>
-                    <option value="1" {{ request('is_active') === '1' ? 'selected' : '' }}>Aktif</option>
-                    <option value="0" {{ request('is_active') === '0' ? 'selected' : '' }}>Nonaktif</option>
-                </select>
-            </div>
-            <div class="col-lg-3 col-md-3 col-6">
-                <div class="d-flex gap-1">
-                    <button type="submit" class="btn btn-outline-primary flex-fill">
-                        <i class="bi bi-search d-lg-none"></i>
-                        <span class="d-none d-lg-inline">Cari</span>
-                    </button>
-                    @if(request('q') || request('is_active') !== null)
-                        <a href="{{ route('roles.index') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-clockwise"></i>
-                        </a>
-                    @endif
-                </div>
-            </div>
-        </form>
 
-        <!-- Table -->
-        <x-standard-table
-            :headers="[
-                ['text' => '#', 'width' => '5%'],
-                ['text' => 'Role'],
-                ['text' => 'Users', 'class' => 'd-none d-lg-table-cell'],
-                ['text' => 'Permissions', 'class' => 'd-none d-lg-table-cell'],
-                ['text' => 'Status', 'class' => 'd-none d-sm-table-cell']
-            ]"
-            :pagination="$roles"
-            :searchable="false"
-            :sortable="true"
-            :sortColumn="request('sort', 'name')"
-            :sortDirection="request('direction', 'asc')"
-        >
-                    @forelse($roles as $role)
-                    <tr>
-                        <td>{{ $loop->iteration + ($roles->currentPage() - 1) * $roles->perPage() }}</td>
-                        <td>
-                            <div class="fw-semibold">{{ $role->name }}</div>
-                            <div class="small text-muted">{{ $role->code }}</div>
-                            @if($role->description)
-                                <div class="small text-muted">{{ $role->description }}</div>
-                            @endif
-                        </td>
-                        <td class="d-none d-lg-table-cell">
-                            <span class="fw-semibold">{{ $role->users_count }}</span>
-                            <small class="text-muted d-block">users</small>
-                        </td>
-                        <td class="d-none d-lg-table-cell">
-                            <span class="fw-semibold">{{ $role->permissions_count }}</span>
-                            <small class="text-muted d-block">permissions</small>
-                        </td>
-                        <td class="d-none d-sm-table-cell">
-                            @if($role->is_active)
-                                <span class="badge bg-success">Aktif</span>
-                            @else
-                                <span class="badge bg-secondary">Nonaktif</span>
-                            @endif
-                        </td>
-                        <td class="text-center">
-                            <x-index.action-buttons
-                                :viewUrl="route('roles.show', $role)" 
-                                :editUrl="!$role->isPrimarySuperAdmin() ? route('roles.edit', $role) : null"
-                                :deleteUrl="!$role->isPrimarySuperAdmin() ? route('roles.destroy', $role) : null" 
-                                :showToggle="false"
-                                itemName="role {{$role->name}}"
-                            />
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="7" class="text-center py-4 text-muted">
-                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                            Belum ada data role
-                        </td>
-                    </tr>
-                    @endforelse
-        </x-standard_table>
+                {{-- Mobile Cards --}}
+                <div class="md:hidden divide-y divide-gray-200">
+                    <template x-for="(role, index) in sortedRows" :key="role.id">
+                        <div class="p-4 hover:bg-gray-50 transition-colors duration-150">
+                            {{-- Role Header --}}
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-sm font-medium text-gray-900 truncate" x-text="role.name"></h3>
+                                        <span class="text-xs text-gray-500 ml-2" x-text="`#${index + 1}`"></span>
+                                    </div>
+                                    <p class="text-sm text-gray-500 mt-1" x-text="role.code"></p>
+                                    <template x-if="role.description">
+                                        <p class="text-sm text-gray-500 mt-1" x-text="role.description"></p>
+                                    </template>
+                                </div>
+                            </div>
+
+                            {{-- Role Details --}}
+                            <div class="space-y-2">
+                                {{-- Users Count --}}
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Users:</span>
+                                    <div>
+                                        <span class="text-sm font-semibold text-gray-900" x-text="role.users_count"></span>
+                                        <small class="text-gray-500 ml-1">users</small>
+                                    </div>
+                                </div>
+
+                                {{-- Permissions Count --}}
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Permissions:</span>
+                                    <div>
+                                        <span class="text-sm font-semibold text-gray-900"
+                                            x-text="role.permissions_count"></span>
+                                        <small class="text-gray-500 ml-1">permissions</small>
+                                    </div>
+                                </div>
+
+                                {{-- Status --}}
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Status:</span>
+                                    <template x-if="role.is_active">
+                                        <span
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <div class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+                                            Aktif
+                                        </span>
+                                    </template>
+                                    <template x-if="!role.is_active">
+                                        <span
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            <div class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
+                                            Nonaktif
+                                        </span>
+                                    </template>
+                                </div>
+                            </div>
+
+                            {{-- Actions --}}
+                            <div class="mt-4 pt-3 border-t border-gray-200">
+                                <div x-data="{
+                                    viewUrl: '/roles/' + role.id,
+                                    editUrl: role.is_primary_super_admin ? null : '/roles/' + role.id + '/edit',
+                                    deleteUrl: role.is_primary_super_admin ? null : '/roles/' + role.id,
+                                    toggleUrl: null,
+                                    itemName: 'Role ' + role.name,
+                                    isActive: role.is_active
+                                }">
+                                    <x-index.action-buttons :view="true" :edit="true" :delete="true"
+                                        :toggle="false" />
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <template x-if="sortedRows.length !== 0">
+                    <div class="pagination-wrapper">
+                        {{ $pagination->links('vendor.pagination.tailwind') }}
+                    </div>
+                </template>
+            </div>
+        </div>
     </div>
-</div>
 @endsection

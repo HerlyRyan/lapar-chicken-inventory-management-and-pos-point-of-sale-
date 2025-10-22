@@ -28,6 +28,7 @@
 <body class="min-h-screen bg-orange-50 text-gray-800">
     {{-- Success Alert --}}
     <x-toast />
+    <x-loading-overlay/>
     <div x-data="{
         sidebarOpen: false,
         handleResize() {

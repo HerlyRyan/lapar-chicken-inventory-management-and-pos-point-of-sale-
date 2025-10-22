@@ -6,17 +6,15 @@ use App\Models\Branch;
 use App\Models\SemiFinishedProduct;
 use App\Models\FinishedBranchStock;
 use App\Models\FinishedProduct;
-use App\Traits\TableFilterTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class BranchController extends Controller
 {
-    use TableFilterTrait;
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $query = Branch::query();
 
@@ -29,35 +27,31 @@ class BranchController extends Controller
             ['key' => 'phone', 'label' => 'Telepon'],
             ['key' => 'is_active', 'label' => 'Status'],
         ];
-        
-        // Define searchable and sortable columns
-        $searchableColumns = ['name', 'address', 'phone', 'code'];
-        $sortableColumns = ['name', 'code', 'type', 'created_at', 'updated_at'];
-        
-        // Handle status filtering
-        if (request('status') === 'active') {
-            $query->where('is_active', true);
-        } elseif (request('status') === 'inactive') {
-            $query->where('is_active', false);
+
+        // Search global
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhere('type', 'like', "%{$search}%")
+                    ->orWhere('address', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            });
         }
-        
-        // Filter berdasarkan tipe cabang
-        if (request('type')) {
-            $query->where('type', request('type'));
+
+        // Filter status
+        if ($status = $request->get('is_active')) {
+            $query->where('is_active', $status);
         }
-        
-        // Apply the standard filtering, sorting, and pagination
-        $branches = $this->applyFilterSortPaginate(
-            $query, 
-            $searchableColumns, 
-            $sortableColumns, 
-            'name', // default sort column
-            'asc'   // default sort direction
-        );
-        
-        // Get current sort parameters for the view
-        $sortColumn = request('sort', 'name');
-        $sortDirection = request('direction', 'asc');
+
+        // Sorting
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $branch */
+        $branch = $query->paginate(10);
 
         $statuses = [
             1 => 'Aktif',
@@ -80,8 +74,20 @@ class BranchController extends Controller
                 'options' => $statuses,
             ],
         ];
-        
-        return view('branches.index', compact('branches', 'sortColumn', 'sortDirection', 'selects', 'columns'));
+
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $branch->items(),
+                'links' => (string) $branch->links('vendor.pagination.tailwind'),
+            ]);
+        }
+
+        return view('branches.index', [
+            'branches' => $branch->items(),
+            'selects' => $selects,
+            'columns' => $columns,
+            'pagination' => $branch,
+        ]);
     }
 
     /**

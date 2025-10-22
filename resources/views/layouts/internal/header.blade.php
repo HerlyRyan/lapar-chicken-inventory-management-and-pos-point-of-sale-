@@ -31,9 +31,9 @@
             {{-- 3. Desktop Navigation & Actions --}}
             <div class="hidden lg:flex items-center space-x-4">
                 {{-- Branch Selector --}}
-                @if (isset($showBranchSelector) && $showBranchSelector && isset($branches) && $branches->count() > 0)
+                @if (isset($showBranchSelector) && $showBranchSelector && isset($branch) && $branch->count() > 0)
                     <div x-data="{ open: false }" class="relative">
-                        <button @click="open = !open" 
+                        <button @click="open = !open" type="button"
                                 class="flex items-center px-4 py-2.5 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-200 backdrop-blur-sm border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/30">
                             <div class="flex items-center">
                                 <svg class="w-5 h-5 mr-3 text-orange-200" fill="currentColor" viewBox="0 0 24 24">
@@ -99,8 +99,8 @@
                                 </a>
 
                                 @php
-                                    $productionCenters = $branches->where('type', 'production')->sortBy('code');
-                                    $retailBranches = $branches->where('type', 'branch')->sortBy('code');
+                                    $productionCenters = $branch->where('type', 'production')->sortBy('code');
+                                    $retailBranches = $branch->where('type', 'branch')->sortBy('code');
                                 @endphp
 
                                 {{-- Production Centers --}}
@@ -268,7 +268,7 @@
         <div class="lg:hidden border-t border-white/20 py-3" x-data="{ branchOpen: false, userOpen: false }">
             <div class="flex items-center justify-between space-x-3">
                 {{-- Mobile Branch Selector --}}
-                @if (isset($showBranchSelector) && $showBranchSelector && isset($branches) && $branches->count() > 0)
+                @if (isset($showBranchSelector) && $showBranchSelector && isset($branch) && $branch->count() > 0)
                     <div class="flex-1">
                         <button @click="branchOpen = !branchOpen" 
                                 class="w-full flex items-center justify-between px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors duration-200 text-sm">

@@ -16,7 +16,7 @@ class SemiFinishedProductController extends Controller
         // Constructor without BranchStockService dependency
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $selectedBranchId = request('branch_id');
         $selectedBranch = null;
@@ -33,6 +33,95 @@ class SemiFinishedProductController extends Controller
 
         $query = SemiFinishedProduct::with(['unit', 'category']);
 
+        $columns = [
+            ['key' => 'code', 'label' => 'Kode'],
+            ['key' => 'image', 'label' => 'Gambar'],
+            ['key' => 'name', 'label' => 'Nama Bahan'],
+            ['key' => 'category', 'label' => 'Kategori'],
+            ['key' => 'unit', 'label' => 'Satuan'],
+            ['key' => 'current_stock', 'label' => 'Stok Saat Ini'],
+            ['key' => 'minimum_stock', 'label' => 'Stok Minimum'],
+            ['key' => 'production_cost', 'label' => 'Biaya Produksi'],
+            ['key' => 'is_active', 'label' => 'Status'],
+        ];
+
+        // === SEARCH ===
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhereHas('category', fn($b) => $b->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('unit', fn($r) => $r->where('unit_name', 'like', "%{$search}%"));
+            });
+        }
+
+        // === FILTER STATUS ===
+        if ($status = $request->get('is_active')) {
+            $query->where('is_active', $status);
+        }
+
+        // === SORTING ===
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
+
+            // 🧩 Deteksi kolom relasi
+            switch ($sortBy) {
+                case 'category':
+                    $query->leftjoin('categories', 'categories.id', '=', 'semi_finished_products.category_id')
+                        ->orderBy('categories.name', $sortDir)
+                        ->select('semi_finished_products.*');
+                    break;
+
+                case 'unit':
+                    $query->leftjoin('units', 'units.id', '=', 'semi_finished_products.unit_id')
+                        ->orderBy('units.unit_name', $sortDir)
+                        ->select('semi_finished_products.*');
+                    break;
+
+                case 'production_cost':
+                    $query->orderBy('semi_finished_products.production_cost', $sortDir);
+                    break;
+
+                default:
+                    $query->orderBy("semi_finished_products.{$sortBy}", $sortDir);
+            }
+        }
+
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $semiFinishedProducts */
+        $semiFinishedProducts = $query->paginate(10);
+
+        // Manual sorting untuk current_stock
+        if ($sortBy === 'current_stock') {
+            $semiFinishedProducts->setCollection(
+                $semiFinishedProducts->getCollection()->sortBy(
+                    fn($item) => $item->display_stock_quantity,
+                    SORT_REGULAR,
+                    request('sort_dir') === 'desc'
+                )
+            );
+        }
+
+        $statuses = [
+            1 => 'Aktif',
+            0 => 'Nonaktif',
+        ];
+
+        $selects = [
+            [
+                'name' => 'is_active',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+        ];
+
+        // === RESPONSE ===
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $semiFinishedProducts->items(),
+                'links' => (string) $semiFinishedProducts->links('vendor.pagination.tailwind'),
+            ]);
+        }
+
         // Load semi-finished branch stocks for the specific branch if selected
         if ($branchForStock) {
             $query = $query->with(['semiFinishedBranchStocks' => function($q) use ($branchForStock) {
@@ -44,30 +133,6 @@ class SemiFinishedProductController extends Controller
                 $q->with('branch');
             }]);
         }
-        
-        // Define searchable and sortable columns
-        $searchableColumns = ['name', 'code', 'description'];
-        $sortableColumns = ['name', 'code', 'created_at', 'updated_at', 'production_cost', 'minimum_stock'];
-        
-        // Handle is_active status filtering separately since it's a boolean
-        if (request('status') === 'active') {
-            $query->where('is_active', true);
-        } elseif (request('status') === 'inactive') {
-            $query->where('is_active', false);
-        }
-        
-        // Apply the standard filtering, sorting, and pagination
-        $semiFinishedProducts = $this->applyFilterSortPaginate(
-            $query, 
-            $searchableColumns, 
-            $sortableColumns, 
-            'name', // default sort column
-            'asc'   // default sort direction
-        );
-        
-        // Get current sort parameters for the view
-        $sortColumn = request('sort', 'name');
-        $sortDirection = request('direction', 'asc');
 
         // Initialize branch stock for products that don't have it and calculate display stock
         foreach ($semiFinishedProducts as $product) {
@@ -88,15 +153,16 @@ class SemiFinishedProductController extends Controller
                 $product->display_stock_quantity = $product->semiFinishedBranchStocks->sum('quantity');
             }
         }
-        
-        return view('semi-finished-products.index', compact(
-            'semiFinishedProducts', 
-            'selectedBranch', 
-            'branchForStock', 
-            'showBranchSelector',
-            'sortColumn',
-            'sortDirection'
-        ));
+
+        return view('semi-finished-products.index', [
+            'semiFinishedProducts' => $semiFinishedProducts->items(),
+            'selects' => $selects,
+            'columns' => $columns,
+            'pagination' => $semiFinishedProducts,
+            'selectedBranch' => $selectedBranch,
+            'branchForStock' => $branchForStock,
+            'showBranchSelector' => $showBranchSelector,
+        ]);
     }
 
     public function create()

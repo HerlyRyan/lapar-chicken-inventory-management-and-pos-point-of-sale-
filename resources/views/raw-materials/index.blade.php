@@ -3,261 +3,260 @@
 @section('title', 'Master Bahan Baku')
 
 @section('content')
-<?php $materials = $rawMaterials; ?>
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 fw-bold mb-1" style="color: var(--primary-red);">
-            <i class="bi bi-box me-2"></i>Master Bahan Baku
-        </h1>
-        <p class="text-muted mb-0">Kelola data bahan baku dan material produksi</p>
-    </div>
-    <a href="{{ route('raw-materials.create') }}" class="btn btn-primary shadow px-4 d-flex align-items-center" style="min-width: 160px; white-space: nowrap;">
-        <i class="bi bi-plus-circle me-2"></i>
-        <span>Tambah Bahan Baku</span>
-    </a>
-</div>
+    <div class="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30">
+        {{-- Page Header --}}
+        <x-index.header title="Master Bahan Baku" subtitle="Kelola data bahan baku dan material produksi"
+            addRoute="{{ route('raw-materials.create') }}" addText="Tambah Bahan Baku" />
 
-<div class="card border-0 shadow-lg">
-    <div class="card-header text-white py-3" style="background: linear-gradient(135deg, #dc2626 0%, #ea580c 50%, #eab308 100%);">
-        <h5 class="mb-0 fw-bold">
-            <i class="bi bi-list-ul me-2"></i>Daftar Bahan Baku
-        </h5>
-    </div>
-    <div class="card-body">
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+        {{-- Main Content --}}
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+            <div x-data="sortableTable(@js($rawMaterials))" @sort-column.window="sortBy($event.detail)"
+                class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
+                {{-- Card Header --}}
+                <x-index.card-header title="Daftar Bahan Baku" />
 
-        @if(session('warning'))
-            <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-triangle me-2"></i>{!! session('warning') !!}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-        
-        <!-- Search Filter -->
-        <form method="GET" action="" class="row g-3 mb-4 table-filter-form">
-            <div class="col-md-6">
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama, kode, atau deskripsi bahan baku..." class="form-control">
+                {{-- Filter Section --}}
+                <x-filter-bar searchPlaceholder="Cari nama, kode, atau deskripsi bahan baku..." :selects="$selects" />
+
+                {{-- Desktop Table --}}
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <x-index.table-head :columns="$columns" />
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template x-for="(material, index) in sortedRows" :key="material.id">
+                                <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="index + 1"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <template x-if="material.code">
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800" x-text="material.code"></span>
+                                        </template>
+                                        <template x-if="!material.code">
+                                            <span class="text-gray-400">-</span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <template x-if="material.image">
+                                            <img :src="material.image" :alt="material.name" class="w-15 h-15 rounded-lg object-cover border border-gray-200">
+                                        </template>
+                                        <template x-if="!material.image">
+                                            <div class="w-15 h-15 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center">
+                                                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                                </svg>
+                                            </div>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm font-medium text-gray-900" x-text="material.name"></div>
+                                        <template x-if="material.description">
+                                            <div class="text-sm text-gray-500 max-w-xs truncate" :title="material.description" x-text="material.description.length > 50 ? material.description.substring(0, 50) + '...' : material.description"></div>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <template x-if="material.category">
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+                                                </svg>
+                                                <span x-text="material.category.name"></span>
+                                            </span>
+                                        </template>
+                                        <template x-if="!material.category">
+                                            <span class="text-gray-400">-</span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <template x-if="material.unit">
+                                            <span x-text="material.unit.unit_name"></span>
+                                        </template>
+                                        <template x-if="!material.unit">
+                                            <span class="text-gray-400">-</span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <span class="text-lg font-bold" :class="Number(material.current_stock) <= Number(material.minimum_stock) ? 'text-red-600' : 'text-green-600'" x-text="new Intl.NumberFormat('id-ID').format(material.current_stock)"></span>
+                                            <template x-if="Number(material.current_stock) <= Number(material.minimum_stock)">
+                                                <svg class="w-5 h-5 text-yellow-500 ml-2" fill="currentColor" viewBox="0 0 20 20" title="Stok di bawah minimum">
+                                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                                </svg>
+                                            </template>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="new Intl.NumberFormat('id-ID').format(material.minimum_stock)"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(material.unit_price)"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <template x-if="material.supplier">
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800" x-text="material.supplier.name"></span>
+                                        </template>
+                                        <template x-if="!material.supplier">
+                                            <span class="text-gray-400">-</span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <template x-if="material.is_active">
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <div class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+                                                Aktif
+                                            </span>
+                                        </template>
+                                        <template x-if="!material.is_active">
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                <div class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
+                                                Tidak Aktif
+                                            </span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <div x-data="{
+                                            viewUrl: '/raw-materials/' + material.id,
+                                            editUrl: '/raw-materials/' + material.id + '/edit',
+                                            deleteUrl: '/raw-materials/' + material.id,
+                                            toggleUrl: '/raw-materials/' + material.id + '/toggle-status',
+                                            itemName: 'bahan mentah ' + material.name,
+                                            isActive: material.is_active
+                                        }">
+                                            <x-index.action-buttons :view="true" :edit="true" :delete="true" :toggle="true" />
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-if="sortedRows.length === 0">
+                                <x-index.none-data colspan="11" />
+                            </template>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <select name="status" class="form-select">
-                    <option value="all">Semua Status</option>
-                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Aktif</option>
-                    <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Tidak Aktif</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-outline-primary">
-                        <i class="bi bi-filter me-1"></i>Filter
-                    </button>
-                    @if(request('search') || request('status') != 'all')
-                        <a href="{{ route('raw-materials.index') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-clockwise me-1"></i>Reset
-                        </a>
-                    @endif
-                </div>
-            </div>
-        </form>
 
-        <!-- Table -->
-        <x-standard-table
-            :headers="[
-                ['text' => 'Kode', 'sort' => 'code', 'class' => sortColumn('code', 'Kode', $sortColumn, $sortDirection)],
-                ['text' => 'Gambar', 'width' => '80px'],
-                ['text' => 'Nama Bahan Baku', 'sort' => 'name', 'class' => sortColumn('name', 'Nama Bahan Baku', $sortColumn, $sortDirection)],
-                ['text' => 'Kategori'],
-                ['text' => 'Satuan'],
-                ['text' => 'Stok Saat Ini', 'sort' => 'current_stock', 'class' => sortColumn('current_stock', 'Stok Saat Ini', $sortColumn, $sortDirection)],
-                ['text' => 'Stok Minimum', 'sort' => 'minimum_stock', 'class' => sortColumn('minimum_stock', 'Stok Minimum', $sortColumn, $sortDirection)],
-                ['text' => 'Harga Satuan', 'sort' => 'unit_price', 'class' => sortColumn('unit_price', 'Harga Satuan', $sortColumn, $sortDirection)],
-                ['text' => 'Supplier'],
-                ['text' => 'Status']
-            ]"
-            :pagination="$materials"
-            :searchable="false"
-            :sortable="true"
-            :sortColumn="$sortColumn"
-            :sortDirection="$sortDirection"
-        >
-                    @forelse($materials as $material)
-                    @php
-                        $isLowStock = $material->current_stock <= $material->minimum_stock;
-                    @endphp
-                    <tr>
-                        <td>
-                            @if($material->code)
-                                <span class="badge bg-danger text-warning">{{ $material->code }}</span>
-                            @else
-                                <span class="text-muted">-</span>
-                            @endif
-                        </td>
-                        <td>
-                            @if($material->image && file_exists(public_path($material->image)))
-                                <img src="{{ asset($material->image) }}" alt="{{ $material->name }}" class="img-thumbnail" style="width: 60px; height: 60px; object-fit: cover;">
-                            @else
-                                <div class="bg-light border rounded d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                    <i class="bi bi-image text-muted fs-4"></i>
+                {{-- Mobile Cards --}}
+                <div class="md:hidden divide-y divide-gray-200">
+                    <template x-for="(material, index) in sortedRows" :key="material.id">
+                        <div class="p-4 hover:bg-gray-50 transition-colors duration-150">
+                            {{-- Material Header --}}
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex items-start space-x-3 flex-1">
+                                    {{-- Image --}}
+                                    <template x-if="material.image_url">
+                                        <img :src="material.image_url" :alt="material.name" class="w-12 h-12 rounded-lg object-cover border border-gray-200 flex-shrink-0">
+                                    </template>
+                                    <template x-if="!material.image_url">
+                                        <div class="w-12 h-12 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                            </svg>
+                                        </div>
+                                    </template>
+                                    {{-- Name and Code --}}
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="text-sm font-medium text-gray-900 truncate" x-text="material.name"></h3>
+                                        <template x-if="material.code">
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1" x-text="material.code"></span>
+                                        </template>
+                                        <template x-if="material.description">
+                                            <p class="text-sm text-gray-500 truncate mt-1" x-text="material.description.length > 30 ? material.description.substring(0, 30) + '...' : material.description"></p>
+                                        </template>
+                                    </div>
                                 </div>
-                            @endif
-                        </td>
-                        <td>
-                            <div class="fw-bold">{{ $material->name }}</div>
-                            <small class="text-muted">{{ Str::limit($material->description, 50) }}</small>
-                        </td>
-                        <td>
-                            @if($material->category)
-                                <span class="badge bg-info bg-opacity-25 text-info-emphasis border border-info-subtle">
-                                    <i class="bi bi-tag"></i> {{ $material->category->name }}
-                                </span>
-                            @else
-                                -
-                            @endif
-                        </td>
-                        <td>
-                            {{ $material->unit ? $material->unit->unit_name : '-' }}
-                        </td>
-                        <td>
-                            <div class="fw-bold fs-5 {{ $isLowStock ? 'text-danger' : 'text-success' }}">
-                                {{ number_format($material->current_stock, 0, ',', '.') }}
-                                @if($isLowStock)
-                                    <i class="bi bi-exclamation-triangle-fill text-warning ms-1" title="Stok di bawah minimum"></i>
-                                @endif
                             </div>
-                        </td>
-                        <td>
-                            {{ number_format($material->minimum_stock, 0, ',', '.') }}
-                        </td>
-                        <td>
-                            Rp {{ number_format($material->unit_price, 0, ',', '.') }}
-                        </td>
-                        <td>
-                             @if($material->supplier)
-                                <span class="badge bg-secondary bg-opacity-25 text-secondary-emphasis border border-secondary-subtle">{{ $material->supplier->name }}</span>
-                            @else
-                                -
-                            @endif
-                        </td>
-                        <td>
-                            @if($material->is_active)
-                                <span class="badge bg-success">Aktif</span>
-                            @else
-                                <span class="badge bg-secondary">Nonaktif</span>
-                            @endif
-                        </td>
-                        <td class="text-center">
-                            <x-action-buttons
-                                :viewUrl="route('raw-materials.show', $material->id)" 
-                                :editUrl="route('raw-materials.edit', $material->id)"
-                                :deleteUrl="route('raw-materials.destroy', $material->id)" 
-                                :toggleUrl="route('raw-materials.toggle-status', $material->id)"
-                                :isActive="$material->is_active"
-                                :showToggle="true"
-                                itemName="bahan mentah {{$material->name}}"
-                            />
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="11" class="text-center py-5">
-                            <i class="bi bi-inbox fs-1 text-muted mb-2"></i>
-                            <h5 class="text-muted">Data bahan baku tidak ditemukan.</h5>
-                            <p class="text-muted">Coba kata kunci lain atau tambahkan data baru.</p>
-                        </td>
-                    </tr>
-                    @endforelse
-        </x-standard-table>
+
+                            {{-- Material Details --}}
+                            <div class="space-y-2">
+                                {{-- Category and Unit --}}
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Kategori:</span>
+                                    <template x-if="material.category">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800" x-text="material.category.name"></span>
+                                    </template>
+                                    <template x-if="!material.category">
+                                        <span class="text-sm text-gray-400">-</span>
+                                    </template>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Satuan:</span>
+                                    <template x-if="material.unit">
+                                        <span class="text-sm text-gray-900" x-text="material.unit.unit_name"></span>
+                                    </template>
+                                    <template x-if="!material.unit">
+                                        <span class="text-sm text-gray-400">-</span>
+                                    </template>
+                                </div>
+
+                                {{-- Stock Info --}}
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Stok Saat Ini:</span>
+                                    <div class="flex items-center">
+                                        <span class="text-sm font-bold" :class="Number(material.current_stock) <= Number(material.minimum_stock) ? 'text-red-600' : 'text-green-600'" x-text="new Intl.NumberFormat('id-ID').format(material.current_stock)"></span>
+                                        <template x-if="Number(material.current_stock) <= Number(material.minimum_stock)">
+                                            <svg class="w-4 h-4 text-yellow-500 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                            </svg>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Stok Minimum:</span>
+                                    <span class="text-sm text-gray-900" x-text="new Intl.NumberFormat('id-ID').format(material.minimum_stock)"></span>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Harga Satuan:</span>
+                                    <span class="text-sm text-gray-900" x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(material.unit_price)"></span>
+                                </div>
+
+                                {{-- Supplier --}}
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Supplier:</span>
+                                    <template x-if="material.supplier">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800" x-text="material.supplier.name"></span>
+                                    </template>
+                                    <template x-if="!material.supplier">
+                                        <span class="text-sm text-gray-400">-</span>
+                                    </template>
+                                </div>
+
+                                {{-- Status --}}
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Status:</span>
+                                    <template x-if="material.is_active">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <div class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+                                            Aktif
+                                        </span>
+                                    </template>
+                                    <template x-if="!material.is_active">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            <div class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
+                                            Tidak Aktif
+                                        </span>
+                                    </template>
+                                </div>
+                            </div>
+
+                            {{-- Actions --}}
+                            <div class="mt-4 pt-3 border-t border-gray-200">
+                                <div x-data="{
+                                    viewUrl: '/raw-materials/' + material.id,
+                                    editUrl: '/raw-materials/' + material.id + '/edit',
+                                    deleteUrl: '/raw-materials/' + material.id,
+                                    toggleUrl: '/raw-materials/' + material.id + '/toggle-status',
+                                    itemName: 'bahan mentah ' + material.name,
+                                    isActive: material.is_active
+                                }">
+                                    <x-index.action-buttons :view="true" :edit="true" :delete="true" :toggle="true" />
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <template x-if="sortedRows.length !== 0">
+                    <div class="pagination-wrapper">
+                        {{ $pagination->links('vendor.pagination.tailwind') }}
+                    </div>
+                </template>
+            </div>
+        </div>
     </div>
-</div>
-
-@push('styles')
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
-<style>
-    .table-responsive thead th {
-        position: sticky;
-        top: 0;
-        z-index: 1;
-        background-color: #f8f9fa; /* Match table-light bg color */
-        box-shadow: inset 0 -2px 0 #dee2e6; /* Optional: to add a bottom border */
-    }
-</style>
-@endpush
-
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-function confirmDelete(target, materialName) {
-    Swal.fire({
-        title: 'Konfirmasi Hapus',
-        html: `Apakah Anda yakin ingin menghapus bahan baku <br><strong>${materialName}</strong>?`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: '<i class="bi bi-trash me-1"></i>Ya, Hapus!',
-        cancelButtonText: '<i class="bi bi-x-circle me-1"></i>Batal',
-        reverseButtons: true,
-        focusCancel: true,
-        customClass: {
-            confirmButton: 'btn btn-danger',
-            cancelButton: 'btn btn-secondary'
-        },
-        buttonsStyling: false
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Show loading
-            Swal.fire({
-                title: 'Menghapus...',
-                text: 'Mohon tunggu sebentar',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                showConfirmButton: false,
-                didOpen: () => {
-                    Swal.showLoading()
-                }
-            });
-            
-            // Create and submit form
-            const form = document.createElement('form');
-            form.method = 'POST';
-            // Support both ID and full URL passed from the action button
-            let actionUrl;
-            try {
-                const t = String(target ?? '').trim();
-                if (t.startsWith('http') || t.startsWith('/')) {
-                    actionUrl = t;
-                } else {
-                    actionUrl = `/raw-materials/${t}`;
-                }
-            } catch (e) {
-                actionUrl = `/raw-materials/${target}`;
-            }
-            form.action = actionUrl;
-            
-            const csrfToken = document.createElement('input');
-            csrfToken.type = 'hidden';
-            csrfToken.name = '_token';
-            csrfToken.value = '{{ csrf_token() }}';
-            
-            const methodField = document.createElement('input');
-            methodField.type = 'hidden';
-            methodField.name = '_method';
-            methodField.value = 'DELETE';
-            
-            form.appendChild(csrfToken);
-            form.appendChild(methodField);
-            document.body.appendChild(form);
-            form.submit();
-        }
-    });
-}
-</script>
-@endpush
 @endsection

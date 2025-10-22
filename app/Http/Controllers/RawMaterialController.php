@@ -36,37 +36,101 @@ class RawMaterialController extends Controller
             'timestamp' => now()->timestamp
         ]);
     }
-    
-    public function index()
+
+    public function index(Request $request)
     {
-        $query = RawMaterial::query()->with(['unit', 'supplier', 'category']);
-        
-        // Define searchable and sortable columns
-        $searchableColumns = ['name', 'code', 'description'];
-        $sortableColumns = ['name', 'code', 'current_stock', 'minimum_stock', 'unit_price', 'created_at', 'updated_at'];
-        
-        // Handle is_active status filtering separately since it's a boolean
-        if (request('status') === 'active') {
-            $query->where('is_active', true);
-        } elseif (request('status') === 'inactive') {
-            $query->where('is_active', false);
+        $query = RawMaterial::with(['unit', 'supplier', 'category']);
+
+        $columns = [
+            ['key' => 'code', 'label' => 'Kode'],
+            ['key' => 'image', 'label' => 'Gambar'],
+            ['key' => 'name', 'label' => 'Nama Bahan Baku'],
+            ['key' => 'category', 'label' => 'Kategori'],
+            ['key' => 'unit', 'label' => 'Satuan'],
+            ['key' => 'current_stock', 'label' => 'Stok Saat Ini'],
+            ['key' => 'minimum_stock', 'label' => 'Stok Minimum'],
+            ['key' => 'unit_price', 'label' => 'Harga Satuan'],
+            ['key' => 'supplier', 'label' => 'Supplier'],
+            ['key' => 'is_active', 'label' => 'Status'],
+        ];
+
+        // === SEARCH ===
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhereHas('category', fn($q2) => $q2->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('unit', fn($q2) => $q2->where('unit_name', 'like', "%{$search}%"))
+                    ->orWhereHas('supplier', fn($q2) => $q2->where('name', 'like', "%{$search}%"));
+            });
         }
-        
-        // Apply the standard filtering, sorting, and pagination
-        $rawMaterials = $this->applyFilterSortPaginate(
-            $query, 
-            $searchableColumns, 
-            $sortableColumns, 
-            'name', // default sort column
-            'asc'   // default sort direction
-        );
-        
-        // Get current sort parameters for the view
-        $sortColumn = request('sort', 'name');
-        $sortDirection = request('direction', 'asc');
-        
-        return view('raw-materials.index', compact('rawMaterials', 'sortColumn', 'sortDirection'));
+
+        // === FILTER STATUS ===
+        if ($status = $request->get('is_active')) {
+            $query->where('is_active', $status);
+        }
+
+        // === SORTING ===
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
+
+            // 🧩 Deteksi kolom relasi
+            switch ($sortBy) {
+                case 'category':
+                    $query->leftjoin('categories', 'categories.id', '=', 'raw_materials.category_id')
+                        ->orderBy('categories.name', $sortDir)
+                        ->select('raw_materials.*');
+                    break;
+
+                case 'unit':
+                    $query->leftjoin('units', 'units.id', '=', 'raw_materials.unit_id')
+                        ->orderBy('units.unit_name', $sortDir)
+                        ->select('raw_materials.*');
+                    break;
+
+                case 'supplier':
+                    $query->leftjoin('suppliers', 'suppliers.id', '=', 'raw_materials.supplier_id')
+                        ->orderBy('suppliers.name', $sortDir)
+                        ->select('raw_materials.*');
+                    break;
+
+                default:
+                    $query->orderBy($sortBy, $sortDir);
+            }
+        }
+
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $rawMaterials */
+        $rawMaterials = $query->paginate(10);
+
+        $statuses = [
+            1 => 'Aktif',
+            0 => 'Nonaktif',
+        ];
+
+        $selects = [
+            [
+                'name' => 'is_active',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+        ];
+
+        // === RESPONSE ===
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $rawMaterials->items(),
+                'links' => (string) $rawMaterials->links('vendor.pagination.tailwind'),
+            ]);
+        }
+
+        return view('raw-materials.index', [
+            'rawMaterials' => $rawMaterials->items(),
+            'selects' => $selects,
+            'columns' => $columns,
+            'pagination' => $rawMaterials,
+        ]);
     }
+
 
     public function create()
     {

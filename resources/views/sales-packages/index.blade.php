@@ -1,193 +1,257 @@
 @extends('layouts.app')
 
-@php
-use Illuminate\Support\Facades\Storage;
-@endphp
+@section('title', 'Paket Penjualan')
 
 @section('content')
-<div class="container-fluid">
-    <x-page-header 
-        title="Paket Penjualan" 
-        subtitle="Kelola paket produk untuk penjualan standar"
-        :breadcrumb="[
-            ['label' => 'Dashboard', 'url' => route('dashboard')],
-            ['label' => 'Paket Penjualan', 'active' => true]
-        ]"
-    />
+    <div class="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30">
+        {{-- Page Header --}}
+        <x-index.header title="Paket Penjualan" subtitle="Kelola paket produk untuk penjualan standar"
+            addRoute="{{ route('sales-packages.create') }}" addText="Tambah Paket Baru" />
 
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                <i class="bi bi-box2-heart me-2"></i>Daftar Paket Penjualan
-            </h5>
-            <a href="{{ route('sales-packages.create') }}" class="btn btn-light shadow">
-                <i class="bi bi-plus-lg"></i> Tambah Paket Baru
-            </a>
-        </div>
+        {{-- Main Content --}}
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+            <div x-data="sortableTable(@js($salesPackages))" @sort-column.window="sortBy($event.detail)"
+                class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
+                {{-- Card Header --}}
+                <x-index.card-header title="Daftar Paket Penjualan" />
 
-        <div class="card-body">
-            <!-- Filter Section -->
-            <form method="GET" class="row g-3 mb-4">
-                <div class="col-md-4">
-                    <label class="form-label">Cari Paket</label>
-                    <input type="text" class="form-control" name="search" value="{{ request('search') }}" 
-                           placeholder="Nama, kode, atau deskripsi paket...">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Status</label>
-                    <select name="status" class="form-select">
-                        <option value="">Semua Status</option>
-                        <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Aktif</option>
-                        <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Tidak Aktif</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">&nbsp;</label>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-search"></i> Filter
-                        </button>
-                        <a href="{{ route('sales-packages.index') }}" class="btn btn-outline-secondary">Reset</a>
-                    </div>
-                </div>
-            </form>
+                {{-- Filter Section --}}
+                <x-filter-bar searchPlaceholder="Cari nama, kode, atau deskripsi paket..." :selects="$selects" />
 
-            <!-- Table Section -->
-            <div class="table-responsive">
-                <table class="table table-striped table-hover align-middle">
-                    <thead class="table-primary">
-                        <tr>
-                            <th width="50">#</th>
-                            <th>Paket</th>
-                            <th>Kategori</th>
-                            <th>Komponen</th>
-                            <th>Harga Dasar</th>
-                            <th>Diskon/Tambahan</th>
-                            <th class="text-end">Harga Jual</th>
-                            <th>Status</th>
-                            <th width="120">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($salesPackages as $package)
-                        <tr>
-                            <td class="text-center fw-bold text-muted">
-                                {{ $loop->iteration + ($salesPackages->currentPage() - 1) * $salesPackages->perPage() }}
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    @if($package->image && Storage::disk('public')->exists($package->image))
-                                        <img src="{{ asset('storage/' . $package->image) }}" 
-                                             alt="{{ $package->name }}" 
-                                             class="rounded me-3" 
-                                             style="width: 50px; height: 50px; object-fit: cover;">
-                                    @else
-                                        <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" 
-                                             style="width: 50px; height: 50px;">
-                                            <i class="bi bi-box2-heart text-muted"></i>
+                {{-- Desktop Table --}}
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <x-index.table-head :columns="$columns" />
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template x-for="(pkg, index) in sortedRows" :key="pkg.id">
+                                <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="index + 1"></td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <template x-if="pkg.image">
+                                                <img :src="'/storage/' + pkg.image" :alt="pkg.name"
+                                                    class="w-12 h-12 rounded object-cover" />
+                                            </template>
+                                            <template x-if="!pkg.image">
+                                                <div class="w-12 h-12 rounded bg-gray-100 flex items-center justify-center">
+                                                    <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M20 7l-8-4-8 4m0 0l8 4m-8-4v10l8 4m0-10l8 4m-8-4l8-4" />
+                                                    </svg>
+                                                </div>
+                                            </template>
+                                            <div class="min-w-0">
+                                                <h3 class="text-sm font-medium text-gray-900 truncate" x-text="pkg.name">
+                                                </h3>
+                                                <p class="text-xs text-gray-500" x-text="pkg.code"></p>
+                                                <template x-if="pkg.description">
+                                                    <p class="text-xs text-gray-500 truncate mt-1"
+                                                        x-text="pkg.description.substring(0, 50)"></p>
+                                                </template>
+                                            </div>
                                         </div>
-                                    @endif
-                                    <div>
-                                        <h6 class="mb-1">{{ $package->name }}</h6>
-                                        <small class="text-muted">{{ $package->code }}</small>
-                                        @if($package->description)
-                                            <div class="small text-muted mt-1">{{ Str::limit($package->description, 50) }}</div>
-                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <template x-if="pkg.category">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                                                x-text="pkg.category.name"></span>
+                                        </template>
+                                        <template x-if="!pkg.category">
+                                            <span class="text-gray-500">-</span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm text-gray-900">
+                                            <span x-text="`${pkg.package_items.length} produk`"></span>
+                                            <div class="flex flex-wrap gap-1 mt-1">
+                                                <template x-for="item in pkg.package_items.slice(0, 2)"
+                                                    :key="item.id">
+                                                    <span
+                                                        class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800"
+                                                        x-text="`${item.quantity}${item.finished_product?.unit?.abbreviation ?? 'pcs'} ${item.finished_product?.name}`"></span>
+                                                </template>
+                                                <template x-if="pkg.package_items.length > 2">
+                                                    <span
+                                                        class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-600 text-white"
+                                                        x-text="`+${pkg.package_items.length - 2} lainnya`"></span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900">
+                                        <span x-text="`Rp ${new Intl.NumberFormat('id-ID').format(pkg.base_price)}`"></span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                                        <template x-if="pkg.discount_percentage > 0">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                                                x-text="`-${pkg.discount_percentage}%`"></span>
+                                        </template>
+                                        <template x-if="pkg.discount_amount > 0">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                                                x-text="`-Rp ${new Intl.NumberFormat('id-ID').format(pkg.discount_amount)}`"></span>
+                                        </template>
+                                        <template x-if="pkg.discount_percentage === 0 && pkg.discount_amount === 0">
+                                            <span class="text-gray-500">-</span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                                        <template x-if="pkg.additional_charge > 0">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
+                                                x-text="`+Rp ${new Intl.NumberFormat('id-ID').format(pkg.additional_charge)}`"></span>
+                                        </template>
+                                        <template x-if="pkg.additional_charge === 0">
+                                            <span class="text-gray-500">-</span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-blue-600">
+                                        <span
+                                            x-text="`Rp ${new Intl.NumberFormat('id-ID').format(pkg.final_price)}`"></span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                                        <template x-if="pkg.is_active">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <div class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+                                                Aktif
+                                            </span>
+                                        </template>
+                                        <template x-if="!pkg.is_active">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                <div class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
+                                                Tidak Aktif
+                                            </span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                                        <div x-data="{
+                                            viewUrl: '/sales-packages/' + pkg.id,
+                                            editUrl: '/sales-packages/' + pkg.id + '/edit',
+                                            deleteUrl: '/sales-packages/' + pkg.id,
+                                            toggleUrl: '/sales-packages/' + pkg.id + '/toggle-status',
+                                            itemName: 'paket ' + pkg.name,
+                                            isActive: pkg.is_active
+                                        }">
+                                            <x-index.action-buttons :view="true" :edit="true" :delete="true"
+                                                :toggle="true" />
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-if="sortedRows.length === 0">
+                                <x-index.none-data :colspan="9" />
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                {{-- Mobile Cards --}}
+                <div class="md:hidden divide-y divide-gray-200">
+                    <template x-for="(pkg, index) in sortedRows" :key="pkg.id">
+                        <div class="p-4 hover:bg-gray-50 transition-colors duration-150">
+                            {{-- Package Header --}}
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex items-start gap-3 flex-1 min-w-0">
+                                    <template x-if="pkg.image">
+                                        <img :src="'/storage/' + pkg.image" :alt="pkg.name"
+                                            class="w-10 h-10 rounded object-cover" />
+                                    </template>
+                                    <template x-if="!pkg.image">
+                                        <div
+                                            class="w-10 h-10 rounded bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M20 7l-8-4-8 4m0 0l8 4m-8-4v10l8 4m0-10l8 4m-8-4l8-4" />
+                                            </svg>
+                                        </div>
+                                    </template>
+                                    <div class="min-w-0 flex-1">
+                                        <h3 class="text-sm font-medium text-gray-900 truncate" x-text="pkg.name"></h3>
+                                        <p class="text-xs text-gray-500" x-text="pkg.code"></p>
                                     </div>
                                 </div>
-                            </td>
-                            <td>
-                                @if($package->category)
-                                    <span class="badge bg-info text-white">{{ $package->category->name ?? $package->category }}</span>
-                                @else
-                                    <span class="text-muted">-</span>
-                                @endif
-                            </td>
-                            <td>
-                                <small class="text-muted">
-                                    {{ $package->packageItems->count() }} produk:
-                                </small>
-                                <div class="mt-1">
-                                    @foreach($package->packageItems->take(2) as $item)
-                                        <span class="badge bg-light text-dark border me-1">
-                                            {{ $item->quantity }}{{ $item->finishedProduct->unit->abbreviation ?? 'pcs' }} 
-                                            {{ $item->finishedProduct->name }}
-                                        </span>
-                                    @endforeach
-                                    @if($package->packageItems->count() > 2)
-                                        <span class="badge bg-secondary">+{{ $package->packageItems->count() - 2 }} lainnya</span>
-                                    @endif
-                                </div>
-                            </td>
-                            <td class="text-end">
-                                <span class="fw-bold">Rp {{ number_format($package->base_price, 0, ',', '.') }}</span>
-                            </td>
-                            <td>
-                                @if($package->discount_percentage > 0)
-                                    <span class="badge bg-success">-{{ $package->discount_percentage }}%</span>
-                                @elseif($package->discount_amount > 0)
-                                    <span class="badge bg-success">-Rp {{ number_format($package->discount_amount, 0, ',', '.') }}</span>
-                                @endif
-                                
-                                @if($package->additional_charge > 0)
-                                    <span class="badge bg-warning">+Rp {{ number_format($package->additional_charge, 0, ',', '.') }}</span>
-                                @endif
-                                
-                                @if($package->discount_percentage == 0 && $package->discount_amount == 0 && $package->additional_charge == 0)
-                                    <span class="text-muted">-</span>
-                                @endif
-                            </td>
-                            <td class="text-end">
-                                <span class="fw-bold text-primary fs-5">
-                                    Rp {{ number_format($package->final_price, 0, ',', '.') }}
-                                </span>
-                            </td>
-                            <td>
-                                @if($package->is_active)
-                                    <span class="badge bg-success">Aktif</span>
-                                @else
-                                    <span class="badge bg-secondary">Tidak Aktif</span>
-                                @endif
-                            </td>
-                            <td>
-                                <x-action-buttons
-                                    :viewUrl="route('sales-packages.show', $package)"
-                                    :editUrl="route('sales-packages.edit', $package)"
-                                    :deleteUrl="route('sales-packages.destroy', $package)"
-                                    :showToggle="true"
-                                    :toggleUrl="route('sales-packages.toggle-status', $package)"
-                                    :isActive="$package->is_active"
-                                    :itemName="'paket ' . $package->name"
-                                />
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="8" class="text-center py-4">
-                                <i class="bi bi-box2-heart text-muted" style="font-size: 3rem;"></i>
-                                <h5 class="text-muted mt-2">Belum ada paket penjualan</h5>
-                                <p class="text-muted">Silakan tambah paket penjualan pertama Anda.</p>
-                                <a href="{{ route('sales-packages.create') }}" class="btn btn-primary">
-                                    <i class="bi bi-plus-lg"></i> Tambah Paket Baru
-                                </a>
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                            </div>
 
-            <!-- Pagination -->
-            @if($salesPackages->hasPages())
-                <div class="d-flex justify-content-center mt-4">
-                    {{ $salesPackages->links() }}
+                            {{-- Package Details --}}
+                            <div class="space-y-2 text-sm">
+                                {{-- Category --}}
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-500">Kategori:</span>
+                                    <template x-if="pkg.category">
+                                        <span
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                                            x-text="pkg.category.name"></span>
+                                    </template>
+                                    <template x-if="!pkg.category">
+                                        <span class="text-gray-500">-</span>
+                                    </template>
+                                </div>
+
+                                {{-- Prices --}}
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-500">Harga Dasar:</span>
+                                    <span class="font-semibold text-gray-900"
+                                        x-text="`Rp ${new Intl.NumberFormat('id-ID').format(pkg.base_price)}`"></span>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-500">Harga Jual:</span>
+                                    <span class="font-bold text-blue-600"
+                                        x-text="`Rp ${new Intl.NumberFormat('id-ID').format(pkg.final_price)}`"></span>
+                                </div>
+
+                                {{-- Status --}}
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-500">Status:</span>
+                                    <template x-if="pkg.is_active">
+                                        <span
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <div class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+                                            Aktif
+                                        </span>
+                                    </template>
+                                    <template x-if="!pkg.is_active">
+                                        <span
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            <div class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
+                                            Tidak Aktif
+                                        </span>
+                                    </template>
+                                </div>
+                            </div>
+
+                            {{-- Actions --}}
+                            <div class="mt-4 pt-3 border-t border-gray-200">
+                                <div x-data="{
+                                    viewUrl: '/sales-packages/' + pkg.id,
+                                    editUrl: '/sales-packages/' + pkg.id + '/edit',
+                                    deleteUrl: '/sales-packages/' + pkg.id,
+                                    toggleUrl: '/sales-packages/' + pkg.id + '/toggle-status',
+                                    itemName: 'paket ' + pkg.name,
+                                    isActive: pkg.is_active
+                                }">
+                                    <x-index.action-buttons :view="true" :edit="true" :delete="true"
+                                        :toggle="true" />
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
-            @endif
+
+                {{-- Pagination --}}
+                <template x-if="sortedRows.length !== 0">
+                    <div class="pagination-wrapper">
+                        {{ $pagination->links('vendor.pagination.tailwind') }}
+                    </div>
+                </template>
+            </div>
         </div>
     </div>
-</div>
-
-@push('scripts')
-<!-- SweetAlert2 is already included in the main layout -->
-@endpush
 @endsection

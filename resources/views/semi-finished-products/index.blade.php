@@ -3,304 +3,226 @@
 @section('title', 'Master Bahan Setengah Jadi')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 fw-bold mb-1" style="color: var(--primary-red);">
-            <i class="bi bi-box-seam me-2"></i>Master Bahan Setengah Jadi
-        </h1>
-        <p class="text-muted mb-0">Kelola data bahan setengah jadi hasil produksi internal</p>
-    </div>
-    <a href="{{ route('semi-finished-products.create') }}{{ request('branch_id') ? '?branch_id=' . request('branch_id') : '' }}" class="btn btn-primary shadow px-4 d-flex align-items-center" style="min-width: 160px; white-space: nowrap;">
-        <i class="bi bi-plus-circle me-2"></i>
-        <span>Tambah Bahan Setengah Jadi</span>
-    </a>
-</div>
+<div class="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30">
+    {{-- Page Header --}}
+    <x-index.header title="Master Bahan Setengah Jadi" subtitle="Kelola data bahan setengah jadi hasil produksi internal"
+        addRoute="{{ route('semi-finished-products.create') }}{{ request('branch_id') ? '?branch_id=' . request('branch_id') : '' }}"
+        addText="Tambah Bahan Setengah Jadi" />
 
-<div class="card border-0 shadow-lg">
-    <div class="card-header text-white py-3" style="background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 50%, #10b981 100%);">
-        <h5 class="mb-0 fw-bold">
-            <i class="bi bi-list-ul me-2"></i>Daftar Bahan Setengah Jadi
-        </h5>
-    </div>
-    <div class="card-body">
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+    {{-- Main Content --}}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div x-data="sortableTable(@js($semiFinishedProducts))" @sort-column.window="sortBy($event.detail)"
+            class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
+            {{-- Card Header --}}
+            <x-index.card-header title="Daftar Bahan Setengah Jadi" />
 
-        @if(session('warning'))
-            <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-triangle me-2"></i>{!! session('warning') !!}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-
-        <!-- Branch Info -->
-        @if($branchForStock)
-            <div class="alert alert-info mb-3">
-                <i class="bi bi-building me-2"></i>
-                <strong>Cabang Aktif:</strong> {{ $branchForStock->name }} ({{ $branchForStock->code }})
-                <small class="d-block mt-1">Menampilkan stok untuk cabang ini</small>
-            </div>
-        @elseif($selectedBranch)
-            <div class="alert alert-info mb-3">
-                <i class="bi bi-building me-2"></i>
-                <strong>Cabang Dipilih:</strong> {{ $selectedBranch->name }} ({{ $selectedBranch->code }})
-                <small class="d-block mt-1">Menampilkan stok untuk cabang ini</small>
-            </div>
-        @else
-            <div class="alert alert-secondary mb-3">
-                <i class="bi bi-buildings me-2"></i>
-                <strong>Tampilan:</strong> Semua Cabang
-                <small class="d-block mt-1">Menampilkan total stok dari semua cabang</small>
-            </div>
-        @endif
-        
-        <!-- Search Filter -->
-        <form method="GET" action="" class="row g-3 mb-4 table-filter-form">
-            @if(request('branch_id'))
-                <input type="hidden" name="branch_id" value="{{ request('branch_id') }}">
-            @endif
-            <div class="col-md-6">
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama, kode, atau deskripsi bahan setengah jadi..." class="form-control">
-                </div>
-            </div>
-            <div class="col-md-3">
-                <select name="status" class="form-select">
-                    <option value="all">Semua Status</option>
-                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Aktif</option>
-                    <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Tidak Aktif</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-outline-primary">
-                        <i class="bi bi-filter me-1"></i>Filter
-                    </button>
-                    @if(request('search') || request('status') != 'all')
-                        <a href="{{ route('semi-finished-products.index') }}{{ request('branch_id') ? '?branch_id=' . request('branch_id') : '' }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-clockwise me-1"></i>Reset
-                        </a>
+            <div class="p-4 sm:p-6">
+                {{-- Branch Info --}}
+                <div class="mb-4">
+                    @if($branchForStock)
+                        <div class="rounded-md bg-blue-50 p-3 border border-blue-100 text-sm text-blue-700">
+                            <i class="bi bi-building me-2"></i>
+                            <strong>Cabang Aktif:</strong> {{ $branchForStock->name }} ({{ $branchForStock->code }})
+                            <div class="text-xs text-blue-600 mt-1">Menampilkan stok untuk cabang ini</div>
+                        </div>
+                    @elseif($selectedBranch)
+                        <div class="rounded-md bg-blue-50 p-3 border border-blue-100 text-sm text-blue-700">
+                            <i class="bi bi-building me-2"></i>
+                            <strong>Cabang Dipilih:</strong> {{ $selectedBranch->name }} ({{ $selectedBranch->code }})
+                            <div class="text-xs text-blue-600 mt-1">Menampilkan stok untuk cabang ini</div>
+                        </div>
+                    @else
+                        <div class="rounded-md bg-gray-50 p-3 border border-gray-100 text-sm text-gray-700">
+                            <i class="bi bi-buildings me-2"></i>
+                            <strong>Tampilan:</strong> Semua Cabang
+                            <div class="text-xs text-gray-600 mt-1">Menampilkan total stok dari semua cabang</div>
+                        </div>
                     @endif
                 </div>
-            </div>
-        </form>
 
-        <div class="table-responsive">
-            <table class="table table-hover table-striped standard-table mb-0">
-                <thead class="sticky-top bg-white">
-                    <tr>
-                        <th>{!! sortColumn('code', 'Kode', $sortColumn, $sortDirection) !!}</th>
-                        <th style="width: 80px;">Gambar</th>
-                        <th>{!! sortColumn('name', 'Nama Bahan', $sortColumn, $sortDirection) !!}</th>
-                        <th>Kategori</th>
-                        <th>Satuan</th>
-                        <th>Stok Saat Ini</th>
-                        <th>{!! sortColumn('minimum_stock', 'Stok Minimum', $sortColumn, $sortDirection) !!}</th>
-                        <th>{!! sortColumn('production_cost', 'Biaya Produksi', $sortColumn, $sortDirection) !!}</th>
-                        <th>Status</th>
-                        <th class="text-center" style="width: 180px;">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($semiFinishedProducts as $product)
-                        @php
-                            $currentStock = $product->display_stock_quantity ?? 0;
-                            $minimumStock = $product->minimum_stock ?? 0;
-                            $isLowStock = $minimumStock > 0 && $currentStock <= $minimumStock;
-                        @endphp
-                        <tr>
-                            <td>
-                                @if($product->code)
-                                    <span class="badge bg-danger text-warning">{{ $product->code }}</span>
-                                @else
-                                    <span class="text-muted">-</span>
-                                @endif
-                            </td>
-                            <td>
-                                @if($product->image && file_exists(public_path($product->image)))
-                                    <img src="{{ asset($product->image) }}" alt="{{ $product->name }}" class="img-thumbnail" style="width: 60px; height: 60px; object-fit: cover;">
-                                @else
-                                    <div class="bg-light border rounded d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                        <i class="bi bi-image text-muted fs-4"></i>
+                {{-- Filter Section --}}
+                <x-filter-bar 
+                    searchPlaceholder="Cari nama, kode, atau deskripsi bahan setengah jadi..." 
+                    :selects="$selects" 
+                />
+
+                {{-- Desktop Table --}}
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <x-index.table-head :columns="$columns" />
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template x-for="(product, index) in sortedRows" :key="product.id">
+                                <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="index + 1"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <template x-if="product.code">
+                                            <span class="inline-flex items-center px-2 py-1 rounded-md bg-red-100 text-red-800 text-xs font-semibold" x-text="product.code"></span>
+                                        </template>
+                                        <template x-if="!product.code">
+                                            <span class="text-gray-400">-</span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <template x-if="product.image && product.image_exists">
+                                            <img :src="'/storage/' + product.image" :alt="product.name" class="rounded-md object-cover" style="width:60px; height:60px;">
+                                        </template>
+                                        <template x-if="!product.image || !product.image_exists">
+                                            <div class="w-15 h-15 bg-gray-100 rounded-md flex items-center justify-center" style="width:60px; height:60px;">
+                                                <i class="bi bi-image text-gray-400 text-lg"></i>
+                                            </div>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm font-medium text-gray-900" x-text="product.name"></div>
+                                        <div class="text-sm text-gray-500" x-text="product.description ? product.description.substring(0, 50) + (product.description.length > 50 ? '...' : '') : ''"></div>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm">
+                                        <template x-if="product.category">
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                                                <i class="bi bi-tag me-1"></i>
+                                                <span x-text="product.category.name"></span>
+                                            </span>
+                                        </template>
+                                        <template x-if="!product.category">
+                                            <span>-</span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-700" x-text="product.unit ? (typeof product.unit === 'object' ? product.unit.unit_name : product.unit) : '-'"></td>
+                                    <td class="px-6 py-4 text-sm">
+                                        <div :class="product.is_low_stock ? 'text-red-600' : 'text-green-600'" class="font-semibold">
+                                            <span x-text="new Intl.NumberFormat('id-ID').format(product.display_stock_quantity || 0)"></span>
+                                            <template x-if="product.is_low_stock">
+                                                <i class="bi bi-exclamation-triangle-fill text-yellow-500 ml-1" title="Stok di bawah minimum"></i>
+                                            </template>
+                                        </div>
+                                        <div class="text-xs text-gray-500">
+                                            @if($branchForStock) {{ $branchForStock->code }}
+                                            @elseif($selectedBranch) {{ $selectedBranch->code }}
+                                            @else Total
+                                            @endif
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-700" x-text="new Intl.NumberFormat('id-ID').format(product.minimum_stock || 0)"></td>
+                                    <td class="px-6 py-4 text-sm text-gray-700" x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(product.production_cost || 0)"></td>
+                                    <td class="px-6 py-4">
+                                        <template x-if="product.is_active">
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <div class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+                                                Aktif
+                                            </span>
+                                        </template>
+                                        <template x-if="!product.is_active">
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                <div class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
+                                                Non-Aktif
+                                            </span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 text-center text-sm">
+                                        <div x-data="{
+                                            viewUrl: '/semi-finished-products/' + product.id,
+                                            editUrl: '/semi-finished-products/' + product.id + '/edit',
+                                            deleteUrl: '/semi-finished-products/' + product.id,
+                                            toggleUrl: '/semi-finished-products/' + product.id + '/toggle-status',
+                                            itemName: 'produk setengah jadi ' + product.name,
+                                            isActive: product.is_active
+                                        }">
+                                            <x-index.action-buttons :view="true" :edit="true" :delete="true" :toggle="true" />
+                                        </div>
+
+                                        @if($branchForStock || $selectedBranch)
+                                            <div class="mt-2 inline-flex rounded-md shadow-sm" role="group">
+                                                <a :href="'/semi-finished-products/' + product.id + '{{ request('branch_id') ? '?branch_id=' . request('branch_id') . '&action=stock-in' : '?action=stock-in' }}'" class="inline-flex items-center px-2 py-1 border border-green-200 text-green-700 bg-white hover:bg-green-50">
+                                                    <i class="bi bi-plus-circle me-1"></i>In
+                                                </a>
+                                                <a :href="'/semi-finished-products/' + product.id + '{{ request('branch_id') ? '?branch_id=' . request('branch_id') . '&action=stock-out' : '?action=stock-out' }}'" class="inline-flex items-center px-2 py-1 border border-yellow-200 text-yellow-700 bg-white hover:bg-yellow-50">
+                                                    <i class="bi bi-dash-circle me-1"></i>Out
+                                                </a>
+                                                <a :href="'/semi-finished-products/' + product.id + '{{ request('branch_id') ? '?branch_id=' . request('branch_id') . '&action=stock-return' : '?action=stock-return' }}'" class="inline-flex items-center px-2 py-1 border border-blue-200 text-blue-700 bg-white hover:bg-blue-50">
+                                                    <i class="bi bi-arrow-return-left me-1"></i>Return
+                                                </a>
+                                            </div>
+                                        @endif
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-if="sortedRows.length === 0">
+                                <x-index.none-data colspan="6" />
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                {{-- Mobile Cards --}}
+                <div class="md:hidden divide-y divide-gray-200">
+                    <template x-for="(product, index) in sortedRows" :key="product.id">
+                        <div class="p-4 hover:bg-gray-50 transition-colors duration-150">
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-sm font-medium text-gray-900 truncate" x-text="product.name"></h3>
+                                        <span class="text-xs text-gray-500 ml-2" x-text="product.code"></span>
                                     </div>
-                                @endif
-                            </td>
-                            <td>
-                                <div class="fw-bold">{{ $product->name }}</div>
-                                <small class="text-muted">{{ Str::limit($product->description, 50) }}</small>
-                            </td>
-                            <td>
-                                @if($product->category)
-                                    <span class="badge bg-info bg-opacity-25 text-info-emphasis border border-info-subtle">
-                                        <i class="bi bi-tag"></i> {{ $product->category->name }}
-                                    </span>
-                                @else
-                                    -
-                                @endif
-                            </td>
-                            <td>{{ is_object($product->unit) ? $product->unit->unit_name : (is_string($product->unit) ? $product->unit : '-') }}</td>
-                            <td>
-                                <div class="fw-bold fs-5 {{ $isLowStock ? 'text-danger' : 'text-success' }}">
-                                    {{ number_format($currentStock, 0) }}
-                                    @if($isLowStock)
-                                        <i class="bi bi-exclamation-triangle-fill text-warning ms-1" title="Stok di bawah minimum"></i>
-                                    @endif
+                                    <p class="text-sm text-gray-500 truncate mt-1" x-text="product.description"></p>
                                 </div>
-                                @if($branchForStock)
-                                    <small class="text-muted">{{ $branchForStock->code }}</small>
-                                @elseif($selectedBranch)
-                                    <small class="text-muted">{{ $selectedBranch->code }}</small>
-                                @else
-                                    <small class="text-muted">Total</small>
-                                @endif
-                            </td>
-                            <td>{{ number_format($minimumStock, 0) }}</td>
-                            <td>Rp {{ number_format($product->production_cost, 0, ',', '.') }}</td>
-                            <td>
-                                @if($product->is_active)
-                                    <span class="badge bg-success">Aktif</span>
-                                @else
-                                    <span class="badge bg-secondary">Non-Aktif</span>
-                                @endif
-                            </td>
-                            <td class="text-center">
-                                <x-action-buttons
-                                    :viewUrl="route('semi-finished-products.show', $product->id)" 
-                                    :editUrl="route('semi-finished-products.edit', $product->id)"
-                                    :deleteUrl="route('semi-finished-products.destroy', $product->id)" 
-                                    :toggleUrl="route('semi-finished-products.toggle-status', $product->id)"
-                                    :isActive="$product->is_active"
-                                    :showToggle="true"
-                                    itemName="produk setengah jadi {{$product->name}}"
-                                />
-                                @if($branchForStock || $selectedBranch)
-                                    <div class="btn-group btn-group-sm mt-1" role="group">
-                                        <a href="{{ route('semi-finished-products.show', $product) }}{{ request('branch_id') ? '?branch_id=' . request('branch_id') . '&action=stock-in' : '?action=stock-in' }}" 
-                                           class="btn btn-outline-success" title="Stok Masuk">
-                                            <i class="bi bi-plus-circle"></i> In
-                                        </a>
-                                        <a href="{{ route('semi-finished-products.show', $product) }}{{ request('branch_id') ? '?branch_id=' . request('branch_id') . '&action=stock-out' : '?action=stock-out' }}" 
-                                           class="btn btn-outline-warning" title="Stok Keluar">
-                                            <i class="bi bi-dash-circle"></i> Out
-                                        </a>
-                                        <a href="{{ route('semi-finished-products.show', $product) }}{{ request('branch_id') ? '?branch_id=' . request('branch_id') . '&action=stock-return' : '?action=stock-return' }}" 
-                                           class="btn btn-outline-info" title="Return Stok">
-                                            <i class="bi bi-arrow-return-left"></i> Return
-                                        </a>
+                            </div>
+
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Kategori:</span>
+                                    <div class="text-sm text-gray-900" x-text="product.category ? product.category.name : '-'"></div>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Stok:</span>
+                                    <div :class="product.is_low_stock ? 'text-red-600' : 'text-green-600'" class="text-sm font-semibold">
+                                        <span x-text="new Intl.NumberFormat('id-ID').format(product.display_stock_quantity || 0)"></span>
+                                        <template x-if="product.is_low_stock">
+                                            <i class="bi bi-exclamation-triangle-fill text-yellow-500 ml-1" title="Stok di bawah minimum"></i>
+                                        </template>
                                     </div>
-                                @endif
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="10" class="text-center py-5">
-                                <i class="bi bi-inbox fs-1 text-muted mb-2"></i>
-                                <h5 class="text-muted">Data bahan setengah jadi tidak ditemukan.</h5>
-                                <p class="text-muted">Coba kata kunci lain atau tambahkan data baru.</p>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                                </div>
 
-        <!-- Pagination -->
-        <div class="d-flex justify-content-between align-items-center mt-4">
-            <div>
-                @if($semiFinishedProducts instanceof \Illuminate\Pagination\LengthAwarePaginator)
-                    <p class="text-muted mb-0">Menampilkan {{ $semiFinishedProducts->firstItem() ?? 0 }}-{{ $semiFinishedProducts->lastItem() ?? 0 }} dari {{ $semiFinishedProducts->total() }} data</p>
-                @else
-                    <p class="text-muted mb-0">Menampilkan {{ count($semiFinishedProducts) }} data</p>
-                @endif
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Status:</span>
+                                    <template x-if="product.is_active">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <div class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+                                            Aktif
+                                        </span>
+                                    </template>
+                                    <template x-if="!product.is_active">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            <div class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
+                                            Tidak Aktif
+                                        </span>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 pt-3 border-t border-gray-200">
+                                <div x-data="{
+                                    viewUrl: '/semi-finished-products/' + product.id,
+                                    editUrl: '/semi-finished-products/' + product.id + '/edit',
+                                    deleteUrl: '/semi-finished-products/' + product.id,
+                                    toggleUrl: '/semi-finished-products/' + product.id + '/toggle-status',
+                                    itemName: 'produk setengah jadi ' + product.name,
+                                    isActive: product.is_active
+                                }">
+                                    <x-index.action-buttons :view="true" :edit="true" :delete="true" :toggle="true" />
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <template x-if="sortedRows.length !== 0">
+                    <div class="pagination-wrapper">
+                        {{ $pagination->links('vendor.pagination.tailwind') }}
+                    </div>
+                </template>
             </div>
-            <div>
-                @if($semiFinishedProducts instanceof \Illuminate\Pagination\LengthAwarePaginator)
-                    {{ $semiFinishedProducts->withQueryString()->links() }}
-                @endif
-            </div>
         </div>
-
-
     </div>
 </div>
-
-
-
 @endsection
-
-@push('styles')
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
-<style>
-    .table-responsive thead th {
-        position: sticky;
-        top: 0;
-        z-index: 1;
-        background-color: #f8f9fa; /* Match table-light bg color */
-        box-shadow: inset 0 -2px 0 #dee2e6; /* Optional: to add a bottom border */
-    }
-</style>
-@endpush
-
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-function confirmDelete(productId, productName) {
-    Swal.fire({
-        title: 'Konfirmasi Hapus',
-        html: `Apakah Anda yakin ingin menghapus bahan setengah jadi <br><strong>${productName}</strong>?`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: '<i class="bi bi-trash me-1"></i>Ya, Hapus!',
-        cancelButtonText: '<i class="bi bi-x-circle me-1"></i>Batal',
-        reverseButtons: true,
-        focusCancel: true,
-        customClass: {
-            confirmButton: 'btn btn-danger',
-            cancelButton: 'btn btn-secondary'
-        },
-        buttonsStyling: false
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Show loading
-            Swal.fire({
-                title: 'Menghapus...',
-                text: 'Mohon tunggu sebentar',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                showConfirmButton: false,
-                didOpen: () => {
-                    Swal.showLoading()
-                }
-            });
-            
-            // Create and submit form
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `/semi-finished-products/${productId}`;
-            
-            const csrfToken = document.createElement('input');
-            csrfToken.type = 'hidden';
-            csrfToken.name = '_token';
-            csrfToken.value = '{{ csrf_token() }}';
-            
-            const methodField = document.createElement('input');
-            methodField.type = 'hidden';
-            methodField.name = '_method';
-            methodField.value = 'DELETE';
-            
-            form.appendChild(csrfToken);
-            form.appendChild(methodField);
-            document.body.appendChild(form);
-            form.submit();
-        }
-    });
-}
-</script>
-@endpush

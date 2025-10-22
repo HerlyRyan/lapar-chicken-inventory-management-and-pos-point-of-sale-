@@ -1,282 +1,226 @@
 @extends('layouts.app')
 
-@section('title', 'Master Produk Siap Jual')
+@section('title', 'Data Produk Siap Jual')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 fw-bold mb-1" style="color: var(--primary-red);">
-            <i class="bi bi-basket3 me-2"></i>Master Produk Siap Jual
-            @if($branchForStock)
-                <span class="badge bg-info fs-6 ms-2">{{ $branchForStock->name }}</span>
-            @elseif($selectedBranch)
-                <span class="badge bg-info fs-6 ms-2">{{ $selectedBranch->name }}</span>
-            @else
-                <span class="badge bg-secondary fs-6 ms-2">Semua Cabang</span>
-            @endif
-        </h1>
-        <p class="text-muted mb-0">
-            Kelola data produk siap jual untuk penjualan
-            @if($branchForStock)
-                - {{ $branchForStock->name }} ({{ $branchForStock->code }})
-            @elseif($selectedBranch)
-                - {{ $selectedBranch->name }} ({{ $selectedBranch->code }})
-            @else
-                - Tampilkan semua cabang
-            @endif
-        </p>
-    </div>
-    <a href="{{ route('finished-products.create', request()->has('branch_id') ? ['branch_id' => request('branch_id')] : []) }}" class="btn btn-primary shadow px-4 d-flex align-items-center" style="min-width: 160px; white-space: nowrap;">
-        <i class="bi bi-plus-circle me-2"></i>
-        <span>Tambah Produk Siap Jual</span>
-    </a>
-</div>
+    <div class="min-h-screen bg-gradient-to-br from-gray-50 via-green-50/30 to-emerald-50/30">
+        {{-- Page Header --}}
+        <x-index.header title="Produk Siap Jual" subtitle="Kelola data produk siap jual untuk penjualan"
+            addRoute="{{ route('finished-products.create', request()->has('branch_id') ? ['branch_id' => request('branch_id')] : []) }}"
+            addText="Tambah Produk Siap Jual" />
 
-<div class="card border-0 shadow-lg">
-    <div class="card-header text-white py-3" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%);">
-        <h5 class="mb-0 fw-bold">
-            <i class="bi bi-list-ul me-2"></i>Daftar Produk Siap Jual
-        </h5>
-    </div>
-    <div class="card-body">
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+        {{-- Main Content --}}
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+            <div x-data="sortableTable(@js($finishedProducts))" @sort-column.window="sortBy($event.detail)"
+                class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
+                {{-- Card Header --}}
+                <x-index.card-header title="Daftar Produk Siap Jual" />
 
-        @if(session('warning'))
-            <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-triangle me-2"></i>{!! session('warning') !!}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-        
-        <!-- Search Filter -->
-        <form method="GET" action="" class="row g-3 mb-4 table-filter-form">
-            <div class="col-md-6">
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama, kode, atau deskripsi produk siap jual..." class="form-control">
+                {{-- Filter Section --}}
+                <x-filter-bar searchPlaceholder="Cari nama, kode, atau deskripsi produk siap jual..." :selects="$selects ?? []" />
+
+                {{-- Desktop Table --}}
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <x-index.table-head :columns="$columns" />
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template x-for="(product, index) in sortedRows" :key="product.id">
+                                <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="index + 1"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span
+                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
+                                            x-text="product.code ?? '-'"></span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <template x-if="product.photo">
+                                            <img :src="'/storage/' + product.photo" :alt="product.name"
+                                                class="w-12 h-12 rounded object-cover">
+                                        </template>
+                                        <template x-if="!product.photo">
+                                            <div class="w-12 h-12 bg-gray-100 rounded flex items-center justify-center">
+                                                <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path
+                                                        d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" />
+                                                </svg>
+                                            </div>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm font-medium text-gray-900" x-text="product.name"></div>
+                                        <div class="text-sm text-gray-500" x-text="product.description_short"></div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <template x-if="product.category">
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                                                x-text="product.category.name"></span>
+                                        </template>
+                                        <template x-if="!product.category">
+                                            <span class="text-gray-500">-</span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                                        x-text="product.unit.unit_name ?? '-'"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div
+                                            :class="[product.is_low_stock ? 'text-red-600' : 'text-green-600',
+                                                'text-sm font-medium'
+                                            ]">
+                                            <span x-text="product.display_stock_quantity"></span>
+                                            <template x-if="product.is_low_stock">
+                                                <svg class="w-4 h-4 inline ml-1 text-yellow-500" fill="currentColor"
+                                                    viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd"
+                                                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                                        clip-rule="evenodd" />
+                                                </svg>
+                                            </template>
+                                        </div>
+                                        <div class="text-xs text-gray-500" x-text="product.branch_info"></div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                                        x-text="product.minimum_stock"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+                                        x-text="product.price"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <template x-if="product.is_active">
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <div class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+                                                Aktif
+                                            </span>
+                                        </template>
+                                        <template x-if="!product.is_active">
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                <div class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
+                                                Tidak Aktif
+                                            </span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm">
+                                        <div x-data="{
+                                            viewUrl: '/finished-products/' + product.id + '{{ request()->has('branch_id') ? '?branch_id=' . request('branch_id') : '' }}',
+                                            editUrl: '/finished-products/' + product.id + '/edit{{ request()->has('branch_id') ? '?branch_id=' . request('branch_id') : '' }}',
+                                            deleteUrl: '/finished-products/' + product.id,
+                                            toggleUrl: '/finished-products/' + product.id + '/toggle-status',
+                                            itemName: 'produk ' + product.name,
+                                            isActive: product.is_active
+                                        }">
+                                            <x-index.action-buttons :view="true" :edit="true" :delete="true"
+                                                :toggle="true" />
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-if="sortedRows.length === 0">
+                                <x-index.none-data colspan="11" />
+                            </template>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <select name="status" class="form-select">
-                    <option value="all">Semua Status</option>
-                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Aktif</option>
-                    <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Tidak Aktif</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-outline-primary">
-                        <i class="bi bi-filter me-1"></i>Filter
-                    </button>
-                    @if(request('search') || request('status') != 'all')
-                        <a href="{{ route('finished-products.index', request()->has('branch_id') ? ['branch_id' => request('branch_id')] : []) }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-clockwise me-1"></i>Reset
-                        </a>
-                    @endif
-                </div>
-            </div>
-            @if(request()->has('branch_id'))
-                <input type="hidden" name="branch_id" value="{{ request('branch_id') }}">
-            @endif
-        </form>
 
-        <div class="table-responsive">
-            <table class="table table-hover table-striped standard-table mb-0">
-                <thead class="sticky-top bg-white">
-                    <tr>
-                        <th>{!! sortColumn('code', 'Kode', $sortColumn, $sortDirection) !!}</th>
-                        <th style="width: 80px;">Gambar</th>
-                        <th>{!! sortColumn('name', 'Nama Produk', $sortColumn, $sortDirection) !!}</th>
-                        <th>Kategori</th>
-                        <th>Satuan</th>
-                        <th>Stok di Cabang</th>
-                        <th>Stok Minimum</th>
-                        <th>{!! sortColumn('price', 'Harga Jual', $sortColumn, $sortDirection) !!}</th>
-                        <th>Status</th>
-                        <th class="text-center" style="width: 150px;">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($finishedProducts as $product)
-                        @php
-                            $currentStock = $product->display_stock_quantity ?? 0;
-                            $minimumStock = $product->minimum_stock ?? 0;
-                            $isLowStock = $minimumStock > 0 && $currentStock <= $minimumStock;
-                        @endphp
-                        <tr>
-                            <td>
-                                @if($product->code)
-                                    <span class="badge bg-danger text-warning">{{ $product->code }}</span>
-                                @else
-                                    <span class="text-muted">-</span>
-                                @endif
-                            </td>
-                            <td>
-                                @if($product->photo)
-                                    <img src="{{ \Storage::url(trim($product->photo)) }}" alt="{{ $product->name }}" class="img-thumbnail" style="width: 60px; height: 60px; object-fit: cover;" onerror="this.src='{{ asset('images/default-product.png') }}';">
-                                @else
-                                    <div class="bg-light border rounded d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                        <i class="bi bi-image text-muted fs-4"></i>
+                {{-- Mobile Cards --}}
+                <div class="md:hidden divide-y divide-gray-200">
+                    <template x-for="(product, index) in sortedRows" :key="product.id">
+                        <div class="p-4 hover:bg-gray-50 transition-colors duration-150">
+                            {{-- Product Header --}}
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-sm font-medium text-gray-900 truncate" x-text="product.name"></h3>
+                                        <span class="text-xs text-gray-500 ml-2 flex-shrink-0" x-text="product.code"></span>
                                     </div>
-                                @endif
-                            </td>
-                            <td>
-                                <div class="fw-bold">{{ $product->name }}</div>
-                                <small class="text-muted">{{ Str::limit($product->description, 50) }}</small>
-                            </td>
-                            <td>
-                                @if($product->category)
-                                    <span class="badge bg-info bg-opacity-25 text-info-emphasis border border-info-subtle">
-                                        <i class="bi bi-tag"></i> {{ $product->category->name }}
-                                    </span>
-                                @else
-                                    -
-                                @endif
-                            </td>
-                            <td>{{ $product->unit ? $product->unit->unit_name : '-' }}</td>
-                            <td>
-                                <div class="fw-bold fs-5 {{ $isLowStock ? 'text-danger' : 'text-success' }}">
-                                    {{ number_format($currentStock, 0) }}
-                                    @if($isLowStock)
-                                        <i class="bi bi-exclamation-triangle-fill text-warning ms-1" title="Stok di bawah minimum"></i>
-                                    @endif
+                                    <p class="text-sm text-gray-500 truncate mt-1" x-text="product.description_short"></p>
                                 </div>
-                                @if($branchForStock)
-                                    <small class="text-muted">{{ $branchForStock->code }}</small>
-                                @elseif($selectedBranch)
-                                    <small class="text-muted">{{ $selectedBranch->code }}</small>
-                                @else
-                                    <small class="text-muted">Semua Cabang</small>
-                                @endif
-                            </td>
-                            <td>{{ number_format($minimumStock, 0) }}</td>
-                            <td>Rp {{ number_format($product->price, 0, ',', '.') }}</td>
-                            <td>
-                                @if($product->is_active)
-                                    <span class="badge bg-success">Aktif</span>
-                                @else
-                                    <span class="badge bg-secondary">Non-Aktif</span>
-                                @endif
-                            </td>
-                            <td class="text-center">
-                                <x-action-buttons
-                                    :viewUrl="route('finished-products.show', array_merge([$product->id], request()->has('branch_id') ? ['branch_id' => request('branch_id')] : []))" 
-                                    :editUrl="route('finished-products.edit', array_merge([$product->id], request()->has('branch_id') ? ['branch_id' => request('branch_id')] : []))" 
-                                    :deleteUrl="route('finished-products.destroy', $product->id)" 
-                                    :toggleUrl="route('finished-products.toggle-status', $product->id)"
-                                    :isActive="$product->is_active"
-                                    :showToggle="true"
-                                    itemName="produk {{$product->name}}"
-                                />
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="10" class="text-center py-5">
-                                <i class="bi bi-inbox fs-1 text-muted mb-2"></i>
-                                <h5 class="text-muted">Data produk siap jual tidak ditemukan.</h5>
-                                <p class="text-muted">Coba kata kunci lain atau tambahkan data baru.</p>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        
-        <!-- Pagination -->
-        <div class="d-flex justify-content-between align-items-center mt-4">
-            <div>
-                @if($finishedProducts instanceof \Illuminate\Pagination\LengthAwarePaginator)
-                    <p class="text-muted mb-0">Menampilkan {{ $finishedProducts->firstItem() ?? 0 }}-{{ $finishedProducts->lastItem() ?? 0 }} dari {{ $finishedProducts->total() }} data</p>
-                @else
-                    <p class="text-muted mb-0">Menampilkan {{ count($finishedProducts) }} data</p>
-                @endif
+                            </div>
+
+                            {{-- Product Details --}}
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Kategori:</span>
+                                    <template x-if="product.category">
+                                        <span class="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded-full"
+                                            x-text="product.category"></span>
+                                    </template>
+                                    <template x-if="!product.category">
+                                        <span class="text-sm text-gray-900">-</span>
+                                    </template>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Satuan:</span>
+                                    <span class="text-sm text-gray-900" x-text="product.unit_name ?? '-'"></span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Stok:</span>
+                                    <span
+                                        :class="[product.is_low_stock ? 'text-red-600' : 'text-green-600',
+                                            'text-sm font-medium'
+                                        ]">
+                                        <span x-text="product.display_stock_quantity"></span>
+                                        <template x-if="product.is_low_stock">
+                                            <svg class="w-4 h-4 inline text-yellow-500" fill="currentColor"
+                                                viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd"
+                                                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                                    clip-rule="evenodd" />
+                                            </svg>
+                                        </template>
+                                    </span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Min. Stok:</span>
+                                    <span class="text-sm text-gray-900" x-text="product.minimum_stock_formatted"></span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Harga:</span>
+                                    <span class="text-sm font-medium text-gray-900"
+                                        x-text="product.price_formatted"></span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Status:</span>
+                                    <template x-if="product.is_active">
+                                        <span
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <div class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+                                            Aktif
+                                        </span>
+                                    </template>
+                                    <template x-if="!product.is_active">
+                                        <span
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            <div class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
+                                            Tidak Aktif
+                                        </span>
+                                    </template>
+                                </div>
+                            </div>
+
+                            {{-- Actions --}}
+                            <div class="mt-4 pt-3 border-t border-gray-200">
+                                <div x-data="{
+                                    viewUrl: '/finished-products/' + product.id + '{{ request()->has('branch_id') ? '?branch_id=' . request('branch_id') : '' }}',
+                                    editUrl: '/finished-products/' + product.id + '/edit{{ request()->has('branch_id') ? '?branch_id=' . request('branch_id') : '' }}',
+                                    deleteUrl: '/finished-products/' + product.id,
+                                    toggleUrl: '/finished-products/' + product.id + '/toggle-status',
+                                    itemName: 'produk ' + product.name,
+                                    isActive: product.is_active
+                                }">
+                                    <x-index.action-buttons :view="true" :edit="true" :delete="true"
+                                        :toggle="true" />
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <template x-if="sortedRows.length !== 0">
+                    <div class="pagination-wrapper">
+                        {{ $pagination->withQueryString()->links('vendor.pagination.tailwind') }}
+                    </div>
+                </template>
             </div>
-            <div>
-                @if($finishedProducts instanceof \Illuminate\Pagination\LengthAwarePaginator)
-                    {{ $finishedProducts->withQueryString()->links() }}
-                @endif
-            </div>
         </div>
-        
-        <!-- No modals needed anymore -->
     </div>
-</div>
 @endsection
-
-@push('styles')
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
-<style>
-    .table-responsive thead th {
-        position: sticky;
-        top: 0;
-        z-index: 1;
-        background-color: #f8f9fa; /* Match table-light bg color */
-        box-shadow: inset 0 -2px 0 #dee2e6; /* Optional: to add a bottom border */
-    }
-</style>
-@endpush
-
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-function confirmDelete(productId, productName) {
-    Swal.fire({
-        title: 'Konfirmasi Hapus',
-        html: `Apakah Anda yakin ingin menghapus produk siap jual <br><strong>${productName}</strong>?`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: '<i class="bi bi-trash me-1"></i>Ya, Hapus!',
-        cancelButtonText: '<i class="bi bi-x-circle me-1"></i>Batal',
-        reverseButtons: true,
-        focusCancel: true,
-        customClass: {
-            confirmButton: 'btn btn-danger',
-            cancelButton: 'btn btn-secondary'
-        },
-        buttonsStyling: false
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Show loading
-            Swal.fire({
-                title: 'Menghapus...',
-                text: 'Mohon tunggu sebentar',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                showConfirmButton: false,
-                didOpen: () => {
-                    Swal.showLoading()
-                }
-            });
-            
-            // Create and submit form
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `/finished-products/${productId}`;
-            
-            const csrfToken = document.createElement('input');
-            csrfToken.type = 'hidden';
-            csrfToken.name = '_token';
-            csrfToken.value = '{{ csrf_token() }}';
-            
-            const methodField = document.createElement('input');
-            methodField.type = 'hidden';
-            methodField.name = '_method';
-            methodField.value = 'DELETE';
-            
-            form.appendChild(csrfToken);
-            form.appendChild(methodField);
-            document.body.appendChild(form);
-            form.submit();
-        }
-    });
-}
-</script>
-@endpush

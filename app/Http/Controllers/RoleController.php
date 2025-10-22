@@ -12,29 +12,69 @@ class RoleController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $query = Role::query();
-        
-        if (request('q')) {
-            $q = request('q');
-            $query->where(function($sub) use ($q) {
-                $sub->where('name', 'like', "%$q%")
-                    ->orWhere('code', 'like', "%$q%")
-                    ->orWhere('description', 'like', "%$q%");
+
+        // for column selection
+        $columns = [
+            ['key' => 'name', 'label' => 'Nama Role'],
+            ['key' => 'users', 'label' => 'Users'],
+            ['key' => 'permissions', 'label' => 'Permissions'],
+            ['key' => 'is_active', 'label' => 'Status'],
+        ];
+
+        $statuses = [
+            1 => 'Aktif',
+            0 => 'Nonaktif',
+        ];
+
+        // Array untuk komponen filter
+        $selects = [
+            [
+                'name' => 'is_active',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+        ];
+
+        // Search global
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%");
             });
         }
-        
-        if (request('is_active') !== null) {
-            $query->where('is_active', request('is_active'));
+
+        // Filter status
+        if ($status = $request->get('is_active')) {
+            $query->where('is_active', $status);
         }
-        
+
+        // Sorting
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $users */        
         $roles = $query->withCount('users', 'permissions')
                       ->orderBy('name')
                       ->paginate(15)
                       ->withQueryString();
+
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $roles->items(),
+                'links' => (string) $roles->links('vendor.pagination.tailwind'),
+            ]);
+        }
         
-        return view('roles.index', compact('roles'));
+        return view('roles.index', [
+            'roles' => $roles->items(),
+            'columns' => $columns,
+            'selects' => $selects,
+            'pagination' => $roles,
+        ]);
     }
 
     /**

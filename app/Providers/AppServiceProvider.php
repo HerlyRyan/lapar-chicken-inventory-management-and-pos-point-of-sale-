@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Branch;
 use App\Models\RawMaterial;
 use App\Models\Supplier;
 // Observer files don't exist, so removing these imports
@@ -9,6 +10,7 @@ use App\Models\Supplier;
 // use App\Observers\SupplierObserver;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\View;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,6 +30,10 @@ class AppServiceProvider extends ServiceProvider
         // Use Bootstrap 5 pagination styling
         Paginator::defaultView('pagination::bootstrap-5');
         Paginator::defaultSimpleView('pagination::simple-bootstrap-5');
+        View::composer('*', function ($view) {
+            $branches = Branch::all();
+            $view->with('branch', $branches);
+        });
         
         // Register view composers
         \Illuminate\Support\Facades\View::composer('layouts.app', \App\Http\View\Composers\BranchComposer::class);

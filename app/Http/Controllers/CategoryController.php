@@ -14,22 +14,67 @@ class CategoryController extends Controller
     public function index(Request $request)
     {
         $query = Category::with(['finishedProducts', 'rawMaterials', 'semiFinishedProducts']);
-        
-        // Material type filter removed
-        
-        // Search functionality
-        if ($request->has('search') && $request->search !== '') {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
+
+        // for column selection
+        $columns = [
+            ['key' => 'code', 'label' => 'Kode'],
+            ['key' => 'name', 'label' => 'Nama Kategori'],
+            ['key' => 'description', 'label' => 'Deskripsi'],
+            ['key' => 'is_active', 'label' => 'Status'],
+        ];
+
+        // Search global
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
-        
+
+        // Filter status
+        if ($status = $request->get('is_active')) {
+            $query->where('is_active', $status);
+        }
+
+        // Sorting
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $categories */
+        $categories = $query->paginate(10);
+
+        $statuses = [
+            1 => 'Aktif',
+            0 => 'Nonaktif',
+        ];
+
+        // Array untuk komponen filter
+        $selects = [
+            [
+                'name' => 'is_active',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+        ];
+
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $categories->items(),
+                'links' => (string) $categories->links('vendor.pagination.tailwind'),
+            ]);
+        }
+
         $categories = $query->latest()->paginate(15);
-        
-        return view('categories.index', compact('categories'));
+
+        return view('categories.index', [
+            'categories' => $categories->items(),
+            'selects' => $selects,
+            'columns' => $columns,
+            'pagination' => $categories, // tetap simpan pagination untuk tampilkan links
+        ]);
     }
 
     /**
@@ -63,7 +108,7 @@ class CategoryController extends Controller
         ]);
 
         return redirect()->route('categories.index')
-                        ->with('success', 'Kategori berhasil ditambahkan.');
+            ->with('success', 'Kategori berhasil ditambahkan.');
     }
 
     /**
@@ -72,7 +117,7 @@ class CategoryController extends Controller
     public function show(Category $category)
     {
         $category->load(['finishedProducts', 'rawMaterials', 'semiFinishedProducts']);
-        
+
         return view('categories.show', compact('category'));
     }
 
@@ -107,7 +152,7 @@ class CategoryController extends Controller
         ]);
 
         return redirect()->route('categories.index')
-                        ->with('success', 'Kategori berhasil diperbarui.');
+            ->with('success', 'Kategori berhasil diperbarui.');
     }
 
     /**
@@ -118,13 +163,13 @@ class CategoryController extends Controller
         // Check if category has finished products
         if ($category->finishedProducts()->count() > 0) {
             return redirect()->route('categories.index')
-                            ->with('error', 'Kategori tidak dapat dihapus karena masih memiliki produk.');
+                ->with('error', 'Kategori tidak dapat dihapus karena masih memiliki produk.');
         }
 
         $category->delete();
 
         return redirect()->route('categories.index')
-                        ->with('success', 'Kategori berhasil dihapus.');
+            ->with('success', 'Kategori berhasil dihapus.');
     }
 
     /**
@@ -135,9 +180,9 @@ class CategoryController extends Controller
         $category->update(['is_active' => !$category->is_active]);
 
         $status = $category->is_active ? 'diaktifkan' : 'dinonaktifkan';
-        
+
         return redirect()->route('categories.index')
-                        ->with('success', "Kategori berhasil {$status}.");
+            ->with('success', "Kategori berhasil {$status}.");
     }
 
     /**
@@ -146,9 +191,9 @@ class CategoryController extends Controller
     public function getActiveCategories()
     {
         $categories = Category::active()
-                             ->select('id', 'name', 'code')
-                             ->orderBy('name')
-                             ->get();
+            ->select('id', 'name', 'code')
+            ->orderBy('name')
+            ->get();
 
         return response()->json($categories);
     }

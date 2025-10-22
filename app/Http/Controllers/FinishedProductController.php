@@ -22,7 +22,7 @@ class FinishedProductController extends Controller
         // Constructor without BranchStockService dependency
     }
 
-    public function index()
+    public function index(Request $request)
     {
         // Get user's branch and check permissions
         $currentBranch = auth()->check() ? auth()->user()->branch : null;
@@ -46,12 +46,22 @@ class FinishedProductController extends Controller
         
         // Determine which branch to use for stock filtering
         $branchForStock = $selectedBranch ?? $currentBranch;
-        
-        // Get all branches for header selector
-        $branches = Branch::where('is_active', true)->orderBy('name')->get();
+        $showBranchSelector = $canSwitchBranch || !$currentBranch;
         
         // Build the query for finished products
         $query = FinishedProduct::with(['category', 'unit']);
+
+        $columns = [
+            ['key' => 'code', 'label' => 'Kode'],
+            ['key' => 'photo', 'label' => 'Gambar'],
+            ['key' => 'name', 'label' => 'Nama Produk'],
+            ['key' => 'category', 'label' => 'Kategori'],
+            ['key' => 'unit', 'label' => 'Satuan'],
+            ['key' => 'current_stock', 'label' => 'Stok Di Cabang'],
+            ['key' => 'minimum_stock', 'label' => 'Stok Minimum'],
+            ['key' => 'price', 'label' => 'Harga Jual'],
+            ['key' => 'is_active', 'label' => 'Status'],
+        ];
         
         // Load finished branch stocks for the specific branch if selected
         if ($branchForStock) {
@@ -65,29 +75,78 @@ class FinishedProductController extends Controller
             }]);
         }
         
-        // Define searchable and sortable columns
-        $searchableColumns = ['name', 'code', 'description'];
-        $sortableColumns = ['name', 'code', 'created_at', 'updated_at', 'price', 'production_cost'];
-        
-        // Handle is_active status filtering separately since it's a boolean
-        if (request('status') === 'active') {
-            $query->where('is_active', true);
-        } elseif (request('status') === 'inactive') {
-            $query->where('is_active', false);
+        // === SEARCH ===
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhereHas('category', fn($b) => $b->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('unit', fn($r) => $r->where('unit_name', 'like', "%{$search}%"));
+            });
         }
-        
-        // Apply the standard filtering, sorting, and pagination
-        $finishedProducts = $this->applyFilterSortPaginate(
-            $query, 
-            $searchableColumns, 
-            $sortableColumns, 
-            'name', // default sort column
-            'asc'   // default sort direction
-        );
-        
-        // Get current sort parameters for the view
-        $sortColumn = request('sort', 'name');
-        $sortDirection = request('direction', 'asc');
+
+        // === FILTER STATUS ===
+        if ($status = $request->get('is_active')) {
+            $query->where('is_active', $status);
+        }
+
+        // === SORTING ===
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
+
+            // 🧩 Deteksi kolom relasi
+            switch ($sortBy) {
+                case 'category':
+                    $query->leftjoin('categories', 'categories.id', '=', 'finished_products.category_id')
+                        ->orderBy('categories.name', $sortDir)
+                        ->select('finished_products.*');
+                    break;
+
+                case 'unit':
+                    $query->leftjoin('units', 'units.id', '=', 'finished_products.unit_id')
+                        ->orderBy('units.unit_name', $sortDir)
+                        ->select('finished_products.*');
+                    break;
+
+                default:
+                    $query->orderBy("finished_products.{$sortBy}", $sortDir);
+            }
+        }
+
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $finishedProducts */
+        $finishedProducts = $query->paginate(10);
+
+        // Manual sorting untuk current_stock
+        if ($sortBy === 'current_stock') {
+            $finishedProducts->setCollection(
+                $finishedProducts->getCollection()->sortBy(
+                    fn($item) => $item->display_stock_quantity,
+                    SORT_REGULAR,
+                    request('sort_dir') === 'desc'
+                )
+            );
+        }
+
+        $statuses = [
+            1 => 'Aktif',
+            0 => 'Nonaktif',
+        ];
+
+        $selects = [
+            [
+                'name' => 'is_active',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+        ];
+
+        // === RESPONSE ===
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $finishedProducts->items(),
+                'links' => (string) $finishedProducts->links('vendor.pagination.tailwind'),
+            ]);
+        }
         
         // Initialize branch stock for products that don't have it and calculate display stock
         foreach ($finishedProducts as $product) {
@@ -108,17 +167,16 @@ class FinishedProductController extends Controller
                 $product->display_stock_quantity = $product->finishedBranchStocks->sum('quantity');
             }
         }
-        
-        return view('finished-products.index', compact(
-            'finishedProducts', 
-            'branches', 
-            'branchForStock', 
-            'selectedBranch',
-            'sortColumn',
-            'sortDirection',
-            'canSwitchBranch',
-            'currentBranch'
-        ))->with('showBranchSelector', true);
+
+        return view('finished-products.index', [
+            'finishedProducts' => $finishedProducts->items(),
+            'selects' => $selects,
+            'columns' => $columns,
+            'pagination' => $finishedProducts,
+            'selectedBranch' => $selectedBranch,
+            'branchForStock' => $branchForStock,
+            'showBranchSelector' => $showBranchSelector,
+        ]);
     }
 
     public function create()
