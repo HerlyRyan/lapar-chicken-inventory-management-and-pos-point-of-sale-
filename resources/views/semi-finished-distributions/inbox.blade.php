@@ -3,153 +3,342 @@
 @section('title', 'Kotak Masuk Distribusi Cabang')
 
 @section('content')
-<div class="container-fluid">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-0 text-gray-800">
-                <i class="bi bi-inbox text-info me-2"></i>
-                Kotak Masuk Distribusi Cabang
-            </h1>
-            <p class="text-muted small mb-0">
-                Menampilkan distribusi berstatus <span class="badge bg-warning text-dark">Dikirim</span> ke cabang Anda.
-            </p>
-        </div>
-        <div class="text-end">
-            <div class="small text-muted">Cabang aktif:</div>
-            <div class="fw-bold">{{ $branch->name ?? 'Tidak dipilih' }}</div>
-        </div>
-    </div>
 
-    <!-- Filters -->
-    <div class="card shadow mb-4">
-        <div class="card-body">
-            <form method="GET" action="{{ route('semi-finished-distributions.inbox') }}">
-                <input type="hidden" name="branch_id" value="{{ $branchId }}" />
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label for="search" class="form-label">Pencarian</label>
-                        <input type="text" name="search" id="search" class="form-control"
-                               placeholder="Cari berdasarkan kode distribusi..."
-                               value="{{ request('search') }}">
-                    </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <div class="d-grid w-100">
-                            <button type="submit" class="btn btn-outline-primary">
-                                <i class="bi bi-search me-1"></i>
-                                Filter
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-md-6 d-flex align-items-end justify-content-end">
-                        <a href="{{ route('semi-finished-distributions.index') }}" class="btn btn-light me-2">
-                            <i class="bi bi-list-ul me-1"></i> Semua Distribusi
-                        </a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+    <div class="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30">
+        {{-- Page Header --}}
+        <x-index.header title="Kotak Masuk Distribusi Cabang"
+            subtitle="Menampilkan distribusi berstatus Dikirim ke cabang Anda"
+            addRoute="{{ route('semi-finished-distributions.index') }}" addText="Semua Distribusi" />
 
-    <!-- Inbox Table -->
-    <div class="card shadow">
-        <div class="card-header py-3 d-flex justify-content-between align-items-center">
-            <h6 class="m-0 font-weight-bold text-primary">
-                <i class="bi bi-truck me-2"></i>
-                Distribusi Masuk (Dikirim)
-            </h6>
-            <span class="badge bg-info">{{ $distributions->total() }} data</span>
-        </div>
-        <div class="card-body">
-            @if($distributions->count() > 0)
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Kode</th>
-                                <th>Produk</th>
-                                <th>Jumlah</th>
-                                <th>Dikirim Oleh</th>
-                                <th>Tanggal</th>
-                                <th>Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($distributions as $distribution)
-                            <tr class="table-warning">
-                                <td class="align-middle">
-                                    <strong>{{ $distribution->distribution_code }}</strong>
-                                    <span class="badge bg-warning text-dark ms-1">BARU</span>
-                                </td>
-                                <td class="align-middle">
-                                    {{ $distribution->semiFinishedProduct->name ?? '-' }}
-                                    <div class="small text-muted">{{ $distribution->semiFinishedProduct->unit ?? '' }}</div>
-                                </td>
-                                <td class="align-middle">
-                                    {{ number_format((float) $distribution->quantity_sent, 0, ',', '.') }}
-                                </td>
-                                <td class="align-middle">
-                                    {{ $distribution->sentBy->name ?? '-' }}
-                                </td>
-                                <td class="align-middle">
-                                    <div class="small">
-                                        <div class="fw-bold">{{ $distribution->distribution_date->format('d/m/Y') }}</div>
-                                        <div class="text-muted">{{ $distribution->created_at->format('H:i') }}</div>
-                                    </div>
-                                </td>
-                                <td class="align-middle">
-                                    <div class="btn-group-vertical" role="group">
-                                        <a href="{{ route('semi-finished-distributions.show', $distribution) }}" 
-                                           class="btn btn-sm btn-outline-info mb-1" title="Lihat Detail">
-                                            <i class="bi bi-eye me-1"></i>
-                                            Detail
-                                        </a>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+            <div x-data="sortableTable(@js($distributions->items()))" @sort-column.window="sortBy($event.detail)"
+                class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
+                {{-- Card Header --}}
+                <x-index.card-header title="Daftar Distribusi" />
 
-                                        @if($distribution->status === 'sent')
-                                            <button type="button" class="btn btn-sm btn-success mb-1"
-                                                    onclick="showAcceptModal({{ $distribution->id }})" title="Terima Distribusi">
-                                                <i class="bi bi-check-circle me-1"></i>
-                                                Terima
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-danger"
-                                                    onclick="showRejectModal({{ $distribution->id }})" title="Tolak Distribusi">
-                                                <i class="bi bi-x-circle me-1"></i>
-                                                Tolak
-                                            </button>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                            @endforeach
+                {{-- Filter Section --}}
+                <x-filter-bar searchPlaceholder="Cari berdasarkan kode distribusi..." :selects="$selects" />
+
+                {{-- Desktop Table --}}
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <x-index.table-head :columns="$columns" />
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template x-for="(dist, index) in sortedRows" :key="dist.id">
+                                <tr class="hover:bg-gray-50 transition-colors duration-150"
+                                    :class="dist.status === 'pending' ? 'bg-yellow-50' : (dist.status === 'accepted' ?
+                                        'bg-green-50' : 'bg-red-50')">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="index + 1"></td>
+
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        <div class="flex items-center gap-2">
+                                            <div>
+                                                <div class="font-semibold" x-text="dist.distribution_code"></div>
+                                                <template x-if="dist.is_pending">
+                                                    <span
+                                                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 mt-1">BARU</span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-medium text-gray-900"
+                                            x-text="dist.target_branch?.name ?? '-'">
+                                        </div>
+                                        <div class="text-sm text-gray-500 truncate max-w-xs"
+                                            :title="dist.target_branch?.address" x-text="dist.target_branch?.address ?? ''">
+                                        </div>
+                                    </td>
+
+                                    <td class="px-6 py-4 text-sm text-gray-900">
+                                        <div class="text-sm text-gray-600" x-text="dist.semi_finished_product.name"></div>
+                                    </td>
+
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <template x-if="dist.status === 'sent'">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">Terkirim</span>
+                                        </template>
+                                        <template x-if="dist.status === 'accepted'">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">Diterima</span>
+                                        </template>
+                                        <template x-if="dist.status === 'rejected'">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">Ditolak</span>
+                                        </template>
+                                    </td>
+
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <div class="font-medium text-gray-900"
+                                            x-text="dist.created_at ? (new Date(dist.created_at)).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '-'">
+                                        </div>
+                                        <div class="text-xs text-gray-400"
+                                            x-text="dist.created_at ? (new Date(dist.created_at)).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'">
+                                        </div>
+                                    </td>
+
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <template x-if="dist.status === 'accepted' && dist.handled_by">
+                                            <div>
+                                                <div class="text-sm text-green-700 font-semibold">Diterima oleh</div>
+                                                <div class="text-xs text-gray-500"
+                                                    x-text="dist.handled_by && dist.handled_by.name ? dist.handled_by.name : '-'">
+                                                </div>
+                                                <div class="text-xs text-gray-400"
+                                                    x-text="dist.handled_at ? (new Date(dist.handled_at)).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '-'">
+                                                </div>
+                                            </div>
+                                        </template>
+                                        <template x-if="dist.status === 'rejected' && dist.handled_by">
+                                            <div>
+                                                <div class="text-sm text-red-700 font-semibold">Ditolak oleh</div>
+                                                <div class="text-xs text-gray-500" x-text="dist.handled_by.name"></div>
+                                                <div class="text-xs text-gray-400"
+                                                    x-text="dist.handled_at ? (new Date(dist.handled_at)).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '-'">
+                                                </div>
+                                            </div>
+                                        </template>
+                                        <template x-if="dist.status === 'sent'">
+                                            <div>
+                                                <div class="text-sm text-gray-500"><i class="bi bi-clock me-1"></i> Menunggu
+                                                    konfirmasi</div>
+                                            </div>
+                                        </template>
+                                    </td>
+
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <div x-data="{
+                                            viewUrl: '/semi-finished-distributions/' + dist.id,
+                                            editUrl: '/semi-finished-distributions/' + dist.id + '/edit',
+                                            deleteUrl: '/semi-finished-distributions/' + dist.id,
+                                            itemName: 'distribusi ' + dist.distribution_code,
+                                            isPending: dist.status === 'pending',
+                                            isSent: dist.status === 'sent'
+                                        }">
+                                            <div class="flex items-center gap-2 sm:gap-3">
+                                                {{-- Confirm & Reject (only when status is sent) --}}
+                                                <template x-if="isSent" x-data="distributionModals()">
+                                                    <div class="flex items-center gap-2 sm:gap-3">
+                                                        <button type="button"
+                                                            x-on:click="$dispatch('open-accept-modal', { id: dist.id })"
+                                                            class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                                                                bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700
+                                                                text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                                            title="Terima">
+                                                            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none"
+                                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2" d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        </button>
+
+                                                        <button type="button"
+                                                            x-on:click="$dispatch('open-reject-modal', { id: dist.id })"
+                                                            class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                                                                bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
+                                                                text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                                            title="Tolak">
+                                                            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none"
+                                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                        </button>
+
+                                                        <!-- === Modal Area === -->
+                                                        <template x-if="openModal === 'accept'">
+                                                            @include('semi-finished-distributions.partials.accept-modal')
+                                                        </template>
+
+                                                        <template x-if="openModal === 'reject'">
+                                                            @include('semi-finished-distributions.partials.reject-modal')
+                                                        </template>
+                                                    </div>
+                                                </template>
+
+                                                {{-- Default action buttons --}}
+                                                <x-index.action-buttons :view="true" :edit="true"
+                                                    :delete="true" />
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+
+                            <template x-if="sortedRows.length === 0">
+                                <x-index.none-data />
+                            </template>
                         </tbody>
                     </table>
                 </div>
 
-                <!-- Pagination -->
-                <div class="d-flex justify-content-between align-items-center mt-3">
-                    <div class="text-muted small">
-                        Menampilkan {{ $distributions->firstItem() }} - {{ $distributions->lastItem() }} 
-                        dari {{ $distributions->total() }} distribusi
+                {{-- Mobile Cards --}}
+                <div class="md:hidden divide-y divide-gray-200">
+                    <template x-for="(dist, index) in sortedRows" :key="dist.id">
+                        <div class="p-4 hover:bg-gray-50 transition-colors duration-150"
+                            :class="dist.status === 'pending' ? 'bg-yellow-50' : (dist.status === 'accepted' ? 'bg-green-50' :
+                                'bg-red-50')">
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="min-w-0">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="flex items-center gap-3">
+                                            <div class="text-sm text-gray-500" x-text="index + 1"></div>
+                                            <h3 class="text-sm font-medium text-gray-900 truncate"
+                                                x-text="dist.distribution_code"></h3>
+                                            <template x-if="dist.is_pending">
+                                                <span
+                                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 mt-1">BARU</span>
+                                            </template>
+                                        </div>
+
+                                        <span class="text-xs text-gray-500"
+                                            x-text="dist.target_branch?.name ?? '-'"></span>
+                                    </div>
+
+                                    <p class="text-sm text-gray-500 truncate mt-1" :title="dist.target_branch?.address"
+                                        x-text="dist.target_branch?.address ?? ''"></p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Produk:</span>
+                                    <div class="text-sm text-gray-900" x-text="dist.semi_finished_product?.name ?? '-'">
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Status:</span>
+                                    <div>
+                                        <template x-if="dist.status === 'sent'">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Terkirim</span>
+                                        </template>
+                                        <template x-if="dist.status === 'accepted'">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Diterima</span>
+                                        </template>
+                                        <template x-if="dist.status === 'rejected'">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Ditolak</span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 pt-3 border-t border-gray-200 space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900"
+                                            x-text="dist.created_at ? (new Date(dist.created_at)).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '-'">
+                                        </div>
+                                        <div class="text-xs text-gray-400"
+                                            x-text="dist.created_at ? (new Date(dist.created_at)).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'">
+                                        </div>
+                                    </div>
+
+                                    <div class="text-sm text-gray-500">
+                                        <template x-if="dist.status === 'accepted' && dist.handled_by">
+                                            <div>
+                                                <div class="text-sm text-green-700 font-semibold">Diterima oleh</div>
+                                                <div class="text-xs text-gray-500"
+                                                    x-text="dist.handled_by && dist.handled_by.name ? dist.handled_by.name : '-'">
+                                                </div>
+                                                <div class="text-xs text-gray-400"
+                                                    x-text="dist.handled_at ? (new Date(dist.handled_at)).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '-'">
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="dist.status === 'rejected' && dist.handled_by">
+                                            <div>
+                                                <div class="text-sm text-red-700 font-semibold">Ditolak oleh</div>
+                                                <div class="text-xs text-gray-500"
+                                                    x-text="dist.handled_by && dist.handled_by.name ? dist.handled_by.name : '-'">
+                                                </div>
+                                                <div class="text-xs text-gray-400"
+                                                    x-text="dist.handled_at ? (new Date(dist.handled_at)).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '-'">
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="dist.status === 'sent'">
+                                            <div class="text-sm text-gray-500"><i class="bi bi-clock me-1"></i> Menunggu
+                                                konfirmasi</div>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <div x-data="{
+                                    viewUrl: '/semi-finished-distributions/' + dist.id,
+                                    editUrl: '/semi-finished-distributions/' + dist.id + '/edit',
+                                    deleteUrl: '/semi-finished-distributions/' + dist.id,
+                                    itemName: 'distribusi ' + dist.distribution_code,
+                                    isPending: dist.status === 'pending',
+                                    isSent: dist.status === 'sent'
+                                }" class="w-full">
+                                    <div class="flex items-center justify-between gap-2 sm:gap-3">
+                                        {{-- Left: Confirm & Reject (only when status is sent) --}}
+                                        <div class="flex items-center gap-2">
+                                            <template x-if="isSent" x-data="distributionModals()">
+                                                <div class="flex items-center gap-2">
+                                                    <button type="button"
+                                                        x-on:click="$dispatch('open-accept-modal', { id: dist.id })"
+                                                        class="group relative inline-flex items-center justify-center w-9 h-9
+                                                            bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700
+                                                            text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                                        title="Terima">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                    </button>
+
+                                                    <button type="button"
+                                                        x-on:click="$dispatch('open-reject-modal', { id: dist.id })"
+                                                        class="group relative inline-flex items-center justify-center w-9 h-9
+                                                            bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
+                                                            text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                                        title="Tolak">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+
+                                                    <!-- Modals (kept here so mobile can open them too) -->
+                                                    <template x-if="openModal === 'accept'">
+                                                        @include('semi-finished-distributions.partials.accept-modal')
+                                                    </template>
+
+                                                    <template x-if="openModal === 'reject'">
+                                                        @include('semi-finished-distributions.partials.reject-modal')
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </div>
+
+                                        {{-- Right: Default action buttons (stack / wrap on very small screens) --}}
+                                        <div class="flex items-center gap-2 flex-shrink-0">
+                                            <x-index.action-buttons :view="true" :edit="true" :delete="true" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                {{-- Pagination --}}
+                <template x-if="sortedRows.length !== 0">
+                    <div class="p-4">
+                        <div class="pagination-wrapper">
+                            {{-- pass original paginator --}}
+                            {{ $distributions->appends(request()->query())->links('vendor.pagination.tailwind') }}
+                        </div>
                     </div>
-                    {{ $distributions->appends(request()->query())->links() }}
-                </div>
-            @else
-                <div class="text-center py-5">
-                    <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
-                    <h5 class="mt-3 text-muted">Tidak Ada Distribusi Masuk</h5>
-                    <p class="text-muted">Belum ada distribusi baru untuk cabang Anda.</p>
-                </div>
-            @endif
+                </template>
+            </div>
         </div>
     </div>
-</div>
-
-@include('semi-finished-distributions.partials.accept_reject_modals')
-
-@push('styles')
-<style>
-    .btn-group-vertical .btn { margin-bottom: 2px; }
-    .btn-group-vertical .btn:last-child { margin-bottom: 0; }
-</style>
-@endpush
 @endsection

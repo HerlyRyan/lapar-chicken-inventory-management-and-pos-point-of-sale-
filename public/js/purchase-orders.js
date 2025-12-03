@@ -1,1043 +1,559 @@
-/**
- * Purchase Orders JavaScript - Clean Implementation
- * Fixes all functionality issues and provides clean, maintainable code
- */
+(function () {
+    class PurchaseOrderManager {
+        constructor() {
+            this.currentSupplierId = null;
+            this.allMaterials = window.rawMaterials || [];
+            this.filteredMaterials = [];
+            this.itemCounter = 0;
 
-class PurchaseOrderManager {
-    constructor() {
-        // State management
-        this.currentSupplierId = null;
-        this.allMaterials = [];
-        this.filteredMaterials = [];
-        this.itemCounter = 0;
-        
-        // DOM elements
-        this.elements = {
-            supplierSelect: document.getElementById('supplier_id'),
-            supplierPhoneInput: document.getElementById('supplier_phone'),
-            supplierInfo: document.getElementById('supplier-info'),
-            addItemBtn: document.getElementById('add-item'),
-            validatePricesBtn: document.getElementById('validate-prices'),
-            itemsTableBody: document.getElementById('item-rows'),
-            itemTemplate: document.getElementById('item-template'),
-            totalDisplay: document.getElementById('grand-total'),
-            form: document.getElementById('purchase-order-form'),
-            draftButton: document.querySelector('button[value="save_draft"]'),
-            orderButton: document.querySelector('button[value="order_now"]')
-        };
-        
-        this.init();
-    }
+            this.elements = {
+                supplierSelect: document.getElementById('supplier_id'),
+                supplierPhoneInput: document.getElementById('supplier_phone'),
+                addItemBtn: document.getElementById('add-item'),
+                validatePricesBtn: document.getElementById('validate-prices'),
+                itemsTableBody: document.getElementById('item-rows'),
+                itemTemplate: document.getElementById('item-template'),
+                totalDisplay: document.getElementById('grand-total'),
+                form: document.getElementById('purchase-order-form'),
+                draftButton: document.querySelector('button[value="save_draft"]'),
+                orderButton: document.querySelector('button[value="order_now"]')
+            };
 
-    // Initialize existing rows on page load (especially on edit page)
-    initializeExistingRows() {
-        if (!this.elements.itemsTableBody) return;
-        const rows = this.elements.itemsTableBody.querySelectorAll('.item-row');
-        if (!rows.length) return;
-
-        rows.forEach(row => {
-            const materialSelect = row.querySelector('.raw-material-select');
-            const currentValue = materialSelect ? materialSelect.value : null;
-
-            // Populate options for the select to ensure dataset attributes exist
-            if (materialSelect) {
-                this.populateMaterialSelect(materialSelect);
-                if (currentValue) {
-                    materialSelect.value = currentValue;
-                }
-            }
-
-            // Bind events and trigger change to update unit cell (but avoid price override in handler)
-            this.bindItemRowEvents(row);
-
-            // Ensure unit cell is set based on current selection
-            if (materialSelect && materialSelect.value) {
-                const unitCell = row.querySelector('.unit-name');
-                const material = this.filteredMaterials.find(m => m.id == materialSelect.value);
-                if (unitCell) {
-                    const unitName = (material && material.unit) ? (material.unit.unit_name || material.unit.name) : '-';
-                    unitCell.textContent = unitName || '-';
-                }
-            }
-        });
-    }
-    
-    init() {
-        console.log('🚀 Initializing Purchase Order Manager...');
-        
-        // Load materials from window object (passed from Blade template)
-        this.allMaterials = window.rawMaterials || [];
-        console.log(`📦 Loaded ${this.allMaterials.length} raw materials`);
-        
-        // Debug: Show first few materials and their supplier_id
-        if (this.allMaterials.length > 0) {
-            console.log('🔍 DEBUG: First 3 raw materials:', this.allMaterials.slice(0, 3));
-            console.log('🔍 DEBUG: Supplier IDs found:', [...new Set(this.allMaterials.map(m => m.supplier_id))]);
-        } else {
-            console.warn('⚠️ WARNING: No raw materials loaded from backend!');
+            this.init();
         }
-        
-        // Initialize supplier state if already selected (e.g., on edit page)
-        if (this.elements.supplierSelect && this.elements.supplierSelect.value) {
-            this.currentSupplierId = this.elements.supplierSelect.value;
-            // Pre-filter materials and update info to enable buttons
-            this.filterMaterialsBySupplier(this.currentSupplierId);
-            this.updateSupplierInfo(this.currentSupplierId);
-            // Background refresh latest materials and refresh row options without resetting items
-            this.reloadMaterialsData(this.currentSupplierId)
+
+        init() {
+            // load already provided rawMaterials
+            this.allMaterials = window.rawMaterials || [];
+
+            // If supplier pre-selected (edit flow), apply it
+            if (this.elements.supplierSelect && this.elements.supplierSelect.value) {
+                this.currentSupplierId = this.elements.supplierSelect.value;
+                this.filterMaterialsBySupplier(this.currentSupplierId);
+                // attempt background refresh but do not block UI
+                this.reloadMaterialsData(this.currentSupplierId)
+                    .then(() => {
+                        this.filterMaterialsBySupplier(this.currentSupplierId);
+                        this.refreshRowSelectOptions();
+                    })
+                    .catch(() => { });
+            }
+
+            // calculate starting itemCounter from existing rows (edit)
+            if (this.elements.itemsTableBody) {
+                const rows = this.elements.itemsTableBody.querySelectorAll('.item-row');
+                let maxIndex = -1;
+                rows.forEach(row => {
+                    const anyField = row.querySelector('[name^="items["]');
+                    if (anyField && anyField.name) {
+                        const m = anyField.name.match(/items\[(\d+)\]/);
+                        if (m) maxIndex = Math.max(maxIndex, parseInt(m[1], 10));
+                    }
+                });
+                this.itemCounter = maxIndex + 1;
+            }
+
+            // initialize existing rows if any
+            this.initializeExistingRows();
+
+            this.bindEvents();
+            this.updateUIState();
+        }
+
+        initializeExistingRows() {
+            if (!this.elements.itemsTableBody) return;
+            const rows = this.elements.itemsTableBody.querySelectorAll('.item-row');
+            rows.forEach(row => {
+                const sel = row.querySelector('.raw-material-select');
+                if (sel) {
+                    this.populateMaterialSelect(sel);
+                    // ensure unit cell matches selection
+                    if (sel.value) {
+                        const opt = sel.selectedOptions[0];
+                        const unitCell = row.querySelector('.unit-name');
+                        const unitName = opt?.dataset?.unit || '-';
+                        if (unitCell) unitCell.textContent = unitName;
+                    }
+                }
+                this.bindItemRowEvents(row);
+            });
+            this.updateGrandTotal();
+        }
+
+        bindEvents() {
+            if (this.elements.supplierSelect) {
+                this.elements.supplierSelect.addEventListener('change', (e) => this.handleSupplierChange(e.target.value));
+            }
+            if (this.elements.addItemBtn) {
+                this.elements.addItemBtn.addEventListener('click', (e) => { e.preventDefault(); this.addNewItem(); });
+            }
+            if (this.elements.validatePricesBtn) {
+                this.elements.validatePricesBtn.addEventListener('click', (e) => { e.preventDefault(); this.validatePrices(); });
+            }
+            if (this.elements.form) {
+                this.elements.form.addEventListener('submit', (e) => {
+                    // e.submitter supported in modern browsers
+                    const submitAction = e.submitter ? e.submitter.value : null;
+                    if (!submitAction) {
+                        // fallback: determine by focused button
+                        const active = document.activeElement;
+                        const draftBtn = this.elements.draftButton;
+                        const orderBtn = this.elements.orderButton;
+                        if (active === draftBtn) return this.handleDraftSubmit(e);
+                        if (active === orderBtn) return this.handleOrderSubmit(e);
+                        // default to draft if unknown
+                        return this.handleDraftSubmit(e);
+                    }
+                    if (submitAction === 'save_draft') return this.handleDraftSubmit(e);
+                    if (submitAction === 'order_now') return this.handleOrderSubmit(e);
+                });
+            }
+        }
+
+        handleDraftSubmit(e) {
+            // allow normal submit if valid
+            if (!this.validateForm()) {
+                e.preventDefault();
+            }
+        }
+
+        handleOrderSubmit(e) {
+            e.preventDefault();
+            this.submitOrder();
+        }
+
+        handleSupplierChange(newSupplierId) {
+            const hasNonEmptyRows = Array.from(this.elements.itemsTableBody?.children || [])
+                .some(r => !r.classList.contains('empty-row'));
+            if (this.currentSupplierId && this.currentSupplierId !== newSupplierId && hasNonEmptyRows) {
+                // confirm reset
+                if (window.Swal) {
+                    Swal.fire({
+                        title: '⚠️ Konfirmasi Perubahan Supplier',
+                        text: 'Mengganti supplier akan menghapus semua item yang sudah ditambahkan. Lanjutkan?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya, Ganti Supplier',
+                        cancelButtonText: 'Batal'
+                    }).then((res) => {
+                        if (res.isConfirmed) this.applySupplierChange(newSupplierId);
+                        else this.elements.supplierSelect.value = this.currentSupplierId || '';
+                    });
+                } else {
+                    if (!confirm('Mengganti supplier akan menghapus semua item yang sudah ditambahkan. Lanjutkan?')) {
+                        this.elements.supplierSelect.value = this.currentSupplierId || '';
+                        return;
+                    }
+                    this.applySupplierChange(newSupplierId);
+                }
+                return;
+            }
+            this.applySupplierChange(newSupplierId);
+        }
+
+        applySupplierChange(supplierId) {
+            this.currentSupplierId = supplierId || null;
+            if (!supplierId) {
+                // clear phone and items
+                if (this.elements.supplierPhoneInput) this.elements.supplierPhoneInput.value = '';
+                this.resetAllItems();
+                this.updateUIState();
+                return;
+            }
+            // update phone from selected option
+            const opt = this.elements.supplierSelect?.selectedOptions[0];
+            if (opt && this.elements.supplierPhoneInput) {
+                this.elements.supplierPhoneInput.value = opt.dataset.phone || '';
+            }
+            // fetch latest materials then reset items
+            this.showLoadingState('Mengambil data bahan mentah terbaru...');
+            this.reloadMaterialsData(supplierId)
                 .then(() => {
-                    this.filterMaterialsBySupplier(this.currentSupplierId);
-                    this.refreshRowSelectOptions();
+                    this.filterMaterialsBySupplier(supplierId);
+                    this.resetAllItems();
+                    this.updateUIState();
+                    if (window.Swal) Swal.close();
                 })
-                .catch((err) => {
-                    console.warn('⚠️ Failed to background-refresh materials on init:', err);
+                .catch(() => {
+                    // fallback local filter
+                    this.filterMaterialsBySupplier(supplierId);
+                    this.resetAllItems();
+                    this.updateUIState();
+                    if (window.Swal) Swal.close();
                 });
         }
 
-        // Initialize itemCounter based on existing rows (important for edit page)
-        if (this.elements.itemsTableBody) {
-            const rows = this.elements.itemsTableBody.querySelectorAll('.item-row');
-            let maxIndex = -1;
-            rows.forEach((row) => {
-                // Try to read index from any field name like items[<index>][...]
-                const anyField = row.querySelector('[name^="items["]');
-                if (anyField && anyField.name) {
-                    const match = anyField.name.match(/items\[(\d+)\]/);
-                    if (match) {
-                        const idx = parseInt(match[1], 10);
-                        if (!isNaN(idx)) {
-                            maxIndex = Math.max(maxIndex, idx);
+        filterMaterialsBySupplier(supplierId) {
+            this.filteredMaterials = (this.allMaterials || []).filter(m => String(m.supplier_id) === String(supplierId));
+            return this.filteredMaterials;
+        }
+
+        reloadMaterialsData(supplierId) {
+            return new Promise((resolve, reject) => {
+                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                fetch(`/get-materials-by-supplier?supplier_id=${encodeURIComponent(supplierId)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': token
+                    }
+                })
+                    .then(r => {
+                        if (!r.ok) throw new Error('Network response not ok');
+                        return r.json();
+                    })
+                    .then(data => {
+                        let arr = [];
+                        if (Array.isArray(data)) arr = data;
+                        else if (data && Array.isArray(data.data)) arr = data.data;
+                        else if (data && Array.isArray(data.materials)) arr = data.materials;
+                        else if (data && typeof data === 'object') {
+                            const vals = Object.values(data).filter(v => Array.isArray(v) === false);
+                            if (Array.isArray(vals) && vals.length && vals[0] && vals[0].id) arr = Object.values(data);
                         }
-                    }
-                }
+
+                        // merge arr into allMaterials (update existing / add new)
+                        if (arr && arr.length) {
+                            arr.forEach(mat => {
+                                const idx = this.allMaterials.findIndex(m => m && m.id === mat.id);
+                                if (idx !== -1) this.allMaterials[idx] = mat;
+                                else this.allMaterials.push(mat);
+                            });
+                            // set filteredMaterials to server result
+                            this.filteredMaterials = arr;
+                            resolve(arr);
+                        } else {
+                            // even empty array is a valid response
+                            this.filteredMaterials = arr;
+                            resolve(arr);
+                        }
+                    })
+                    .catch(err => reject(err));
             });
-            this.itemCounter = maxIndex + 1;
         }
 
-        // Initialize existing rows (important for edit page)
-        this.initializeExistingRows();
+        resetAllItems() {
+            if (!this.elements.itemsTableBody) return;
+            this.elements.itemsTableBody.innerHTML = `
+                <tr class="empty-row">
+                    <td colspan="7" class="p-8 text-center text-gray-500">
+                        <div class="flex flex-col items-center">
+                            <i class="bi bi-cart-x text-3xl mb-3 opacity-50"></i>
+                            <h6 class="font-medium">Belum ada item pesanan</h6>
+                            <p class="text-sm">Klik tombol "Tambah Bahan Mentah" untuk menambah item</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            this.itemCounter = 0;
+            this.updateGrandTotal();
+        }
 
-        this.bindEvents();
-        this.updateUIState();
-        
-        console.log('✅ Purchase Order Manager initialized successfully');
-    }
-    
-    bindEvents() {
-        // Supplier selection change
-        if (this.elements.supplierSelect) {
-            this.elements.supplierSelect.addEventListener('change', (e) => {
-                this.handleSupplierChange(e.target.value);
-            });
-        }
-        
-        // Add item button
-        if (this.elements.addItemBtn) {
-            this.elements.addItemBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.addNewItem();
-            });
-        }
-        
-        // Validate prices button
-        if (this.elements.validatePricesBtn) {
-            this.elements.validatePricesBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.validatePrices();
-            });
-        }
-        
-        // Form submission - add form submit event instead of button clicks
-        if (this.elements.form) {
-            this.elements.form.addEventListener('submit', (e) => {
-                console.log('🔄 Form submit event triggered');
-                console.log('Submit button:', e.submitter);
-                console.log('Submit action:', e.submitter ? e.submitter.value : 'not supported');
-                
-                const submitAction = e.submitter ? e.submitter.value : null;
-                if (!submitAction) {
-                    console.error('❌ Browser tidak mendukung e.submitter, menggunakan solusi alternatif');
-                    // Try to determine which button was clicked by checking which one has focus
-                    const draftButton = document.querySelector('button[value="save_draft"]');
-                    const orderButton = document.querySelector('button[value="order_now"]');
-                    
-                    if (document.activeElement === draftButton) {
-                        console.log('Using activeElement fallback: save_draft');
-                        this.handleDraftSubmit(e);
-                    } else if (document.activeElement === orderButton) {
-                        console.log('Using activeElement fallback: order_now');
-                        this.handleOrderSubmit(e);
-                    } else {
-                        console.log('Could not determine which button was clicked, defaulting to draft');
-                        this.handleDraftSubmit(e);
-                    }
+        addNewItem() {
+            if (!this.currentSupplierId) {
+                if (window.Swal) {
+                    Swal.fire({ title: 'Supplier Diperlukan', text: 'Silakan pilih supplier terlebih dahulu.', icon: 'warning' });
+                } else alert('Silakan pilih supplier terlebih dahulu.');
+                return;
+            }
+            // ensure we have materials
+            if (!this.filteredMaterials || this.filteredMaterials.length === 0) {
+                this.filterMaterialsBySupplier(this.currentSupplierId);
+                if (!this.filteredMaterials || this.filteredMaterials.length === 0) {
+                    if (window.Swal) Swal.fire({ title: 'Tidak Ada Bahan Mentah', text: 'Tidak ada bahan mentah untuk supplier ini.', icon: 'info' });
+                    else alert('Tidak ada bahan mentah untuk supplier ini.');
                     return;
                 }
-                
-                if (submitAction === 'save_draft') {
-                    console.log('🔄 Draft submission detected');
-                    this.handleDraftSubmit(e);
-                } else if (submitAction === 'order_now') {
-                    console.log('🔄 Order submission detected');
-                    this.handleOrderSubmit(e);
-                }
-            });
-        }
-    }
-    
-    // Handle draft submission
-    handleDraftSubmit(e) {
-        // For drafts, don't prevent default, just validate
-        if (!this.validateForm()) {
-            console.log('❌ Form validation failed for draft');
-            e.preventDefault();
-        } else {
-            console.log('✅ Draft form validated, submitting...');
-        }
-    }
-    
-    // Handle order submission
-    handleOrderSubmit(e) {
-        // For orders, show confirmation and then submit manually
-        e.preventDefault();
-        console.log('🔄 Order submission - showing confirmation');
-        this.submitOrder();
-    }
-    
-    handleSupplierChange(newSupplierId) {
-        console.log(`🔄 Supplier changed to: ${newSupplierId}`);
-        
-        // Check if there are existing items and show warning
-        const existingItems = this.elements.itemsTableBody?.children.length || 0;
-        const hasNonEmptyRows = Array.from(this.elements.itemsTableBody?.children || [])
-            .some(row => !row.classList.contains('empty-row'));
-        
-        if (this.currentSupplierId && 
-            this.currentSupplierId !== newSupplierId && 
-            hasNonEmptyRows) {
-            
-            this.showSupplierChangeWarning(newSupplierId);
-            return;
-        }
-        
-        this.applySupplierChange(newSupplierId);
-    }
-    
-    showSupplierChangeWarning(newSupplierId) {
-        Swal.fire({
-            title: '⚠️ Konfirmasi Perubahan Supplier',
-            text: 'Mengganti supplier akan menghapus semua item yang sudah ditambahkan. Lanjutkan?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc2626',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Ya, Ganti Supplier',
-            cancelButtonText: 'Batal',
-            reverseButtons: true
-        }).then((result) => {
-            if (result.isConfirmed) {
-                this.applySupplierChange(newSupplierId);
-            } else {
-                // Reset supplier selection to previous value
-                this.elements.supplierSelect.value = this.currentSupplierId || '';
-            }
-        });
-    }
-    
-    applySupplierChange(supplierId) {
-        this.currentSupplierId = supplierId;
-        
-        // If supplier cleared, reset UI immediately
-        if (!supplierId) {
-            this.filteredMaterials = [];
-            this.updateSupplierInfo(null);
-            this.resetAllItems();
-            this.updateUIState();
-            if (window.Swal) Swal.close();
-            return;
-        }
-        
-        // Show loading while fetching latest materials
-        this.showLoadingState('Mengambil data bahan mentah terbaru...');
-        
-        // Always refresh from server to ensure latest prices/materials
-        this.reloadMaterialsData(supplierId)
-            .then(() => {
-                // Filter with latest data
-                this.filterMaterialsBySupplier(supplierId);
-                // Update supplier info and phone (now has correct material count)
-                this.updateSupplierInfo(supplierId);
-                // Reset all items
-                this.resetAllItems();
-                // Update UI state
-                this.updateUIState();
-                // Close loading dialog
-                if (window.Swal) Swal.close();
-            })
-            .catch((error) => {
-                console.error('❌ Failed to reload materials, using local cache:', error);
-                // Fallback to local filter
-                this.filterMaterialsBySupplier(supplierId);
-                this.updateSupplierInfo(supplierId);
-                this.resetAllItems();
-                this.updateUIState();
-                if (window.Swal) Swal.close();
-            });
-    }
-    
-    updateSupplierInfo(supplierId) {
-        const supplierOption = this.elements.supplierSelect?.selectedOptions[0];
-        
-        if (supplierId && supplierOption) {
-            // Update phone field
-            const phone = supplierOption.dataset.phone || '';
-            if (this.elements.supplierPhoneInput) {
-                this.elements.supplierPhoneInput.value = phone;
-            }
-            
-            // Update info message
-            const supplierName = supplierOption.textContent.trim();
-            const materialCount = this.filteredMaterials.length;
-            
-            if (this.elements.supplierInfo) {
-                this.elements.supplierInfo.innerHTML = `
-                    <i class="bi bi-check-circle me-1"></i> 
-                    Supplier dipilih: <strong>${supplierName}</strong> 
-                    <span class="badge bg-success">${materialCount} bahan mentah tersedia</span>
-                    <br><small>Klik "Tambah Bahan Mentah" untuk menambah item pesanan.</small>
-                `;
-                this.elements.supplierInfo.className = 'alert alert-success';
-            }
-        } else {
-            // Reset to default state
-            if (this.elements.supplierPhoneInput) {
-                this.elements.supplierPhoneInput.value = '';
-            }
-            
-            if (this.elements.supplierInfo) {
-                this.elements.supplierInfo.innerHTML = `
-                    <i class="bi bi-info-circle me-1"></i> 
-                    Pilih supplier terlebih dahulu untuk melihat bahan mentah yang tersedia.
-                    <br><small><strong>Catatan:</strong> Jika supplier diganti, semua item akan direset.</small>
-                `;
-                this.elements.supplierInfo.className = 'alert alert-info';
-            }
-        }
-    }
-    
-    filterMaterialsBySupplier(supplierId) {
-        // Reset filteredMaterials
-        this.filteredMaterials = [];
-        
-        if (this.allMaterials.length > 0) {
-            // Filter materials by supplier locally if we have them already
-            this.filteredMaterials = this.allMaterials.filter(m => m.supplier_id == supplierId);
-            console.log(`🔍 Filtered ${this.filteredMaterials.length} materials for supplier ${supplierId}`);
-            
-            if (this.filteredMaterials.length === 0) {
-                console.warn(`⚠️ WARNING: No materials found for supplier ${supplierId}`);
-                console.log('🔍 DEBUG: Available supplier IDs in materials:', [...new Set(this.allMaterials.map(m => m.supplier_id))]);
-            }
-        } else {
-            console.log('❌ No materials data available to filter');
-        }
-        
-        return this.filteredMaterials;
-    }
-    
-    reloadMaterialsData(supplierId) {
-        return new Promise((resolve, reject) => {
-            // Get CSRF token
-            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            
-            if (!token) {
-                console.error('❌ CSRF token not found');
-                reject('CSRF token not found');
-                return;
-            }
-            
-            // Make AJAX request to get latest materials data
-            fetch(`/get-materials-by-supplier?supplier_id=${supplierId}`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': token
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('✅ Reloaded materials data:', data);
-                
-                // Handle different response formats
-                let materialsArray = [];
-                let foundArrayFormat = false;
-                
-                // Check if data is directly an array
-                if (Array.isArray(data)) {
-                    materialsArray = data;
-                    foundArrayFormat = true;
-                } 
-                // Check if data is an object with data property that's an array
-                else if (data && typeof data === 'object' && Array.isArray(data.data)) {
-                    materialsArray = data.data;
-                    foundArrayFormat = true;
-                } 
-                // Check if data is an object with materials property that's an array
-                else if (data && typeof data === 'object' && Array.isArray(data.materials)) {
-                    materialsArray = data.materials;
-                    foundArrayFormat = true;
-                }
-                // Check if data is an object where values form an array of materials
-                else if (data && typeof data === 'object') {
-                    // Try to extract values from object (only if they look like material objects)
-                    const possibleArray = Object.values(data);
-                    if (Array.isArray(possibleArray) && possibleArray.length > 0) {
-                        const looksLikeMaterials = possibleArray.every(v => v && typeof v === 'object' && Object.prototype.hasOwnProperty.call(v, 'id'));
-                        if (looksLikeMaterials) {
-                            materialsArray = possibleArray;
-                            foundArrayFormat = true;
-                        }
-                    }
-                }
-                
-                // If we found an array format (even if empty), update our data
-                if (foundArrayFormat) {
-                    console.log('✅ Extracted materials array:', materialsArray.length, 'items');
-                    this.filteredMaterials = materialsArray;
-                    
-                    // Merge into allMaterials: update if exists, push if new
-                    materialsArray.forEach(newMaterial => {
-                        if (!newMaterial) return; // Skip if null/undefined
-                        const index = this.allMaterials.findIndex(m => m && m.id === newMaterial.id);
-                        if (index !== -1) {
-                            // Update existing material
-                            this.allMaterials[index] = newMaterial;
-                        } else {
-                            this.allMaterials.push(newMaterial);
-                        }
-                    });
-                    
-                    resolve(materialsArray);
-                } else {
-                    console.error('❌ Could not extract materials array from response:', data);
-                    reject('Invalid data format received - could not extract materials');
-                }
-            })
-            .catch(error => {
-                console.error('❌ Error reloading materials data:', error);
-                reject(error);
-            });
-        });
-    }
-    
-    resetAllItems() {
-        if (!this.elements.itemsTableBody) return;
-        
-        // Clear all existing items and show empty state
-        this.elements.itemsTableBody.innerHTML = `
-            <tr class="empty-row">
-                <td colspan="7" class="text-center py-4">
-                    <i class="bi bi-cart-x fs-1 text-muted d-block mb-2"></i>
-                    <p class="text-muted mb-0">Belum ada item. Klik tombol Tambah Item di bawah.</p>
-                </td>
-            </tr>
-        `;
-        
-        this.itemCounter = 0;
-        this.updateGrandTotal();
-    }
-    
-    addNewItem() {
-        if (!this.elements.itemsTableBody || !this.elements.itemTemplate) {
-            console.error('❌ Missing required DOM elements for adding items');
-            return;
-        }
-        
-        // Check if supplier is selected first (requirement #1)
-        if (!this.currentSupplierId) {
-            Swal.fire({
-                title: 'Supplier Diperlukan',
-                text: 'Silakan pilih supplier terlebih dahulu sebelum menambahkan item.',
-                icon: 'warning',
-                confirmButtonColor: '#ea580c'
-            });
-            return;
-        }
-        
-        // Check if we have materials for this supplier
-        if (this.filteredMaterials.length === 0) {
-            // Try to filter materials one more time
-            this.filterMaterialsBySupplier(this.currentSupplierId);
-            
-            // If still empty, show warning
-            if (this.filteredMaterials.length === 0) {
-                Swal.fire({
-                    title: 'Tidak Ada Bahan Mentah',
-                    text: 'Tidak ada bahan mentah yang terdaftar untuk supplier ini.',
-                    icon: 'info',
-                    confirmButtonColor: '#ea580c'
-                });
-                return;
-            }
-        }
-        
-        try {
-            // Remove empty row if exists
-            const emptyRow = this.elements.itemsTableBody.querySelector('.empty-row');
-            if (emptyRow) {
-                emptyRow.remove();
-            }
-            
-            // Get template HTML and replace index placeholder
-            const templateHTML = this.elements.itemTemplate.innerHTML.replace(/__index__/g, this.itemCounter);
-            
-            // Create new row directly using innerHTML
-            this.elements.itemsTableBody.insertAdjacentHTML('beforeend', templateHTML);
-            
-            // Get the newly added row
-            const newRow = this.elements.itemsTableBody.lastElementChild;
-            
-            // Populate material select in the new row
-            const materialSelect = newRow.querySelector('.raw-material-select');
-            if (materialSelect) {
-                // Populate the dropdown with filtered materials from the selected supplier
-                this.populateMaterialSelect(materialSelect);
-            }
-            
-            // Update row number
-            this.updateRowNumbers();
-            
-            // Bind events for new row
-            this.bindItemRowEvents(newRow);
-            
-            this.itemCounter++;
-            
-            console.log('✅ Added new item row');
-            
-        } catch (error) {
-            console.error('❌ Error adding new item:', error);
-            Swal.fire({
-                title: 'Error',
-                text: 'Gagal menambah item baru: ' + error.message,
-                icon: 'error',
-                confirmButtonColor: '#ea580c'
-            });
-        }
-    }
-    
-    populateMaterialSelect(selectElement) {
-        if (!selectElement) {
-            console.error('❌ ERROR: selectElement is null/undefined');
-            return;
-        }
-        
-        // Clear and add default option
-        selectElement.innerHTML = '<option value="">-- Pilih Bahan Mentah --</option>';
-        
-        // Add filtered materials
-        this.filteredMaterials.forEach(material => {
-            const option = document.createElement('option');
-            option.value = material.id;
-            option.textContent = `${material.name} (${material.code})`;
-            
-            // Debug the unit information
-            console.log(`Material ${material.id} (${material.name}) unit data:`, material.unit);
-            
-            // Store unit name explicitly for proper display
-            if (material.unit && material.unit.unit_name) {
-                option.dataset.unit = material.unit.unit_name;
-            } else if (material.unit && material.unit.name) {
-                option.dataset.unit = material.unit.name;
-            } else {
-                option.dataset.unit = '-';
-            }
-            
-            option.dataset.price = String(Math.round(Number(material.unit_price || 0)));
-            option.dataset.stock = material.current_stock || 0;
-            
-            selectElement.appendChild(option);
-        });
-    }
-    
-    refreshRowSelectOptions() {
-        if (!this.elements.itemsTableBody) return;
-        const rows = this.elements.itemsTableBody.querySelectorAll('.item-row');
-        rows.forEach(row => {
-            const materialSelect = row.querySelector('.raw-material-select');
-            if (materialSelect) {
-                const currentValue = materialSelect.value;
-                this.populateMaterialSelect(materialSelect);
-                if (currentValue) {
-                    materialSelect.value = currentValue;
-                    // Update unit cell to reflect potentially refreshed unit data
-                    const unitCell = row.querySelector('.unit-name');
-                    if (unitCell) {
-                        let unitName = materialSelect.selectedOptions[0]?.dataset.unit;
-                        if (!unitName || unitName === '-') {
-                            const mat = this.filteredMaterials.find(m => m.id == currentValue);
-                            if (mat && mat.unit) {
-                                unitName = mat.unit.unit_name || mat.unit.name || '-';
-                            }
-                        }
-                        unitCell.textContent = unitName || '-';
-                    }
-                }
-            }
-        });
-    }
-    
-    bindItemRowEvents(row) {
-        // Material selection change
-        const materialSelect = row.querySelector('.raw-material-select');
-        if (materialSelect) {
-            materialSelect.addEventListener('change', (e) => {
-                this.handleMaterialChange(e, row);
-            });
-            
-            // Trigger change event if a value is already selected (for re-initialization)
-            if (materialSelect.value) {
-                const event = new Event('change');
-                materialSelect.dispatchEvent(event);
             }
 
-            // Populate options on focus while preserving current selection (useful on edit page)
-            materialSelect.addEventListener('focus', () => {
-                const currentValue = materialSelect.value;
-                // Only repopulate if options look incomplete (e.g., only 1 selected option)
-                if (materialSelect.options.length <= 1) {
-                    this.populateMaterialSelect(materialSelect);
-                    if (currentValue) {
-                        materialSelect.value = currentValue;
-                    }
+            // remove empty row if present
+            const empty = this.elements.itemsTableBody.querySelector('.empty-row');
+            if (empty) empty.remove();
+
+            const html = this.elements.itemTemplate.innerHTML.replace(/__index__/g, this.itemCounter);
+            this.elements.itemsTableBody.insertAdjacentHTML('beforeend', html);
+            const newRow = this.elements.itemsTableBody.lastElementChild;
+            // populate select
+            const sel = newRow.querySelector('.raw-material-select');
+            if (sel) this.populateMaterialSelect(sel);
+            this.updateRowNumbers();
+            this.bindItemRowEvents(newRow);
+            this.itemCounter++;
+            this.updateGrandTotal();
+        }
+
+        populateMaterialSelect(selectElement) {
+            if (!selectElement) return;
+            selectElement.innerHTML = '<option value="">-- Pilih Bahan Mentah --</option>';
+            (this.filteredMaterials || []).forEach(material => {
+                if (!material) return;
+                const option = document.createElement('option');
+                option.value = material.id;
+                option.textContent = (material.name || 'Unknown') + (material.code ? ` (${material.code})` : '');
+                // unit dataset
+                let unitName = '-';
+                if (material.unit) unitName = material.unit.unit_name || material.unit.name || '-';
+                option.dataset.unit = unitName;
+                // price dataset - use unit_price or material.unit_price
+                const price = Number(material.unit_price ?? material.price ?? 0);
+                option.dataset.price = String(Math.round(price));
+                option.dataset.stock = material.current_stock ?? 0;
+                selectElement.appendChild(option);
+            });
+        }
+
+        refreshRowSelectOptions() {
+            if (!this.elements.itemsTableBody) return;
+            const rows = this.elements.itemsTableBody.querySelectorAll('.item-row');
+            rows.forEach(row => {
+                const sel = row.querySelector('.raw-material-select');
+                if (!sel) return;
+                const cur = sel.value;
+                this.populateMaterialSelect(sel);
+                if (cur) {
+                    sel.value = cur;
+                    // update unit cell
+                    const unitCell = row.querySelector('.unit-name');
+                    const opt = sel.selectedOptions[0];
+                    if (unitCell) unitCell.textContent = opt?.dataset?.unit || '-';
                 }
             });
         }
-        
-        // Quantity and price changes
-        const quantityInput = row.querySelector('.item-quantity');
-        const priceInput = row.querySelector('.item-price');
-        
-        // Enforce integer-only attributes and sanitize current values
-        if (quantityInput) {
-            quantityInput.setAttribute('step', '1');
-            quantityInput.setAttribute('min', '0');
-            quantityInput.setAttribute('inputmode', 'numeric');
-            quantityInput.setAttribute('pattern', '[0-9]*');
-            quantityInput.value = String(Math.round(parseFloat(quantityInput.value) || 0));
-        }
-        if (priceInput) {
-            priceInput.setAttribute('step', '1');
-            priceInput.setAttribute('min', '0');
-            priceInput.setAttribute('inputmode', 'numeric');
-            priceInput.setAttribute('pattern', '[0-9]*');
-            priceInput.value = String(Math.round(parseFloat(priceInput.value) || 0));
-        }
-        
-        [quantityInput, priceInput].forEach(input => {
-            if (input) {
-                input.addEventListener('input', () => {
-                    this.updateRowTotal(row);
+
+        bindItemRowEvents(row) {
+            const sel = row.querySelector('.raw-material-select');
+            if (sel) {
+                sel.addEventListener('change', (e) => this.handleMaterialChange(e, row));
+                // lazy-populate on focus if options missing
+                sel.addEventListener('focus', () => {
+                    if (sel.options.length <= 1) {
+                        this.populateMaterialSelect(sel);
+                    }
                 });
             }
-        });
-        
-        // Remove button
-        const removeBtn = row.querySelector('.remove-item');
-        if (removeBtn) {
-            removeBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.removeItem(row);
+            const qty = row.querySelector('.item-quantity');
+            const price = row.querySelector('.item-price');
+            [qty, price].forEach(el => {
+                if (!el) return;
+                el.setAttribute('inputmode', 'numeric');
+                el.addEventListener('input', () => this.updateRowTotal(row));
             });
+            // remove button is .btn-remove in template
+            const removeBtn = row.querySelector('.btn-remove');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.removeItem(row);
+                });
+            }
         }
-    }
-    
-    handleMaterialChange(event, row) {
-        const selectedOption = event.target.selectedOptions[0];
-        
-        if (selectedOption && selectedOption.value) {
-            // Get the material ID
-            const materialId = selectedOption.value;
-            
-            // Find the material data from our filtered materials
-            const selectedMaterial = this.filteredMaterials.find(m => m.id == materialId);
-            
-            // Update unit display - use multiple sources to ensure reliability
+
+        handleMaterialChange(event, row) {
+            const opt = event.target.selectedOptions[0];
+            if (!opt) return;
+            // unit
             const unitCell = row.querySelector('.unit-name');
-            if (unitCell) {
-                // First try to get unit from data attribute
-                let unitName = selectedOption.dataset.unit;
-                
-                // If that's empty or placeholder, try to get it from the material object
-                if (!unitName || unitName === '-') {
-                    if (selectedMaterial && selectedMaterial.unit) {
-                        unitName = selectedMaterial.unit.unit_name || selectedMaterial.unit.name || '-';
-                    } else {
-                        unitName = '-';
-                    }
-                }
-                
-                // Update the display
-                unitCell.textContent = unitName || '-';
-                console.log(`Updated unit cell to: ${unitCell.textContent}`);
-            }
-            
-            // Update price
+            const unit = opt.dataset.unit || '-';
+            if (unitCell) unitCell.textContent = unit;
+            // price - only override when user action
             const priceInput = row.querySelector('.item-price');
-            if (priceInput) {
-                // Only update price if data-price exists on option
-                const hasDataPrice = selectedOption.hasAttribute('data-price');
-                if (hasDataPrice) {
-                    // If this is a user-triggered change, update price directly
-                    // If programmatic (initialization), only set price when empty to avoid overwriting existing values
-                    if (event.isTrusted) {
-                        priceInput.value = String(Math.round(Number(selectedOption.dataset.price || 0)));
-                    } else if (priceInput.value === '' || priceInput.value === null) {
-                        priceInput.value = String(Math.round(Number(selectedOption.dataset.price || 0)));
-                    }
-                }
+            if (priceInput && event.isTrusted) {
+                const p = Number(opt.dataset.price || 0);
+                priceInput.value = String(Math.round(p));
             }
-            
-            // Update row total
             this.updateRowTotal(row);
         }
-    }
-    
-    removeItem(row) {
-        Swal.fire({
-            title: 'Hapus Item',
-            text: 'Yakin ingin menghapus item ini?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc2626',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Hapus',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
+
+        removeItem(row) {
+            const doRemove = () => {
                 row.remove();
                 this.updateRowNumbers();
                 this.updateGrandTotal();
-                
-                // Show empty state if no items left
-                if (this.elements.itemsTableBody.children.length === 0) {
-                    this.resetAllItems();
-                }
+                if ((this.elements.itemsTableBody.children || []).length === 0) this.resetAllItems();
+            };
+            if (window.Swal) {
+                Swal.fire({
+                    title: 'Hapus Item',
+                    text: 'Yakin ingin menghapus item ini?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Hapus',
+                    cancelButtonText: 'Batal'
+                }).then(res => { if (res.isConfirmed) doRemove(); });
+            } else {
+                if (confirm('Yakin ingin menghapus item ini?')) doRemove();
             }
-        });
-    }
-    
-    updateRowNumbers() {
-        const rows = this.elements.itemsTableBody.querySelectorAll('.item-row');
-        rows.forEach((row, index) => {
-            const numberCell = row.querySelector('.row-number');
-            if (numberCell) {
-                numberCell.textContent = index + 1;
+        }
+
+        updateRowNumbers() {
+            const rows = this.elements.itemsTableBody.querySelectorAll('.item-row');
+            rows.forEach((r, i) => {
+                const n = r.querySelector('.row-number');
+                if (n) n.textContent = String(i + 1);
+            });
+        }
+
+        updateRowTotal(row) {
+            const qty = Math.max(0, Math.round(Number(row.querySelector('.item-quantity')?.value || 0)));
+            const price = Math.max(0, Math.round(Number(row.querySelector('.item-price')?.value || 0)));
+            if (row.querySelector('.item-quantity')) row.querySelector('.item-quantity').value = String(qty);
+            if (row.querySelector('.item-price')) row.querySelector('.item-price').value = String(price);
+            const total = qty * price;
+            const cell = row.querySelector('.item-total');
+            if (cell) cell.textContent = this.formatCurrency(total);
+            this.updateGrandTotal();
+        }
+
+        updateGrandTotal() {
+            const rows = this.elements.itemsTableBody.querySelectorAll('.item-row');
+            let grand = 0;
+            rows.forEach(r => {
+                const q = Math.round(Number(r.querySelector('.item-quantity')?.value || 0));
+                const p = Math.round(Number(r.querySelector('.item-price')?.value || 0));
+                grand += q * p;
+            });
+            if (this.elements.totalDisplay) this.elements.totalDisplay.textContent = this.formatCurrency(grand);
+        }
+
+        validatePrices() {
+            if (!this.currentSupplierId) {
+                if (window.Swal) Swal.fire({ title: 'Supplier Diperlukan', text: 'Pilih supplier terlebih dahulu', icon: 'warning' });
+                else alert('Pilih supplier terlebih dahulu');
+                return;
             }
-        });
-    }
-    
-    updateRowTotal(row) {
-        // Sanitize to integers
-        const quantityInput = row.querySelector('.item-quantity');
-        const priceInput = row.querySelector('.item-price');
-        let quantity = Math.round(parseFloat(quantityInput?.value) || 0);
-        let price = Math.round(parseFloat(priceInput?.value) || 0);
-
-        if (quantityInput) quantityInput.value = String(quantity);
-        if (priceInput) priceInput.value = String(price);
-
-        const total = quantity * price;
-        
-        const totalCell = row.querySelector('.item-total');
-        if (totalCell) {
-            totalCell.textContent = this.formatCurrency(total);
-        }
-        
-        // Update grand total
-        this.updateGrandTotal();
-    }
-    
-    updateGrandTotal() {
-        const rows = this.elements.itemsTableBody.querySelectorAll('.item-row');
-        let grandTotal = 0;
-        
-        rows.forEach(row => {
-            const quantity = Math.round(parseFloat(row.querySelector('.item-quantity')?.value) || 0);
-            const price = Math.round(parseFloat(row.querySelector('.item-price')?.value) || 0);
-            grandTotal += (quantity * price);
-        });
-        
-        if (this.elements.totalDisplay) {
-            this.elements.totalDisplay.textContent = this.formatCurrency(grandTotal);
-        }
-    }
-    
-    validatePrices() {
-        if (!this.currentSupplierId) {
-            Swal.fire({
-                title: 'Supplier Diperlukan',
-                text: 'Pilih supplier terlebih dahulu sebelum memvalidasi harga.',
-                icon: 'warning',
-                confirmButtonColor: '#ea580c'
-            });
-            return;
-        }
-
-        // Check if there are any items to validate
-        const rows = this.elements.itemsTableBody.querySelectorAll('.item-row');
-        if (!rows.length) {
-            Swal.fire({
-                title: 'Tidak Ada Item',
-                text: 'Tambahkan item terlebih dahulu sebelum memvalidasi harga.',
-                icon: 'info',
-                confirmButtonColor: '#ea580c'
-            });
-            return;
-        }
-        
-        // Show loading state
-        const loadingDialog = Swal.fire({
-            title: 'Memvalidasi Harga',
-            text: 'Sedang memperbarui data harga terbaru...',
-            allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading();
+            const rows = this.elements.itemsTableBody.querySelectorAll('.item-row');
+            if (!rows.length) {
+                if (window.Swal) Swal.fire({ title: 'Tidak Ada Item', text: 'Tambahkan item terlebih dahulu', icon: 'info' });
+                else alert('Tambahkan item terlebih dahulu');
+                return;
             }
-        });
-        
-        // Reload materials data from server to get latest prices
-        this.reloadMaterialsData(this.currentSupplierId)
-            .then(materials => {
-                console.log('✅ Successfully loaded materials for price validation:', materials.length);
-                
-                // Update prices in each row while preserving material selection and quantity
-                let updatedCount = 0;
-                
-                rows.forEach(row => {
-                    const materialSelect = row.querySelector('.raw-material-select');
-                    const priceInput = row.querySelector('.item-price');
-                    
-                    if (materialSelect && materialSelect.value && priceInput) {
-                        const materialId = materialSelect.value;
-                        const material = this.filteredMaterials.find(m => m.id == materialId);
-                        
-                        if (material && material.unit_price) {
-                            // Store previous price for comparison (as integer)
-                            const previousPrice = Math.round(parseFloat(priceInput.value) || 0);
-                            const newPrice = Math.round(parseFloat(material.unit_price) || 0);
-                            
-                            // Update the price as integer string
-                            priceInput.value = String(newPrice);
-                            
-                            // Highlight the price change with animation
-                            if (previousPrice !== newPrice) {
-                                priceInput.classList.add('price-updated');
-                                setTimeout(() => {
-                                    priceInput.classList.remove('price-updated');
-                                }, 2000);
-                                updatedCount++;
-                            }
-                            
-                            // Update the row total
-                            this.updateRowTotal(row);
-                        }
-                    }
+            if (window.Swal) {
+                Swal.fire({ title: 'Memvalidasi Harga', text: 'Memperbarui data harga...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            }
+            this.reloadMaterialsData(this.currentSupplierId)
+                .then(() => {
+                    // update each row price if material matches
+                    let updated = 0;
+                    rows.forEach(row => {
+                        const sel = row.querySelector('.raw-material-select');
+                        const priceInput = row.querySelector('.item-price');
+                        if (!sel || !sel.value || !priceInput) return;
+                        const mat = this.filteredMaterials.find(m => String(m.id) === String(sel.value));
+                        const newPrice = Math.round(Number(mat?.unit_price ?? mat?.price ?? 0));
+                        const prev = Math.round(Number(priceInput.value || 0));
+                        priceInput.value = String(newPrice);
+                        if (prev !== newPrice) updated++;
+                        this.updateRowTotal(row);
+                    });
+                    if (window.Swal) Swal.close();
+                    if (window.Swal) Swal.fire({ title: 'Harga Diperbarui', text: updated > 0 ? `Memperbarui ${updated} harga` : 'Semua harga sudah terkini', icon: 'success' });
+                })
+                .catch(() => {
+                    if (window.Swal) Swal.close();
+                    if (window.Swal) Swal.fire({ title: 'Gagal Memperbarui Harga', text: 'Terjadi kesalahan saat memuat data', icon: 'error' });
                 });
-                
-                // Update grand total
-                this.updateGrandTotal();
-                
-                // Show success message
-                if (window.Swal) Swal.close();
-                return Swal.fire({
-                    title: 'Harga Diperbarui',
-                    text: updatedCount > 0 ? 
-                        `Berhasil memperbarui ${updatedCount} harga item dengan data terbaru.` : 
-                        'Semua harga sudah terkini.',
-                    icon: 'success',
-                    confirmButtonColor: '#059669'
-                });
-            })
-            .catch(error => {
-                console.error('❌ Error during price validation:', error);
-                if (window.Swal) Swal.close();
-                return Swal.fire({
-                    title: 'Gagal Memperbarui Harga',
-                    text: 'Terjadi kesalahan saat memperbarui harga. Silakan coba lagi.',
-                    icon: 'error',
-                    confirmButtonColor: '#dc2626'
-                });
-            });
-    }
-    
-    updateUIState() {
-        const hasSupplier = !!this.currentSupplierId;
-        
-        // Add/Remove disabled state for buttons that require supplier
-        if (this.elements.validatePricesBtn) {
-            this.elements.validatePricesBtn.disabled = !hasSupplier;
         }
-        
-        if (this.elements.orderButton) {
-            this.elements.orderButton.disabled = !hasSupplier;
-        }
-        
-        // Add item button should also require supplier
-        if (this.elements.addItemBtn) {
-            this.elements.addItemBtn.disabled = !hasSupplier;
-        }
-    }
-    
-    handleFormSubmit(event, action) {
-        event.preventDefault();
-        
-        if (!this.validateForm()) {
-            return;
-        }
-        
-        if (action === 'draft') {
-            this.saveDraft();
-        } else if (action === 'order') {
-            this.submitOrder();
-        }
-    }
-    
-    validateForm() {
-        // Check supplier selection
-        if (!this.currentSupplierId) {
-            this.showErrorMessage('Pilih supplier terlebih dahulu');
-            return false;
-        }
-        
-        // Check if there are items
-        const itemRows = this.elements.itemsTableBody.querySelectorAll('.item-row');
-        if (itemRows.length === 0) {
-            this.showErrorMessage('Tambahkan minimal satu item pesanan');
-            return false;
-        }
-        
-        // Validate each item
-        for (let row of itemRows) {
-            const material = row.querySelector('.raw-material-select')?.value;
-            const qInput = row.querySelector('.item-quantity');
-            const pInput = row.querySelector('.item-price');
-            const quantity = Math.round(parseFloat(qInput?.value) || 0);
-            const price = Math.round(parseFloat(pInput?.value) || 0);
 
-            // write back sanitized values
-            if (qInput) qInput.value = String(quantity);
-            if (pInput) pInput.value = String(price);
-            
-            if (!material || quantity <= 0 || price < 0) {
-                this.showErrorMessage('Pastikan semua item memiliki bahan mentah, kuantitas, dan harga yang valid');
+        validateForm() {
+            if (!this.currentSupplierId) {
+                this.showErrorMessage('Pilih supplier terlebih dahulu');
                 return false;
             }
-        }
-        
-        return true;
-    }
-    
-    saveDraft() {
-        console.log('✅ Preparing draft submission');
-        // Ensure submit_action=save_draft is included when form.submit() is called
-        let actionInput = this.elements.form.querySelector('input[name="submit_action"]');
-        if (!actionInput) {
-            actionInput = document.createElement('input');
-            actionInput.type = 'hidden';
-            actionInput.name = 'submit_action';
-            this.elements.form.appendChild(actionInput);
-        }
-        actionInput.value = 'save_draft';
-        this.elements.form.submit();
-    }
-    
-    submitOrder() {
-        const supplierOption = this.elements.supplierSelect.selectedOptions[0];
-        const supplierName = supplierOption?.textContent.trim() || 'Supplier';
-        
-        Swal.fire({
-            title: 'Konfirmasi Pesanan',
-            html: `
-                <p>Pesanan akan dikirim ke <strong>${supplierName}</strong> melalui WhatsApp.</p>
-                <p class="text-muted">Setelah dikonfirmasi, pesanan tidak dapat diubah.</p>
-            `,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#dc2626',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Kirim Pesanan',
-            cancelButtonText: 'Batal',
-            reverseButtons: true
-        }).then((result) => {
-            if (result.isConfirmed) {
-                console.log('✅ User confirmed order, appending submit_action and submitting');
-                // Ensure submit_action=order_now is included
-                let actionInput = this.elements.form.querySelector('input[name="submit_action"]');
-                if (!actionInput) {
-                    actionInput = document.createElement('input');
-                    actionInput.type = 'hidden';
-                    actionInput.name = 'submit_action';
-                    this.elements.form.appendChild(actionInput);
+            const rows = this.elements.itemsTableBody.querySelectorAll('.item-row');
+            if (!rows.length) {
+                this.showErrorMessage('Tambahkan minimal satu item pesanan');
+                return false;
+            }
+            for (const row of rows) {
+                const mat = row.querySelector('.raw-material-select')?.value;
+                const q = Math.round(Number(row.querySelector('.item-quantity')?.value || 0));
+                const p = Math.round(Number(row.querySelector('.item-price')?.value || 0));
+                if (!mat || q <= 0 || p < 0) {
+                    this.showErrorMessage('Pastikan semua item memiliki bahan mentah, kuantitas > 0, dan harga valid');
+                    return false;
                 }
-                actionInput.value = 'order_now';
-                this.elements.form.submit();
             }
-        });
-    }
-    
-    // Utility methods
-    
-    
-    showErrorMessage(message) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: message,
-            confirmButtonColor: '#dc2626'
-        });
-    }
-    
-    showSuccessMessage(message) {
-        Swal.fire({
-            icon: 'success',
-            title: 'Berhasil',
-            text: message,
-            confirmButtonColor: '#16a34a'
-        });
-    }
-    
-    formatCurrency(amount) {
-        return 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(amount || 0));
-    }
-    
-    showLoadingState(message) {
-        Swal.fire({
-            title: 'Memproses...',
-            text: message,
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            showConfirmButton: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
-    }
-}
+            return true;
+        }
 
-// Auto-initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🔄 DOM Content Loaded - Initializing Purchase Order Manager...');
-    
-    // Check if we're on the purchase order create page
-    if (document.getElementById('purchase-order-form')) {
-        window.purchaseOrderManager = new PurchaseOrderManager();
-    } else {
-        console.log('⚠️ Purchase order form not found - skipping initialization');
+        saveDraft() {
+            // ensure hidden input submit_action exists
+            let input = this.elements.form.querySelector('input[name="submit_action"]');
+            if (!input) {
+                input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'submit_action';
+                this.elements.form.appendChild(input);
+            }
+            input.value = 'save_draft';
+            this.elements.form.submit();
+        }
+
+        submitOrder() {
+            const supplierName = this.elements.supplierSelect?.selectedOptions?.[0]?.textContent?.trim() || 'Supplier';
+            if (window.Swal) {
+                Swal.fire({
+                    title: 'Konfirmasi Pesanan',
+                    html: `<p>Pesanan akan dikirim ke <strong>${supplierName}</strong> via WhatsApp.</p>`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Kirim Pesanan',
+                    cancelButtonText: 'Batal'
+                }).then(res => {
+                    if (res.isConfirmed) {
+                        let input = this.elements.form.querySelector('input[name="submit_action"]');
+                        if (!input) {
+                            input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'submit_action';
+                            this.elements.form.appendChild(input);
+                        }
+                        input.value = 'order_now';
+                        this.elements.form.submit();
+                    }
+                });
+            } else {
+                if (confirm(`Kirim pesanan ke ${supplierName}?`)) {
+                    let input = this.elements.form.querySelector('input[name="submit_action"]');
+                    if (!input) {
+                        input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'submit_action';
+                        this.elements.form.appendChild(input);
+                    }
+                    input.value = 'order_now';
+                    this.elements.form.submit();
+                }
+            }
+        }
+
+        showErrorMessage(message) {
+            if (window.Swal) Swal.fire({ icon: 'error', title: 'Error', text: message });
+            else alert(message);
+        }
+
+        formatCurrency(amount) {
+            return 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(amount || 0));
+        }
+
+        showLoadingState(msg) {
+            if (window.Swal) Swal.fire({ title: 'Memproses...', text: msg, allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        }
+
+        updateUIState() {
+            const hasSupplier = !!this.currentSupplierId;
+            if (this.elements.validatePricesBtn) this.elements.validatePricesBtn.disabled = !hasSupplier;
+            if (this.elements.addItemBtn) this.elements.addItemBtn.disabled = !hasSupplier;
+            if (this.elements.orderButton) this.elements.orderButton.disabled = !hasSupplier;
+        }
     }
-});
+
+    // init on DOM ready, but don't override if already present
+    document.addEventListener('DOMContentLoaded', function () {
+        if (!document.getElementById('purchase-order-form')) return;
+        if (!window.purchaseOrderManager) {
+            window.purchaseOrderManager = new PurchaseOrderManager();
+        }
+    });
+})();

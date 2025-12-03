@@ -31,8 +31,12 @@ class AppServiceProvider extends ServiceProvider
         Paginator::defaultView('pagination::bootstrap-5');
         Paginator::defaultSimpleView('pagination::simple-bootstrap-5');
         View::composer('*', function ($view) {
-            $branches = Branch::all();
-            $view->with('branch', $branches);
+            $selectedBranchId = session('current_branch_id');
+            $selectedBranch = $selectedBranchId ? Branch::find($selectedBranchId) : null;
+            $branchItem = Branch::all();
+            $showBranchSelector = true;
+
+            $view->with(compact('selectedBranch', 'branchItem', 'showBranchSelector'));
         });
         
         // Register view composers

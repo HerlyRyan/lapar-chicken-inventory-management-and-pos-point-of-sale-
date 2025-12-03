@@ -18,8 +18,16 @@ class ProductionRequestController extends Controller
      */
     public function index(Request $request)
     {
-        $query = ProductionRequest::with(['requestedBy', 'items.rawMaterial'])
-            ->orderBy('created_at', 'desc');
+        $query = ProductionRequest::with(['requestedBy', 'items.rawMaterial']);
+
+        $columns = [
+            ['key' => 'request_code', 'label' => 'Kode Pengajuan'],
+            ['key' => 'purpose', 'label' => 'Peruntukan'],
+            ['key' => 'requested_by', 'label' => 'Pemohon'],
+            ['key' => 'total_raw_material_cost', 'label' => 'Total Biaya'],
+            ['key' => 'status', 'label' => 'Status'],
+            ['key' => 'created_at', 'label' => 'Tanggal'],
+        ];
 
         // Filter by status if provided
         if ($request->filled('status')) {
@@ -29,56 +37,58 @@ class ProductionRequestController extends Controller
         // Search by request code or purpose
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('request_code', 'like', "%{$search}%")
-                  ->orWhere('purpose', 'like', "%{$search}%");
+                    ->orWhere('purpose', 'like', "%{$search}%");
             });
         }
 
-        // Use a dedicated page name to avoid collision with raw materials pagination on the same page
-        $productionRequests = $query->paginate(15, ['*'], 'pr_page');
-        // Preserve current query parameters in pagination links
-        $productionRequests->appends($request->query());
+        // === SORTING ===
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
 
-        // Build raw materials stock list (with filters/search/pagination like raw-materials/stock)
-        // Use separate paginator name so it can co-exist with $productionRequests on the same page.
-        $rawMaterialsQuery = RawMaterial::where('is_active', true)
-            ->with(['unit', 'supplier']);
+            // 🧩 Deteksi kolom relasi
+            switch ($sortBy) {
+                case 'requested_by':
+                    $query->leftjoin('users', 'users.id', '=', 'production_requests.requested_by')
+                        ->orderBy('users.name', $sortDir)
+                        ->select('production_requests.*');
+                    break;    
 
-        // Search (q) reuses the same keys as on raw materials stock page
-        if ($request->filled('q')) {
-            $search = $request->q;
-            $rawMaterialsQuery->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhereHas('supplier', function($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('code', 'like', "%{$search}%");
-                  });
-            });
-        }
-
-        // Stock level filter: low (< min), warning ([min, 2x min)), normal (>= 2x min)
-        if ($request->filled('stock')) {
-            if ($request->stock === 'low') {
-                $rawMaterialsQuery->whereRaw('current_stock < minimum_stock');
-            } elseif ($request->stock === 'warning') {
-                $rawMaterialsQuery->whereRaw('current_stock >= minimum_stock AND current_stock < (minimum_stock * 2)');
-            } elseif ($request->stock === 'normal') {
-                $rawMaterialsQuery->whereRaw('current_stock >= (minimum_stock * 2)');
+                default:
+                    $query->orderBy($sortBy, $sortDir);
             }
         }
 
-        $rawMaterialsStock = $rawMaterialsQuery->orderByRaw('
-            CASE 
-                WHEN current_stock < minimum_stock THEN 1
-                WHEN current_stock < minimum_stock * 2 THEN 2
-                ELSE 3
-            END, name ASC
-        ')->paginate(12, ['*'], 'rm_page');
-        $rawMaterialsStock->appends($request->query());
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $productionRequests */
+        $productionRequests = $query->paginate(10);
 
-        return view('production-requests.index', compact('productionRequests', 'rawMaterialsStock'));
+        $statuses = [
+            'pending' => 'Ditunda',
+            'approved' => 'Diterima',
+            'rejected' => 'Ditolak',
+            'in_progress' => 'Dalam Proses',
+            'completed' => 'Selesai',
+            'cancelled' => 'Dibatalkan',
+        ];
+
+        $selects = [
+            [
+                'name' => 'status',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+        ];
+
+        // === RESPONSE ===
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $productionRequests->items(),
+                'links' => (string) $productionRequests->links('vendor.pagination.tailwind'),
+            ]);
+        }
+
+        return view('production-requests.index', compact('productionRequests', 'columns', 'selects'));
     }
 
     /**
@@ -192,7 +202,7 @@ class ProductionRequestController extends Controller
             'items.rawMaterial.unit',
             'outputs.semiFinishedProduct.unit'
         ]);
-        
+
         return view('production-requests.show', compact('productionRequest'));
     }
 
@@ -325,7 +335,7 @@ class ProductionRequestController extends Controller
         return redirect()->route('production-requests.index')
             ->with('success', 'Pengajuan produksi berhasil dihapus.');
     }
-    
+
     /**
      * Show confirmation page before deleting a production request.
      *
@@ -340,7 +350,7 @@ class ProductionRequestController extends Controller
         }
         return view('production-requests.delete-confirm', compact('productionRequest'));
     }
-    
+
     /**
      * Alternative GET method to remove the specified production request (for debugging)
      */

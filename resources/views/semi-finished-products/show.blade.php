@@ -1,167 +1,294 @@
 @extends('layouts.app')
 
+@php
+use Illuminate\Support\Facades\Storage;
+@endphp
+
 @section('title', 'Detail Bahan Setengah Jadi - ' . $semiFinishedProduct->name)
 
 @section('content')
-{{-- Header --}}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 fw-bold mb-1" style="color: var(--primary-red);">
-            <i class="bi bi-box-seam me-2"></i>Detail Bahan Setengah Jadi
-        </h1>
-        <p class="text-muted mb-0">
-            Informasi lengkap: {{ $semiFinishedProduct->name }}
-        </p>
-    </div>
-    <a href="{{ route('semi-finished-products.index', request()->has('branch_id') ? ['branch_id' => request('branch_id')] : []) }}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left me-2"></i>Kembali
-    </a>
-</div>
+<div class="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-orange-100">
+    {{-- Header --}}
+    <div class="bg-gradient-to-r from-orange-900 via-orange-800 to-red-900 shadow-xl">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="flex items-center space-x-4">
+                    <a href="{{ route('semi-finished-products.index', request()->has('branch_id') ? ['branch_id' => request('branch_id')] : []) }}"
+                       class="inline-flex items-center justify-center w-10 h-10 bg-white/10 hover:bg-white/20 rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/20 group">
+                        <svg class="w-5 h-5 text-white group-hover:text-orange-200 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl lg:text-3xl font-bold text-white">
+                            <i class="bi bi-box-seam me-2"></i>Detail Bahan Setengah Jadi
+                        </h1>
+                        <p class="text-orange-200 mt-1">Informasi lengkap: {{ $semiFinishedProduct->name }}</p>
+                    </div>
+                </div>
 
-<div class="row">
-    {{-- Main Content Column --}}
-    <div class="col-lg-8">
-        <div class="card border-0 shadow-lg mb-4">
-            <div class="card-header text-white py-3" style="background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 50%, #10b981 100%);">
-                <h5 class="mb-0 fw-bold">
-                    <i class="bi bi-info-circle me-2"></i>Informasi: {{ $semiFinishedProduct->name }}
-                </h5>
+                <div class="flex items-center space-x-3">
+                    <a href="{{ route('semi-finished-products.edit', array_merge([$semiFinishedProduct], request()->has('branch_id') ? ['branch_id' => request('branch_id')] : [])) }}"
+                       class="inline-flex items-center px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition-all duration-200 backdrop-blur-sm border border-white/20 group">
+                        <svg class="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Edit
+                    </a>
+
+                    <button onclick="confirmDelete()" 
+                            class="inline-flex items-center px-4 py-2.5 bg-red-600/80 hover:bg-red-600 text-white rounded-xl font-medium transition-all duration-200 backdrop-blur-sm border border-red-500/30 group">
+                        <svg class="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Hapus
+                    </button>
+                </div>
             </div>
-            <div class="card-body p-4">
-                {{-- Image Section --}}
-                <div class="text-center mb-4">
-                    <x-product-image :src="$semiFinishedProduct->image" :alt="$semiFinishedProduct->name" class="rounded border shadow-sm" height="300" />
-                </div>
+        </div>
+    </div>
 
-                <hr>
+    {{-- Content --}}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {{-- Main Card --}}
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
+                    {{-- Header / Avatar --}}
+                    <div class="relative bg-gradient-to-r from-orange-500 via-red-500 to-orange-600 px-8 py-12">
+                        <div class="absolute inset-0 bg-black/10"></div>
+                        <div class="relative text-center">
+                            <div class="relative inline-block mb-6">
+                                @if($semiFinishedProduct->image)
+                                    <img src="{{ Storage::url($semiFinishedProduct->image) }}" alt="{{ $semiFinishedProduct->name }}"
+                                         class="w-32 h-32 rounded-full border-4 border-white shadow-2xl object-cover">
+                                @else
+                                    <div class="w-32 h-32 rounded-full border-4 border-white shadow-2xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center">
+                                        <span class="text-4xl font-bold text-white">{{ strtoupper(substr($semiFinishedProduct->name, 0, 1)) }}</span>
+                                    </div>
+                                @endif
 
-                {{-- Product Details Section --}}
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div>
-                        @if($semiFinishedProduct->code)
-                            <p class="text-muted mb-2">
-                                <i class="bi bi-upc me-1"></i>Kode: <span class="fw-semibold">{{ $semiFinishedProduct->code }}</span>
-                            </p>
-                        @endif
-                    </div>
-                    @if($semiFinishedProduct->is_active)
-                        <span class="badge bg-success fs-6 px-3 py-2"><i class="bi bi-check-circle me-1"></i>Aktif</span>
-                    @else
-                        <span class="badge bg-secondary fs-6 px-3 py-2"><i class="bi bi-x-circle me-1"></i>Tidak Aktif</span>
-                    @endif
-                </div>
-
-                @if($semiFinishedProduct->description)
-                    <p class="mb-3 fst-italic text-muted">"{{ $semiFinishedProduct->description }}"</p>
-                @else
-                    <p class="mb-3 fst-italic text-muted">Tidak ada deskripsi.</p>
-                @endif
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-dark fw-bold">Kode</label>
-                        <h5><span class="badge bg-primary">{{ $semiFinishedProduct->code }}</span></h5>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-dark fw-bold">Kategori</label>
-                        @if($semiFinishedProduct->category)
-                            <h5><span class="badge bg-info">{{ $semiFinishedProduct->category->name }}</span></h5>
-                        @else
-                            <h5 class="fw-normal text-muted">-</h5>
-                        @endif
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-dark fw-bold">Satuan</label>
-                        <h5 class="fw-normal">{{ $semiFinishedProduct->unit ? (is_object($semiFinishedProduct->unit) ? $semiFinishedProduct->unit->unit_name : $semiFinishedProduct->unit) : '-' }}</h5>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-dark fw-bold">Biaya Produksi</label>
-                        <h5 class="fw-bold text-success">
-                            @if($semiFinishedProduct->production_cost)
-                                Rp {{ number_format($semiFinishedProduct->production_cost, 0, ',', '.') }}
-                            @else
-                                -
-                            @endif
-                        </h5>
-                    </div>
-                </div>
-
-                <hr>
-
-                {{-- Stock Info Section --}}
-                <h6 class="fw-bold mb-3"><i class="bi bi-archive me-2"></i>Informasi Stok</h6>
-                <div class="alert alert-info d-flex align-items-center">
-                    <i class="bi bi-info-circle-fill me-2"></i>
-                    <div>
-                        Stok ditampilkan untuk: 
-                        <span class="fw-bold">
-                        @if($branchForStock)
-                            {{ $branchForStock->name }}
-                        @elseif($selectedBranch)
-                            {{ $selectedBranch->name }}
-                        @else
-                            Semua Cabang
-                        @endif
-                        </span>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-6"><label class="form-label text-muted fw-semibold">Stok Saat Ini</label><div class="d-flex align-items-center"><span class="fw-bold fs-4 {{ $displayStockQuantity > $displayMinimumStock ? 'text-success' : 'text-danger' }}">{{ number_format($displayStockQuantity, 0, ',', '.') }}</span><small class="text-muted ms-2">{{ $semiFinishedProduct->unit->unit_name ?? '' }}</small></div></div>
-                    <div class="col-md-6"><label class="form-label text-muted fw-semibold">Stok Minimum</label><p class="fw-semibold mb-0">{{ number_format($displayMinimumStock, 0, ',', '.') }} <small class="text-muted">{{ $semiFinishedProduct->unit->unit_name ?? '' }}</small></p></div>
-                </div>
-
-                {{-- Branch Stock Details --}}
-                @if(!$branchForStock && !$selectedBranch && $semiFinishedProduct->semiFinishedBranchStocks->isNotEmpty())
-                <hr class="my-4">
-                <h6 class="fw-bold mb-3"><i class="bi bi-building me-2"></i>Rincian Stok Per Cabang</h6>
-                <ul class="list-group list-group-flush">
-                    @foreach($semiFinishedProduct->semiFinishedBranchStocks as $branchStock)
-                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <div>
-                            <div class="fw-semibold">{{ $branchStock->branch->name ?? 'Unknown' }}</div>
-                            <small class="text-muted">{{ $branchStock->branch->code ?? '' }}</small>
-                        </div>
-                        <div class="text-end">
-                            <div class="fw-semibold {{ $branchStock->quantity > 0 ? 'text-success' : 'text-danger' }}">
-                                {{ number_format($branchStock->quantity, 0, ',', '.') }}
+                                <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-white flex items-center justify-center">
+                                    @if($semiFinishedProduct->is_active)
+                                        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                        </svg>
+                                    @else
+                                        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                                        </svg>
+                                    @endif
+                                </div>
                             </div>
-                            <small class="text-muted">{{ $semiFinishedProduct->unit->unit_name ?? '' }}</small>
-                        </div>
-                    </li>
-                    @endforeach
-                </ul>
-                @endif
-            </div>
-        </div>
-    </div>
 
-    {{-- Action & System Info Column --}}
-    <div class="col-lg-4">
-        {{-- Actions Card --}}
-        <div class="card border-0 shadow-lg mb-4">
-            <div class="card-header bg-light py-3"><h6 class="mb-0 fw-bold text-dark"><i class="bi bi-lightning-charge-fill me-2"></i>Aksi</h6></div>
-            <div class="card-body">
-                <div class="d-grid gap-2">
-                    <a href="{{ route('semi-finished-products.edit', array_merge([$semiFinishedProduct], request()->has('branch_id') ? ['branch_id' => request('branch_id')] : [])) }}" class="btn btn-warning"><i class="bi bi-pencil me-2"></i>Edit Bahan</a>
-                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal"><i class="bi bi-trash me-2"></i>Hapus Bahan</button>
+                            <h2 class="text-3xl font-bold text-white mb-2">{{ $semiFinishedProduct->name }}</h2>
+                            <p class="text-orange-100 text-lg">
+                                @if($semiFinishedProduct->code)
+                                    <span class="inline-flex items-center px-3 py-1 bg-white/10 rounded-full text-sm">{{ $semiFinishedProduct->code }}</span>
+                                @else
+                                    -
+                                @endif
+                            </p>
+
+                            <div class="mt-4">
+                                @if($semiFinishedProduct->is_active)
+                                    <span class="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
+                                        <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                                        Aktif
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-800 rounded-full text-sm font-semibold">
+                                        <div class="w-2 h-2 bg-gray-500 rounded-full mr-2"></div>
+                                        Tidak Aktif
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Details --}}
+                    <div class="p-8">
+                        <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                            <svg class="w-5 h-5 mr-3 text-orange-500" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                            Informasi Detail
+                        </h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                                <h4 class="font-semibold text-gray-800 mb-1">Kategori</h4>
+                                @if($semiFinishedProduct->category)
+                                    <p class="font-medium text-gray-700">{{ $semiFinishedProduct->category->name }}</p>
+                                @else
+                                    <p class="text-gray-400">-</p>
+                                @endif
+                            </div>
+
+                            <div class="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
+                                <h4 class="font-semibold text-gray-800 mb-1">Satuan</h4>
+                                <p class="text-gray-700">{{ $semiFinishedProduct->unit ? (is_object($semiFinishedProduct->unit) ? $semiFinishedProduct->unit->unit_name : $semiFinishedProduct->unit) : '-' }}</p>
+                            </div>
+
+                            <div class="p-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border border-green-100">
+                                <h4 class="font-semibold text-gray-800 mb-1">Biaya Produksi</h4>
+                                <p class="font-bold text-success">
+                                    @if($semiFinishedProduct->production_cost)
+                                        Rp {{ number_format($semiFinishedProduct->production_cost, 0, ',', '.') }}
+                                    @else
+                                        -
+                                    @endif
+                                </p>
+                            </div>
+
+                            <div class="p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-100">
+                                <h4 class="font-semibold text-gray-800 mb-1">Stok Minimum</h4>
+                                <p class="font-semibold text-gray-700">{{ number_format($displayMinimumStock, 0, ',', '.') }} <small class="text-muted">{{ $semiFinishedProduct->unit->unit_name ?? '' }}</small></p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <h4 class="font-semibold text-gray-800 mb-2">Deskripsi</h4>
+                            @if($semiFinishedProduct->description)
+                                <p class="text-gray-600 italic">"{{ $semiFinishedProduct->description }}"</p>
+                            @else
+                                <p class="text-gray-400 italic">Tidak ada deskripsi.</p>
+                            @endif
+                        </div>
+
+                        <hr class="my-6">
+
+                        {{-- Stock Summary --}}
+                        <h6 class="fw-bold mb-3 flex items-center text-gray-800"><i class="bi bi-archive me-2"></i>Informasi Stok</h6>
+                        <div class="alert alert-info d-flex align-items-center p-4 rounded-xl bg-blue-50 border border-blue-100">
+                            <i class="bi bi-info-circle-fill me-2 text-blue-600"></i>
+                            <div class="text-sm text-gray-700">
+                                Stok ditampilkan untuk:
+                                <span class="font-semibold">
+                                @if($branchForStock)
+                                    {{ $branchForStock->name }}
+                                @elseif($selectedBranch)
+                                    {{ $selectedBranch->name }}
+                                @else
+                                    Semua Cabang
+                                @endif
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div class="p-4 bg-white rounded-xl border border-gray-100">
+                                <label class="form-label text-muted fw-semibold">Stok Saat Ini</label>
+                                <div class="d-flex align-items-center mt-2">
+                                    <span class="fw-bold fs-4 {{ $displayStockQuantity > $displayMinimumStock ? 'text-success' : 'text-danger' }}">
+                                        {{ number_format($displayStockQuantity, 0, ',', '.') }}
+                                    </span>
+                                    <small class="text-muted ms-2">{{ $semiFinishedProduct->unit->unit_name ?? '' }}</small>
+                                </div>
+                            </div>
+
+                            <div class="p-4 bg-white rounded-xl border border-gray-100">
+                                <label class="form-label text-muted fw-semibold">Stok Minimum</label>
+                                <p class="fw-semibold mb-0 mt-2">{{ number_format($displayMinimumStock, 0, ',', '.') }} <small class="text-muted">{{ $semiFinishedProduct->unit->unit_name ?? '' }}</small></p>
+                            </div>
+                        </div>
+
+                        {{-- Branch Stocks --}}
+                        @if(!$branchForStock && !$selectedBranch && $semiFinishedProduct->semiFinishedBranchStocks->isNotEmpty())
+                            <hr class="my-6">
+                            <h6 class="fw-bold mb-3 flex items-center text-gray-800"><i class="bi bi-building me-2"></i>Rincian Stok Per Cabang</h6>
+                            <ul class="space-y-3">
+                                @foreach($semiFinishedProduct->semiFinishedBranchStocks as $branchStock)
+                                    <li class="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-100">
+                                        <div>
+                                            <div class="font-semibold text-gray-800">{{ $branchStock->branch->name ?? 'Unknown' }}</div>
+                                            <small class="text-gray-500">{{ $branchStock->branch->code ?? '' }}</small>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="font-semibold {{ $branchStock->quantity > 0 ? 'text-green-600' : 'text-red-600' }}">
+                                                {{ number_format($branchStock->quantity, 0, ',', '.') }}
+                                            </div>
+                                            <small class="text-gray-500">{{ $semiFinishedProduct->unit->unit_name ?? '' }}</small>
+                                        </div>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
                 </div>
             </div>
-        </div>
 
-        {{-- System Info Card --}}
-        <div class="card border-0 shadow-lg">
-            <div class="card-header bg-light py-3"><h6 class="mb-0 fw-bold text-dark"><i class="bi bi-clock-history me-2"></i>Informasi Sistem</h6></div>
-            <div class="card-body text-muted small">
-                <p class="mb-2"><strong>Dibuat:</strong><br>{{ $semiFinishedProduct->created_at ? $semiFinishedProduct->created_at->format('d/m/Y H:i:s') : '-' }}</p>
-                <p class="mb-0"><strong>Diperbarui:</strong><br>{{ $semiFinishedProduct->updated_at ? $semiFinishedProduct->updated_at->format('d/m/Y H:i:s') : '-' }}</p>
+            {{-- Sidebar --}}
+            <div class="space-y-6">
+                {{-- Actions Card --}}
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
+                    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4">
+                        <h3 class="text-lg font-bold text-white flex items-center">
+                            <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M10,17L6,13L7.41,11.59L10,14.17L16.59,7.58L18,9L10,17Z"/>
+                            </svg>
+                            Aksi
+                        </h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="d-grid gap-2">
+                            <a href="{{ route('semi-finished-products.edit', array_merge([$semiFinishedProduct], request()->has('branch_id') ? ['branch_id' => request('branch_id')] : [])) }}" class="inline-flex items-center justify-center px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-white rounded-xl font-medium">
+                                <i class="bi bi-pencil me-2"></i>Edit Bahan
+                            </a>
+
+                            <button type="button" onclick="confirmDelete()" class="inline-flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium">
+                                <i class="bi bi-trash me-2"></i>Hapus Bahan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- System Info --}}
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
+                    <div class="bg-gradient-to-r from-gray-600 to-gray-700 px-6 py-4">
+                        <h3 class="text-lg font-bold text-white flex items-center">
+                            <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                            Info Sistem
+                        </h3>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-500">Produk ID</span>
+                            <span class="font-mono text-gray-700">{{ $semiFinishedProduct->id }}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-500">Dibuat</span>
+                            <span class="text-gray-700">{{ $semiFinishedProduct->created_at ? $semiFinishedProduct->created_at->format('d/m/Y H:i') : '-' }}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-500">Diperbarui</span>
+                            <span class="text-gray-700">{{ $semiFinishedProduct->updated_at ? $semiFinishedProduct->updated_at->format('d/m/Y H:i') : '-' }}</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-{{-- Delete Confirmation Modal --}}
-<div class="modal fade" id="deleteModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Konfirmasi Hapus</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body">Apakah Anda yakin ingin menghapus <strong>{{ $semiFinishedProduct->name }}</strong>?</div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><form action="{{ route('semi-finished-products.destroy', $semiFinishedProduct) }}" method="POST">@csrf @method('DELETE')<button type="submit" class="btn btn-danger">Ya, Hapus</button></form></div></div></div></div>
+{{-- Small script to toggle modal using the 'show' class for progressive enhancement --}}
+<script>
+    (function(){
+        // reflect 'show' class by toggling hidden / flex
+        const observer = new MutationObserver(() => {
+            const modal = document.getElementById('deleteModal');
+            if(!modal) return;
+            if(modal.classList.contains('show')){
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }else{
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+        });
+        observer.observe(document.getElementById('deleteModal'), { attributes: true, attributeFilter: ['class'] });
+    })();
+</script>
 @endsection

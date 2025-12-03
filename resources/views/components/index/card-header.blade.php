@@ -1,5 +1,5 @@
 @props([
-    'title' => 'Unknowmn',
+'title' => 'Unknowmn',
 ])
 
 <div class="bg-gradient-to-r from-orange-600 via-orange-700 to-red-700 px-4 sm:px-6 py-4 sm:py-6">

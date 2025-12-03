@@ -1,805 +1,683 @@
 @extends('layouts.app')
+@php use Illuminate\Support\Facades\Storage; @endphp
 
-@php
-use Illuminate\Support\Facades\Storage;
-@endphp
+@section('title', 'Edit Paket Penjualan')
 
 @section('content')
-<div class="container-fluid">
-    <x-page-header 
-        title="Edit Paket Penjualan" 
-        subtitle="Edit paket {{ $salesPackage->name }}"
-        :breadcrumb="[
-            ['label' => 'Dashboard', 'url' => route('dashboard')],
-            ['label' => 'Paket Penjualan', 'url' => route('sales-packages.index')],
-            ['label' => $salesPackage->name, 'url' => route('sales-packages.show', $salesPackage)],
-            ['label' => 'Edit', 'active' => true]
-        ]"
-    />
+    <div class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 py-6">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            {{-- Header --}}
+            <x-form.header title="Paket Penjualan" backRoute="{{ route('sales-packages.index') }}" />
 
-    <form action="{{ route('sales-packages.update', $salesPackage) }}" method="POST" enctype="multipart/form-data" id="salesPackageForm" class="compact-form">
-        @csrf
-        @method('PUT')
-        <div class="row">
-            <!-- Form Section -->
-            <div class="col-lg-9">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">
-                            <i class="bi bi-info-circle me-2"></i>Informasi Paket
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <!-- Row 1: Name -->
-                        <div class="row mb-3">
-                            <div class="col-md-12">
-                                <label for="name" class="form-label">Nama Paket <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control @error('name') is-invalid @enderror" 
-                                       id="name" name="name" value="{{ old('name', $salesPackage->name) }}" 
-                                       placeholder="Contoh: Paket Lapar Aja" required>
-                                @error('name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                <div class="form-text">Kode paket: {{ $salesPackage->code }}</div>
-                            </div>
-                        </div>
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden mt-6">
+                <x-form.card-header title="Edit Paket Penjualan" type="edit" />
 
-                        <!-- Row 2: Description & Category -->
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="description" class="form-label">Deskripsi</label>
-                                <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description" rows="3">{{ old('description', $salesPackage->description) }}</textarea>
-                                @error('description')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="col-md-6">
-                                <label for="category_id" class="form-label">Kategori <span class="text-danger">*</span></label>
-                                <select class="form-select @error('category_id') is-invalid @enderror" id="category_id" name="category_id" required>
-                                    <option value="" disabled>Pilih Kategori...</option>
-                                    @foreach($categories as $category)
-                                        <option value="{{ $category->id }}" data-name="{{ $category->name }}" {{ old('category_id', $salesPackage->category_id) == $category->id ? 'selected' : '' }}>
-                                            {{ $category->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('category_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                <div class="form-text mt-1">
-                                    <a href="{{ route('categories.create') }}" target="_blank" rel="noopener" class="text-decoration-underline">
-                                        <i class="bi bi-box-arrow-up-right me-1"></i>Tambah kategori di tab baru
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-text">Kategori akan digunakan untuk filter paket penjualan</div>
+                <div class="p-6 sm:p-8">
+                    <form action="{{ route('sales-packages.update', $salesPackage) }}" method="POST" enctype="multipart/form-data"
+                        id="salesPackageForm" class="space-y-6">
+                        @csrf
+                        @method('PUT')
 
-                        <!-- Row 3: Pricing -->
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label for="discount_percentage" class="form-label">Diskon (%)</label>
-                                <div class="input-group">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="decrement('discount_percentage')">-</button>
-                                    <input type="number" class="form-control @error('discount_percentage') is-invalid @enderror" 
-                                           id="discount_percentage" name="discount_percentage" 
-                                           value="{{ old('discount_percentage', $salesPackage->discount_percentage) }}" 
-                                           placeholder="0" min="0" max="100" step="0.01">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="increment('discount_percentage')">+</button>
-                                </div>
-                                @error('discount_percentage')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="col-md-4">
-                                <label for="discount_amount" class="form-label">Diskon (Rp)</label>
-                                <div class="input-group">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="decrement('discount_amount')">-</button>
-                                    <input type="number" class="form-control @error('discount_amount') is-invalid @enderror" 
-                                           id="discount_amount" name="discount_amount" 
-                                           value="{{ old('discount_amount', $salesPackage->discount_amount) }}" 
-                                           placeholder="0" min="0" step="1">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="increment('discount_amount')">+</button>
-                                </div>
-                                @error('discount_amount')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="col-md-4">
-                                <label for="additional_charge" class="form-label">Biaya Tambahan (Rp)</label>
-                                <div class="input-group">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="decrement('additional_charge')">-</button>
-                                    <input type="number" class="form-control @error('additional_charge') is-invalid @enderror" 
-                                           id="additional_charge" name="additional_charge" 
-                                           value="{{ old('additional_charge', $salesPackage->additional_charge) }}" 
-                                           placeholder="0" min="0" step="1">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="increment('additional_charge')">+</button>
-                                </div>
-                                @error('additional_charge')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <div class="alert alert-info py-1 small">
-                                    <i class="bi bi-info-circle me-1"></i>
-                                    <small><strong>Catatan:</strong> Pilih diskon % ATAU nominal. Biaya tambahan untuk packaging, delivery, dll.</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Row 4: Image Management -->
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <label class="form-label">Foto Paket</label>
-                                <div class="row">
-                                    <!-- Current Image -->
-                                    <div class="col-md-6">
-                                        <div class="card h-100">
-                                            <div class="card-header bg-light py-2">
-                                                <small class="text-muted fw-bold">Foto Saat Ini</small>
-                                            </div>
-                                            <div class="card-body d-flex align-items-center justify-content-center" style="min-height: 200px;">
-                                                @if($salesPackage->image && Storage::disk('public')->exists($salesPackage->image))
-                                                    <img src="{{ asset('storage/' . $salesPackage->image) }}" 
-                                                         alt="{{ $salesPackage->name }}" 
-                                                         class="img-fluid rounded shadow-sm" 
-                                                         style="max-height: 180px; max-width: 100%; object-fit: cover;">
-                                                @else
-                                                    <div class="text-center text-muted">
-                                                        <i class="bi bi-image" style="font-size: 3rem;"></i>
-                                                        <div class="mt-2">Belum ada foto</div>
-                                                    </div>
-                                                @endif
-                                            </div>
+                        <div class="grid grid-cols-1 gap-6">
+                            <div class="space-y-6">
+                                <div class="bg-white rounded-lg p-5">
+                                    <div class="flex items-center mb-4">
+                                        <div
+                                            class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="bi bi-info-circle text-white text-sm"></i>
                                         </div>
+                                        <h3 class="text-lg font-semibold text-gray-900">Informasi Paket</h3>
                                     </div>
-                                    
-                                    <!-- Upload New Image -->
-                                    <div class="col-md-6">
-                                        <div class="card h-100">
-                                            <div class="card-header bg-light py-2">
-                                                <small class="text-muted fw-bold">Upload Foto Baru (Opsional)</small>
-                                            </div>
-                                            <div class="card-body">
-                                                <input type="file" class="form-control mb-3 @error('image') is-invalid @enderror" 
-                                                       id="image" name="image" accept="image/*" onchange="previewImage(this)">
-                                                @error('image')
-                                                    <div class="invalid-feedback">{{ $message }}</div>
-                                                @enderror
-                                                <div class="form-text mb-3">
-                                                    <i class="bi bi-info-circle me-1"></i>
-                                                    Format: JPG, PNG, GIF. Maksimal 2MB.
-                                                </div>
-                                                
-                                                <!-- Preview Container -->
-                                                <div id="imagePreview" style="display: none;">
-                                                    <div class="border rounded p-2 bg-light">
-                                                        <small class="text-muted fw-bold d-block mb-2">Preview:</small>
-                                                        <img id="previewImg" src="" alt="Preview" 
-                                                             class="img-fluid rounded shadow-sm" 
-                                                             style="max-height: 120px; width: 100%; object-fit: cover;">
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Package Items Section -->
-                <div class="card shadow-sm mt-3">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="bi bi-box-seam me-2"></i>Komponen Paket
-                        </h5>
-                        <button type="button" class="btn btn-light btn-sm" onclick="addPackageItem()">
-                            <i class="bi bi-plus-lg"></i> Tambah Produk
-                        </button>
-                    </div>
-                    <div class="card-body p-2">
-                        <div class="alert alert-info mb-2 py-1 px-2">
-                            <small><i class="bi bi-info-circle me-1"></i>Anda bisa <strong>scroll</strong> untuk melihat seluruh komponen yang ditambahkan.</small>
-                        </div>
-                        <div id="packageItems" class="overflow-auto" style="max-height: 400px; scrollbar-width: thin;">
-                            <!-- Existing items will be loaded here -->
-                            @foreach($salesPackage->packageItems as $index => $item)
-                                <div class="package-item border rounded p-3 mb-3" data-index="{{ $index }}">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0">Produk {{ $index + 1 }}</h6>
-                                        <button type="button" class="btn btn-danger btn-sm" onclick="removePackageItem(this)">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                    {{-- Name --}}
+                                    <div class="mb-4">
+                                        <label for="name" class="block text-sm font-semibold text-gray-700 mb-2">
+                                            Nama Paket <span class="text-red-500">*</span>
+                                        </label>
+                                        <input type="text" id="name" name="name" required
+                                            class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('name') border-red-300 ring-2 ring-red-200 @enderror"
+                                            value="{{ old('name', $salesPackage->name) }}" placeholder="Contoh: Paket Lapar Aja">
+                                        <p class="mt-2 text-sm text-gray-600"><i class="bi bi-info-circle mr-1"></i>Kode
+                                            paket: <strong>{{ $salesPackage->code }}</strong></p>
+                                        @error('name')
+                                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                        @enderror
                                     </div>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <label class="form-label">Produk Siap Jual <span class="text-danger">*</span></label>
-                                            <select class="form-select product-select" name="items[{{ $index }}][finished_product_id]" required onchange="updateProductInfo(this)">
-                                                <option value="">Pilih Produk</option>
-                                                @foreach($finishedProducts as $product)
-                                                    <option value="{{ $product->id }}" 
-                                                            data-price="{{ $product->price }}" 
-                                                            data-unit="{{ $product->unit->abbreviation ?? 'pcs' }}"
-                                                            {{ $item->finished_product_id == $product->id ? 'selected' : '' }}>
-                                                        {{ $product->name }} - Rp {{ number_format($product->price, 0, ',', '.') }}
+
+                                    {{-- Description & Category --}}
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="description"
+                                                class="block text-sm font-semibold text-gray-700 mb-2">Deskripsi</label>
+                                            <textarea id="description" name="description" rows="3"
+                                                class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('description') border-red-300 ring-2 ring-red-200 @enderror"
+                                                placeholder="Deskripsi paket (opsional)">{{ old('description', $salesPackage->description) }}</textarea>
+                                            @error('description')
+                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+
+                                        <div>
+                                            <label for="category_id"
+                                                class="block text-sm font-semibold text-gray-700 mb-2">Kategori <span
+                                                    class="text-red-500">*</span></label>
+                                            <select id="category_id" name="category_id" required
+                                                class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('category_id') border-red-300 ring-2 ring-red-200 @enderror">
+                                                <option value="" disabled>Pilih Kategori</option>
+                                                @foreach ($categories as $category)
+                                                    <option value="{{ $category->id }}" data-name="{{ $category->name }}"
+                                                        {{ old('category_id', $salesPackage->category_id) == $category->id ? 'selected' : '' }}>
+                                                        {{ $category->name }}
                                                     </option>
                                                 @endforeach
                                             </select>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label for="quantity" class="form-label">Jumlah <span class="text-danger">*</span></label>
-                                            <div class="input-group">
-                                                <button class="btn btn-outline-secondary" type="button" onclick="decrementItem(this)">-</button>
-                                                <input type="number" class="form-control quantity-input" id="quantity_{{ $index }}" name="items[{{ $index }}][quantity]" min="0.01" step="0.01" placeholder="" required onchange="calculateItemTotal(this)" value="{{ $item->quantity }}">
-                                                <button class="btn btn-outline-secondary" type="button" onclick="incrementItem(this)">+</button>
-                                            </div>
-                                            @error('items.*.quantity')
-                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            <input type="hidden" name="category_name" id="category_name"
+                                                value="{{ old('category_name', $salesPackage->category) }}">
+                                            <p class="mt-2 text-sm text-gray-600"><i
+                                                    class="bi bi-info-circle mr-1"></i>Kategori akan digunakan untuk filter
+                                                paket penjualan</p>
+                                            <p class="mt-1 text-sm"><a href="{{ route('categories.create') }}"
+                                                    target="_blank" rel="noopener" class="text-orange-600 underline"><i
+                                                        class="bi bi-box-arrow-up-right mr-1"></i>Tambah kategori di tab
+                                                    baru</a></p>
+                                            @error('category_id')
+                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                                             @enderror
                                         </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label">Total Harga</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">Rp</span>
-                                                <input type="text" class="form-control total-price" readonly>
+                                    </div>
+
+                                    {{-- Pricing --}}
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                                        <div>
+                                            <label for="discount_percentage"
+                                                class="block text-sm font-semibold text-gray-700 mb-2">Diskon (%)</label>
+                                            <div class="flex rounded-xl border overflow-hidden">
+                                                <button type="button" class="px-3 bg-gray-50 text-gray-700"
+                                                    onclick="decrement('discount_percentage')">-</button>
+                                                <input type="number" id="discount_percentage" name="discount_percentage"
+                                                    min="0" max="100" step="0.01"
+                                                    class="flex-1 px-3 py-2 focus:outline-none" placeholder="0"
+                                                    value="{{ old('discount_percentage', $salesPackage->discount_percentage) }}">
+                                                <button type="button" class="px-3 bg-gray-50 text-gray-700"
+                                                    onclick="increment('discount_percentage')">+</button>
+                                            </div>
+                                            @error('discount_percentage')
+                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+
+                                        <div>
+                                            <label for="discount_amount"
+                                                class="block text-sm font-semibold text-gray-700 mb-2">Diskon (Rp)</label>
+                                            <div class="flex rounded-xl border overflow-hidden">
+                                                <button type="button" class="px-3 bg-gray-50 text-gray-700"
+                                                    onclick="decrement('discount_amount')">-</button>
+                                                <input type="number" id="discount_amount" name="discount_amount"
+                                                    min="0" step="1"
+                                                    class="flex-1 px-3 py-2 focus:outline-none" placeholder="0"
+                                                    value="{{ old('discount_amount', $salesPackage->discount_amount) }}">
+                                                <button type="button" class="px-3 bg-gray-50 text-gray-700"
+                                                    onclick="increment('discount_amount')">+</button>
+                                            </div>
+                                            @error('discount_amount')
+                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+
+                                        <div>
+                                            <label for="additional_charge"
+                                                class="block text-sm font-semibold text-gray-700 mb-2">Biaya Tambahan
+                                                (Rp)</label>
+                                            <div class="flex rounded-xl border overflow-hidden">
+                                                <button type="button" class="px-3 bg-gray-50 text-gray-700"
+                                                    onclick="decrement('additional_charge')">-</button>
+                                                <input type="number" id="additional_charge" name="additional_charge"
+                                                    min="0" step="1"
+                                                    class="flex-1 px-3 py-2 focus:outline-none" placeholder="0"
+                                                    value="{{ old('additional_charge', $salesPackage->additional_charge) }}">
+                                                <button type="button" class="px-3 bg-gray-50 text-gray-700"
+                                                    onclick="increment('additional_charge')">+</button>
+                                            </div>
+                                            @error('additional_charge')
+                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-3">
+                                        <div class="bg-blue-50 rounded-md p-3 text-sm text-blue-700">
+                                            <i class="bi bi-info-circle mr-1"></i>
+                                            <strong>Catatan:</strong> Pilih diskon % ATAU nominal. Biaya tambahan untuk
+                                            packaging, delivery, dll.
+                                        </div>
+                                    </div>
+
+                                    {{-- Image --}}
+                                    <div class="mt-4">
+                                        <label for="image" class="block text-sm font-semibold text-gray-700 mb-2">Foto
+                                            Paket</label>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {{-- Current --}}
+                                            <div class="flex items-center">
+                                                <div class="w-full">
+                                                    <div class="rounded-lg border p-2 bg-gray-50 flex items-center justify-center" style="min-height:120px;">
+                                                        @if($salesPackage->image && Storage::disk('public')->exists($salesPackage->image))
+                                                            <img src="{{ asset('storage/' . $salesPackage->image) }}"
+                                                                 alt="{{ $salesPackage->name }}"
+                                                                 class="rounded-lg max-h-40 object-contain mx-auto">
+                                                        @else
+                                                            <div class="text-center text-gray-400">
+                                                                <i class="bi bi-image text-3xl"></i>
+                                                                <div class="mt-2">Belum ada foto</div>
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                    <p class="mt-2 text-sm text-gray-600">Foto saat ini</p>
+                                                </div>
+                                            </div>
+
+                                            {{-- Upload --}}
+                                            <div>
+                                                <input type="file" id="image" name="image" accept="image/*"
+                                                    onchange="previewImage(this)"
+                                                    class="w-full text-sm file:border-0 file:bg-gray-100 file:px-3 file:py-2 rounded-xl @error('image') border-red-300 ring-2 ring-red-200 @enderror">
+                                                <p class="mt-2 text-sm text-gray-600">Format: JPG, PNG, GIF. Maksimal 2MB.</p>
+                                                @error('image')
+                                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                                @enderror
+
+                                                <div id="imagePreview" class="mt-3 hidden">
+                                                    <img id="previewImg" src="" alt="Preview"
+                                                        class="rounded-lg border max-h-48 object-contain">
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="mt-2">
-                                        <small class="text-muted product-info">Pilih produk untuk melihat informasi</small>
-                                    </div>
                                 </div>
-                            @endforeach
-                        </div>
-                        @error('items')
-                            <div class="alert alert-danger mt-3">{{ $message }}</div>
-                        @enderror
-                        
-                        <!-- Package Items Template -->
-                        <template id="packageItemTemplate">
-                            <div class="package-item border rounded p-3 mb-3" data-index="">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 class="mb-0">Produk <span class="item-number"></span></h6>
-                                    <button type="button" class="btn btn-danger btn-sm" onclick="removePackageItem(this)">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Produk Siap Jual <span class="text-danger">*</span></label>
-                                        <select class="form-select product-select" name="items[][finished_product_id]" required onchange="updateProductInfo(this)">
-                                            <option value="">Pilih Produk</option>
-                                            @foreach($finishedProducts as $product)
-                                                <option value="{{ $product->id }}" 
-                                                        data-price="{{ $product->price }}" 
-                                                        data-unit="{{ $product->unit->abbreviation ?? 'pcs' }}">
-                                                    {{ $product->name }} - Rp {{ number_format($product->price, 0, ',', '.') }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label for="quantity" class="form-label">Jumlah <span class="text-danger">*</span></label>
-                                        <div class="input-group">
-                                            <button class="btn btn-outline-secondary" type="button" onclick="decrementItem(this)">-</button>
-                                            <input type="number" class="form-control quantity-input" name="items[][quantity]" min="0.01" step="0.01" placeholder="" required onchange="calculateItemTotal(this)">
-                                            <button class="btn btn-outline-secondary" type="button" onclick="incrementItem(this)">+</button>
+
+                                {{-- Package Items --}}
+                                <div class="bg-white rounded-lg p-5">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div class="flex items-center">
+                                            <div
+                                                class="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center mr-3">
+                                                <i class="bi bi-box-seam text-white text-sm"></i>
+                                            </div>
+                                            <h3 class="text-lg font-semibold text-gray-900">Komponen Paket</h3>
                                         </div>
-                                        @error('items.*.quantity')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
+                                        <button type="button"
+                                            class="inline-flex items-center px-3 py-2 bg-white border rounded-lg text-sm shadow-sm hover:shadow-md"
+                                            onclick="addPackageItem()">
+                                            <i class="bi bi-plus-lg mr-2"></i> Tambah Produk
+                                        </button>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Total Harga</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text">Rp</span>
-                                            <input type="text" class="form-control total-price" readonly>
+
+                                    <div class="mb-3 text-sm text-gray-600">
+                                        <i class="bi bi-info-circle mr-1"></i> Anda bisa <strong>scroll</strong> untuk
+                                        melihat seluruh komponen yang ditambahkan.
+                                    </div>
+
+                                    <div id="packageItems" class="space-y-4 max-h-96 overflow-auto pr-2">
+                                        {{-- items will be appended by JS --}}
+                                    </div>
+
+                                    @error('items')
+                                        <div class="mt-3 text-sm text-red-600">{{ $message }}</div>
+                                    @enderror
+
+                                    {{-- Template --}}
+                                    <template id="packageItemTemplate">
+                                        <div class="package-item border rounded-xl p-4 min-w-0" data-index="">
+                                            <div class="flex items-center justify-between mb-3">
+                                                <h6 class="text-sm font-semibold">Produk <span class="item-number"></span>
+                                                </h6>
+                                                <button type="button" class="text-red-600 hover:text-red-800"
+                                                    onclick="removePackageItem(this)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+
+                                            <div class="grid grid-cols-1 md:grid-cols-6 gap-3 min-w-0">
+                                                <div class="md:col-span-3 min-w-0">
+                                                    <label class="block text-sm font-medium text-gray-700 mb-2">Produk Siap
+                                                        Jual <span class="text-red-500">*</span></label>
+                                                    <select
+                                                        class="product-select w-full px-3 py-2 border rounded-xl min-w-0"
+                                                        name="items[][finished_product_id]" required
+                                                        onchange="updateProductInfo(this)">
+                                                        <option value="">Pilih Produk</option>
+                                                        @foreach ($finishedProducts as $product)
+                                                            <option value="{{ $product->id }}"
+                                                                data-price="{{ $product->price }}"
+                                                                data-unit="{{ $product->unit->abbreviation ?? 'pcs' }}">
+                                                                {{ $product->name }} - Rp
+                                                                {{ number_format($product->price, 0, ',', '.') }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+
+                                                <div class="md:col-span-2 min-w-0">
+                                                    <label class="block text-sm font-medium text-gray-700 mb-2">Jumlah
+                                                        <span class="text-red-500">*</span></label>
+                                                    <div class="flex rounded-xl border overflow-hidden items-center">
+                                                        <button type="button" class="px-3 bg-gray-50 text-gray-700"
+                                                            onclick="decrementItem(this)">-</button>
+                                                        <input type="number"
+                                                            class="quantity-input flex-1 px-3 py-2 text-center focus:outline-none min-w-0"
+                                                            name="items[][quantity]" min="0.01" step="0.01" value="1"
+                                                            required onchange="calculateItemTotal(this)">
+                                                        <button type="button" class="px-3 bg-gray-50 text-gray-700"
+                                                            onclick="incrementItem(this)">+</button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="md:col-span-1 min-w-0">
+                                                    <label
+                                                        class="block text-sm font-medium text-gray-700 mb-2">Total</label>
+                                                    <div class="flex items-center px-3 py-2 border rounded-xl bg-gray-50 min-w-0">
+                                                        <span class="text-sm text-gray-700 mr-2 flex-shrink-0">Rp</span>
+                                                        <input type="text"
+                                                            class="total-price flex-1 bg-transparent text-right text-sm truncate min-w-0"
+                                                            readonly value="">
+                                                    </div>
+                                                </div>
+
+                                                <div class="md:col-span-6 mt-2">
+                                                    <small class="text-gray-500 product-info block">Pilih produk untuk melihat
+                                                        informasi</small>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
-                                <div class="mt-2">
-                                    <small class="text-muted product-info">Pilih produk untuk melihat informasi</small>
+                                    </template>
                                 </div>
                             </div>
-                        </template>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Summary Section -->
-            <div class="col-lg-3">
-                <div class="card shadow-sm sticky-top">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0">
-                            <i class="bi bi-calculator me-2"></i>Ringkasan Harga
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span>Harga Dasar:</span>
-                            <span class="fw-bold" id="basePriceDisplay">Rp 0</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span>Diskon:</span>
-                            <span class="text-success fw-bold" id="discountDisplay">Rp 0</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span>Biaya Tambahan:</span>
-                            <span class="text-warning fw-bold" id="additionalChargeDisplay">Rp 0</span>
-                        </div>
-                        <hr>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="h5">Harga Jual Final:</span>
-                            <span class="h4 text-primary fw-bold" id="finalPriceDisplay">Rp 0</span>
-                        </div>
-                        
-                        <!-- Finalize Calculation Button -->
-                        <div class="d-grid">
-                            <button type="button" class="btn btn-warning" onclick="finalizeCalculation()">
-                                <i class="bi bi-calculator me-2"></i>Finalisasi Hitungan
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                            {{-- Summary & Actions --}}
+                            <div class="space-y-6">
+                                <div class="bg-white rounded-lg p-5 shadow-sm">
+                                    <div class="flex items-center mb-3">
+                                        <div
+                                            class="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="bi bi-calculator text-white text-sm"></i>
+                                        </div>
+                                        <h3 class="text-lg font-semibold text-gray-900">Ringkasan Harga</h3>
+                                    </div>
 
-                <!-- Hidden Fields for Calculated Values -->
-                <input type="hidden" name="base_price" id="base_price" value="{{ $salesPackage->base_price }}">
-                <input type="hidden" name="final_price" id="final_price" value="{{ $salesPackage->final_price }}">
-                <input type="hidden" name="category_name" id="category_name" value="{{ $salesPackage->category }}">
-                
-                <!-- Form Actions -->
-                <x-form-buttons
-                    :cancelUrl="route('sales-packages.show', $salesPackage)"
-                    submitText="Update Paket"
-                    submitIcon="bi-check-lg"
-                />
+                                    <div class="text-sm text-gray-700 space-y-2">
+                                        <div class="flex justify-between">
+                                            <span>Harga Dasar:</span>
+                                            <span class="font-semibold" id="basePriceDisplay">Rp 0</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>Diskon:</span>
+                                            <span class="text-green-600 font-semibold" id="discountDisplay">Rp 0</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>Biaya Tambahan:</span>
+                                            <span class="text-yellow-600 font-semibold" id="additionalChargeDisplay">Rp
+                                                0</span>
+                                        </div>
+                                        <hr>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-lg font-semibold">Harga Jual Final:</span>
+                                            <span class="text-2xl text-blue-600 font-bold" id="finalPriceDisplay">Rp
+                                                0</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-4">
+                                        <button type="button"
+                                            class="w-full inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-xl text-sm font-medium text-white shadow"
+                                            onclick="finalizeCalculation(event)">
+                                            <i class="bi bi-calculator mr-2"></i> Finalisasi Hitungan
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {{-- Hidden fields --}}
+                                <input type="hidden" name="base_price" id="base_price" value="{{ $salesPackage->base_price ?? 0 }}">
+                                <input type="hidden" name="final_price" id="final_price" value="{{ $salesPackage->final_price ?? 0 }}">
+
+                                {{-- Actions --}}
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex gap-3">
+                                        <a href="{{ route('sales-packages.show', $salesPackage) }}"
+                                            class="flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm">
+                                            Batal
+                                        </a>
+                                        <button type="submit" id="directSubmitBtn"
+                                            class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-orange-600 to-red-600 rounded-xl text-sm font-medium text-white shadow-lg">
+                                            <i class="bi bi-check-lg mr-2"></i> Update Paket
+                                        </button>
+                                    </div>
+
+                                    @if ($errors->any())
+                                        <div class="mt-4 text-sm text-red-600">
+                                            <ul class="list-disc pl-5">
+                                                @foreach ($errors->all() as $error)
+                                                    <li>{{ $error }}</li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
-    </form>
-</div>
+    </div>
+@endsection
 
-@push('scripts')
 <script>
-let existingPackageItems = @json($salesPackage->packageItems);
-let finishedProducts = @json($finishedProducts->keyBy('id'));
+    let finishedProducts = @json($finishedProducts->keyBy('id'));
+    let existingPackageItems = @json($salesPackage->packageItems);
 
-let packageItemIndex = 0;
-let isItemsLoaded = false; // Flag to prevent duplicate loading
+    document.addEventListener('DOMContentLoaded', function() {
+        setupCategoryDropdown();
+        setupDiscountHandlers();
+        setupInitialItems();
+        calculateTotalPrice();
+    });
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Prevent multiple initialization
-    if (isItemsLoaded) {
-        console.log('Items already loaded, skipping...');
-        return;
-    }
-    
-    console.log('DOMContentLoaded - initializing form...');
-    
-    // Load existing items
-    loadExistingItems();
-    
-    // Setup handlers
-    setupDiscountHandlers();
-    setupCategoryDropdown();
-    calculateTotalPrice();
-    
-    // Setup form submission debugging
-    setupFormSubmissionDebugging();
-    
-    // Mark as loaded
-    isItemsLoaded = true;
-    console.log('Form initialization completed');
-});
+    // Category hidden name sync
+    function setupCategoryDropdown() {
+        const categorySelect = document.getElementById('category_id');
+        const categoryNameInput = document.getElementById('category_name');
+        if (!categorySelect) return;
 
-function setupCategoryDropdown() {
-    // Category dropdown setup without category_name hidden field
-    const categorySelect = document.getElementById('category_id');
-    
-    // Any other category dropdown functionality can go here
-    // No need to update hidden field anymore
-}
-
-function setupFormSubmissionDebugging() {
-    console.log('Setting up form submission debugging...');
-    
-    const form = document.getElementById('salesPackageForm');
-    if (!form) {
-        console.error('Form salesPackageForm not found!');
-        return;
-    }
-    
-    console.log('Form found:', form);
-    
-    // Track form submit event
-    form.addEventListener('submit', function(e) {
-        console.log('=== FORM SUBMISSION TRIGGERED ===');
-        console.log('Event:', e);
-        console.log('Form action:', form.action);
-        console.log('Form method:', form.method);
-        
-        // Collect all form data
-        const formData = new FormData(form);
-        console.log('Form data entries:');
-        for (let [key, value] of formData.entries()) {
-            console.log(`${key}: ${value}`);
+        if (categorySelect.value && categorySelect.selectedOptions[0]) {
+            categoryNameInput.value = categorySelect.selectedOptions[0].dataset.name || '';
         }
-        
-        // Check package items specifically
-        const packageItems = document.querySelectorAll('.package-item');
-        console.log('Package items count:', packageItems.length);
-        
-        packageItems.forEach((item, index) => {
-            const productSelect = item.querySelector('.product-select');
-            const quantityInput = item.querySelector('.quantity-input');
-            console.log(`Item ${index}:`, {
-                product: productSelect ? productSelect.value : 'not found',
-                quantity: quantityInput ? quantityInput.value : 'not found',
-                productName: productSelect ? productSelect.name : 'no name',
-                quantityName: quantityInput ? quantityInput.name : 'no name'
-            });
+
+        categorySelect.addEventListener('change', function() {
+            if (this.value) {
+                const selectedOption = this.options[this.selectedIndex];
+                categoryNameInput.value = selectedOption.dataset.name || '';
+            } else {
+                categoryNameInput.value = '';
+            }
         });
-        
-        console.log('Form submission will proceed...');
-        // Don't prevent default - let form submit naturally
-    });
-    
-    // Track submit button clicks
-    const submitButtons = form.querySelectorAll('button[type="submit"]');
-    submitButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            console.log('Submit button clicked:', button);
-            console.log('Button text:', button.textContent.trim());
+    }
+
+    // Discount handlers
+    function setupDiscountHandlers() {
+        const dp = document.getElementById('discount_percentage');
+        const da = document.getElementById('discount_amount');
+        const ac = document.getElementById('additional_charge');
+
+        if (dp) dp.addEventListener('input', function() {
+            if (this.value) da.value = '';
+            calculateTotalPrice();
         });
-    });
-    
-    console.log('Form submission debugging setup completed');
-}
-
-function loadExistingItems() {
-    console.log('Loading existing items:', existingPackageItems);
-    
-    // Clear existing items in container first to prevent duplicates
-    const container = document.getElementById('packageItems');
-    if (container) {
-        // Remove all existing package items except template
-        const existingItems = container.querySelectorAll('.package-item');
-        existingItems.forEach(item => item.remove());
-        console.log('Cleared existing package items from container');
-    }
-    
-    if (existingPackageItems && existingPackageItems.length > 0) {
-        existingPackageItems.forEach((item, index) => {
-            console.log('Loading item:', item);
-            addPackageItem(item);
+        if (da) da.addEventListener('input', function() {
+            if (this.value) dp.value = '';
+            calculateTotalPrice();
         });
-    } else {
-        console.log('No existing items found, adding empty item');
-        addPackageItem();
-    }
-    
-    // Update calculations after loading
-    calculateTotalPrice();
-}
-
-function addPackageItem(existingItem = null) {
-    console.log('addPackageItem called with:', existingItem);
-    
-    const template = document.getElementById('packageItemTemplate');
-    console.log('Template found:', template);
-    
-    if (!template) {
-        console.error('Template not found!');
-        return;
-    }
-    
-    const templateContent = template.content.cloneNode(true);
-    const newItem = templateContent.querySelector('.package-item');
-    console.log('New item from template:', newItem);
-    
-    const container = document.getElementById('packageItems');
-    console.log('Container found:', container);
-    
-    if (!container) {
-        console.error('Container not found!');
-        return;
-    }
-    
-    const newIndex = document.querySelectorAll('.package-item').length;
-    console.log('New index:', newIndex);
-
-    newItem.dataset.index = newIndex;
-    newItem.querySelector('.item-number').textContent = newIndex + 1;
-
-    // Assign unique ID to the quantity input
-    const quantityInput = newItem.querySelector('.quantity-input');
-    if (quantityInput) {
-        quantityInput.id = `quantity_new_${newIndex}`;
+        if (ac) ac.addEventListener('input', calculateTotalPrice);
     }
 
-    // Update names for inputs
-    newItem.querySelectorAll('select, input').forEach(input => {
-        if (input.name) {
-            input.name = input.name.replace('items[][', `items[new_${newIndex}][`);
-        }
-    });
-    
-    // Append the new item to container
-    console.log('Appending item to container...');
-    container.appendChild(newItem);
-    console.log('Item appended. Container children count:', container.children.length);
-    
-    // Populate with existing data if provided
-    if (existingItem) {
-        console.log('Populating with existing data:', existingItem);
-        const addedItem = container.lastElementChild;
-        const productSelect = addedItem.querySelector('.product-select');
-        const quantityInput = addedItem.querySelector('.quantity-input');
-        
-        console.log('Product select found:', productSelect);
-        console.log('Quantity input found:', quantityInput);
-        
-        if (productSelect && quantityInput) {
-            productSelect.value = existingItem.finished_product_id;
-            quantityInput.value = existingItem.quantity;
-            
-            console.log('Values set - product:', existingItem.finished_product_id, 'quantity:', existingItem.quantity);
-            updateProductInfo(productSelect);
+    // Package items
+    function setupInitialItems() {
+        // If there are existing items, populate them; otherwise add one empty item
+        if (existingPackageItems && existingPackageItems.length > 0) {
+            existingPackageItems.forEach((it, idx) => addPackageItem(it));
+        } else {
+            addPackageItem();
         }
     }
-    
-    updatePackageItemNumbers();
-    calculateTotalPrice();
-    
-    console.log('addPackageItem completed');
-}
 
-function removePackageItem(button) {
-    const item = button.closest('.package-item');
-    item.remove();
-    updatePackageItemNumbers();
-    calculateTotalPrice();
-}
+    function addPackageItem(existingItem = null) {
+        const template = document.getElementById('packageItemTemplate').content.cloneNode(true);
+        const newItem = template.querySelector('.package-item');
+        const newIndex = document.querySelectorAll('.package-item').length;
 
-function updatePackageItemNumbers() {
-    const items = document.querySelectorAll('.package-item');
-    items.forEach((item, index) => {
-        item.querySelector('.item-number').textContent = index + 1;
-    });
-}
+        newItem.dataset.index = newIndex;
+        newItem.querySelector('.item-number').textContent = newIndex + 1;
 
-function updateProductInfo(select) {
-    const item = select.closest('.package-item');
-    const productId = select.value;
-    const infoDiv = item.querySelector('.product-info');
-    
-    if (productId && finishedProducts[productId]) {
-        const product = finishedProducts[productId];
-        infoDiv.innerHTML = `
-            <i class="bi bi-info-circle"></i> 
-            Kategori: ${product.category ? product.category.name : '-'} | 
-            Satuan: ${product.unit ? product.unit.unit_name : 'pcs'}
-        `;
-    } else {
-        infoDiv.textContent = 'Pilih produk untuk melihat informasi';
-    }
-    
-    calculateItemTotal(select);
-}
-
-function calculateItemTotal(input) {
-    const item = input.closest('.package-item');
-    const productSelect = item.querySelector('.product-select');
-    const quantityInput = item.querySelector('.quantity-input');
-    const totalPriceInput = item.querySelector('.total-price');
-    
-    const price = parseFloat(productSelect.selectedOptions[0]?.dataset.price || 0);
-    const quantity = parseFloat(quantityInput.value || 0);
-    const total = price * quantity;
-    
-    totalPriceInput.value = total > 0 ? number_format(total, 0, ',', '.') : '';
-    
-    calculateTotalPrice();
-}
-
-function increment(elementId) {
-    const input = document.getElementById(elementId);
-    if (!input) return;
-    const step = parseFloat(input.step) || 1;
-    const max = parseFloat(input.max);
-    let currentValue = parseFloat(input.value) || 0;
-    let newValue = currentValue + step;
-
-    if (!isNaN(max) && newValue > max) {
-        newValue = max;
-    }
-
-    input.value = newValue.toFixed(step.toString().includes('.') ? step.toString().split('.')[1].length : 0);
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-}
-
-function decrement(elementId) {
-    const input = document.getElementById(elementId);
-    if (!input) return;
-    const step = parseFloat(input.step) || 1;
-    const min = parseFloat(input.min) || 0;
-    let currentValue = parseFloat(input.value) || 0;
-    let newValue = currentValue - step;
-
-    if (newValue < min) {
-        newValue = min;
-    }
-
-    input.value = newValue.toFixed(step.toString().includes('.') ? step.toString().split('.')[1].length : 0);
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-}
-
-function incrementItem(button) {
-    const input = button.previousElementSibling;
-    if (input) {
-        // Always use 1 as increment step, regardless of input's step attribute
-        const max = parseFloat(input.max);
-        let currentValue = parseFloat(input.value) || 0;
-        let newValue = currentValue + 1; // Fixed increment by 1
-
-        if (!isNaN(max) && newValue > max) {
-            newValue = max;
+        // assign unique ids and default values
+        const quantityInput = newItem.querySelector('.quantity-input');
+        if (quantityInput) {
+            quantityInput.id = `quantity_new_${newIndex}`;
+            quantityInput.value = existingItem ? existingItem.quantity : 1;
         }
 
-        input.value = newValue;
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-}
+        newItem.querySelectorAll('select, input').forEach(input => {
+            if (input.name) {
+                input.name = input.name.replace('items[][', `items[new_${newIndex}][`);
+            }
+        });
 
-function decrementItem(button) {
-    const input = button.nextElementSibling;
-    if (input) {
-        // Always use 1 as decrement step, regardless of input's step attribute
-        const min = parseFloat(input.min) || 0;
-        let currentValue = parseFloat(input.value) || 0;
-        let newValue = currentValue - 1; // Fixed decrement by 1
+        document.getElementById('packageItems').appendChild(newItem);
+        const added = document.querySelectorAll('.package-item')[document.querySelectorAll('.package-item').length - 1];
 
-        if (newValue < min) {
-            newValue = min;
+        // populate existing values if provided
+        if (existingItem) {
+            const prodSelect = added.querySelector('.product-select');
+            const qtyInput = added.querySelector('.quantity-input');
+            if (prodSelect) prodSelect.value = existingItem.finished_product_id;
+            if (qtyInput) qtyInput.value = existingItem.quantity;
         }
 
-        input.value = newValue;
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-}
+        setupItemEventHandlers(added);
 
-function calculateTotalPrice() {
-    let basePrice = 0;
-    
-    // Calculate base price from all items
-    document.querySelectorAll('.package-item').forEach(item => {
+        // fire initial calculation for this item
+        const q = added.querySelector('.quantity-input');
+        if (q) q.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function setupItemEventHandlers(item) {
         const productSelect = item.querySelector('.product-select');
         const quantityInput = item.querySelector('.quantity-input');
-        
+
+        if (productSelect) productSelect.addEventListener('change', function() {
+            updateProductInfo(this);
+        });
+        if (quantityInput) {
+            quantityInput.addEventListener('input', function() {
+                calculateItemTotal(this);
+            });
+            quantityInput.addEventListener('change', function() {
+                calculateItemTotal(this);
+            });
+        }
+    }
+
+    function removePackageItem(button) {
+        const item = button.closest('.package-item');
+        if (!item) return;
+        item.remove();
+        updatePackageItemNumbers();
+        calculateTotalPrice();
+    }
+
+    function updatePackageItemNumbers() {
+        document.querySelectorAll('.package-item').forEach((item, idx) => {
+            const num = item.querySelector('.item-number');
+            if (num) num.textContent = idx + 1;
+        });
+    }
+
+    function updateProductInfo(select) {
+        const item = select.closest('.package-item');
+        const productId = select.value;
+        const infoDiv = item.querySelector('.product-info');
+
+        if (productId && finishedProducts[productId]) {
+            const product = finishedProducts[productId];
+            infoDiv.innerHTML =
+                `<i class="bi bi-info-circle"></i> Kategori: ${product.category ? product.category.name : '-'} | Satuan: ${product.unit ? product.unit.unit_name : 'pcs'}`;
+        } else {
+            infoDiv.textContent = 'Pilih produk untuk melihat informasi';
+        }
+
+        // recalc
+        calculateItemTotal(select);
+    }
+
+    function calculateItemTotal(el) {
+        const item = el.closest('.package-item');
+        const productSelect = item.querySelector('.product-select');
+        const quantityInput = item.querySelector('.quantity-input');
+        const totalPriceInput = item.querySelector('.total-price');
+
         const price = parseFloat(productSelect.selectedOptions[0]?.dataset.price || 0);
         const quantity = parseFloat(quantityInput.value || 0);
-        
-        basePrice += price * quantity;
-    });
-    
-    // Get discount and additional charge values - ensure we get valid numbers
-    const discountPercentage = parseFloat(document.getElementById('discount_percentage').value) || 0;
-    const discountAmount = parseFloat(document.getElementById('discount_amount').value) || 0;
-    const additionalCharge = parseFloat(document.getElementById('additional_charge').value) || 0;
-    
-    // Calculate discount
-    let discount = 0;
-    if (discountPercentage > 0) {
-        discount = (basePrice * discountPercentage) / 100;
-    } else {
-        discount = discountAmount;
-    }
-    
-    // Calculate final price
-    const finalPrice = basePrice - discount + additionalCharge;
-    
-    // Update displays
-    const basePriceElement = document.getElementById('basePriceDisplay');
-    if (basePriceElement) basePriceElement.textContent = 'Rp ' + number_format(basePrice, 0, ',', '.');
-    document.getElementById('discountDisplay').textContent = '-Rp ' + number_format(discount, 0, ',', '.');
-    document.getElementById('additionalChargeDisplay').textContent = 'Rp ' + number_format(additionalCharge, 0, ',', '.');
-    document.getElementById('finalPriceDisplay').textContent = 'Rp ' + number_format(finalPrice, 0, ',', '.');
-    
-    // Set hidden fields for form submission
-    document.getElementById('base_price').value = basePrice;
-    document.getElementById('final_price').value = finalPrice;
-}
+        const total = price * quantity;
 
-function finalizeCalculation() {
-    // Update hidden form fields with calculated values
-    const basePriceElement = document.getElementById('basePriceDisplay');
-    const finalPriceElement = document.getElementById('finalPriceDisplay');
-    const baseInputElement = document.getElementById('base_price');
-    const finalInputElement = document.getElementById('final_price');
-    
-    // Extract numeric values from display text
-    const basePrice = parseFloat(basePriceElement.textContent.replace(/[^\d]/g, '')) || 0;
-    const finalPrice = parseFloat(finalPriceElement.textContent.replace(/[^\d]/g, '')) || 0;
-    
-    // Update hidden fields
-    if (baseInputElement) baseInputElement.value = basePrice;
-    if (finalInputElement) finalInputElement.value = finalPrice;
-    
-    // Recalculate from all fields
-    calculateTotalPrice();
-    
-    // Show feedback
-    const button = event.target;
-    const originalText = button.innerHTML;
-    button.innerHTML = '<i class="bi bi-check-lg me-2"></i>Hitungan Difinalisasi!';
-    button.classList.remove('btn-warning');
-    button.classList.add('btn-success');
-    
-    // Reset button after 2 seconds
-    setTimeout(() => {
-        button.innerHTML = originalText;
-        button.classList.remove('btn-success');
-        button.classList.add('btn-warning');
-    }, 2000);
-}
-
-function setupDiscountHandlers() {
-    const discountPercentage = document.getElementById('discount_percentage');
-    const discountAmount = document.getElementById('discount_amount');
-    const additionalCharge = document.getElementById('additional_charge');
-    
-    discountPercentage.addEventListener('input', function() {
-        if (this.value) {
-            discountAmount.value = '';
-        }
+        if (totalPriceInput) totalPriceInput.value = total > 0 ? number_format(total, 0, ',', '.') : '';
         calculateTotalPrice();
-    });
-    
-    discountAmount.addEventListener('input', function() {
-        if (this.value) {
-            discountPercentage.value = '';
-        }
+    }
+
+    // Increment/Decrement generic
+    function increment(elementId) {
+        const input = document.getElementById(elementId);
+        if (!input) return;
+        const step = parseFloat(input.step) || 1;
+        const max = parseFloat(input.max);
+        let current = parseFloat(input.value) || 0;
+        let next = current + step;
+        if (!isNaN(max) && next > max) next = max;
+        input.value = next;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function decrement(elementId) {
+        const input = document.getElementById(elementId);
+        if (!input) return;
+        const step = parseFloat(input.step) || 1;
+        const min = parseFloat(input.min) || 0;
+        let current = parseFloat(input.value) || 0;
+        let next = current - step;
+        if (next < min) next = min;
+        input.value = next;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // Item increment/decrement (buttons sit beside input)
+    function incrementItem(button) {
+        const input = button.previousElementSibling;
+        if (!input) return;
+        let current = parseFloat(input.value) || 0;
+        input.value = current + 1;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function decrementItem(button) {
+        const input = button.nextElementSibling;
+        if (!input) return;
+        const min = parseFloat(input.min) || 0;
+        let current = parseFloat(input.value) || 0;
+        let next = current - 1;
+        if (next < min) next = min;
+        input.value = next;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function calculateTotalPrice() {
+        let basePrice = 0;
+        document.querySelectorAll('.package-item').forEach(item => {
+            const productSelect = item.querySelector('.product-select');
+            const quantityInput = item.querySelector('.quantity-input');
+            if (productSelect && productSelect.selectedOptions && productSelect.selectedOptions[0]) {
+                const price = parseFloat(productSelect.selectedOptions[0].dataset.price || 0);
+                const qty = parseFloat(quantityInput?.value || 0);
+                basePrice += price * qty;
+            }
+        });
+
+        const discountPercentage = parseFloat(document.getElementById('discount_percentage')?.value) || 0;
+        const discountAmount = parseFloat(document.getElementById('discount_amount')?.value) || 0;
+        const additionalCharge = parseFloat(document.getElementById('additional_charge')?.value) || 0;
+
+        let discount = 0;
+        if (discountPercentage > 0) discount = (basePrice * discountPercentage) / 100;
+        else discount = discountAmount;
+
+        const finalPrice = basePrice - discount + additionalCharge;
+
+        const basePriceElement = document.getElementById('basePriceDisplay');
+        const discountElement = document.getElementById('discountDisplay');
+        const additionalChargeElement = document.getElementById('additionalChargeDisplay');
+        const finalPriceElement = document.getElementById('finalPriceDisplay');
+        const baseInputElement = document.getElementById('base_price');
+        const finalInputElement = document.getElementById('final_price');
+
+        if (basePriceElement) basePriceElement.textContent = 'Rp ' + number_format(basePrice, 0, ',', '.');
+        if (discountElement) discountElement.textContent = '-Rp ' + number_format(discount, 0, ',', '.');
+        if (additionalChargeElement) additionalChargeElement.textContent = 'Rp ' + number_format(additionalCharge, 0, ',', '.');
+        if (finalPriceElement) finalPriceElement.textContent = 'Rp ' + number_format(finalPrice, 0, ',', '.');
+
+        if (baseInputElement) baseInputElement.value = basePrice;
+        if (finalInputElement) finalInputElement.value = finalPrice;
+    }
+
+    function finalizeCalculation(e) {
+        // allow event to be optional
+        const basePriceElement = document.getElementById('basePriceDisplay');
+        const finalPriceElement = document.getElementById('finalPriceDisplay');
+        const baseInputElement = document.getElementById('base_price');
+        const finalInputElement = document.getElementById('final_price');
+
+        const basePrice = parseFloat((basePriceElement?.textContent || '').replace(/[^\d]/g, '')) || 0;
+        const finalPrice = parseFloat((finalPriceElement?.textContent || '').replace(/[^\d]/g, '')) || 0;
+
+        if (baseInputElement) baseInputElement.value = basePrice;
+        if (finalInputElement) finalInputElement.value = finalPrice;
+
         calculateTotalPrice();
-    });
-    
-    additionalCharge.addEventListener('input', calculateTotalPrice);
-}
 
-function previewImage(input) {
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('previewImg').src = e.target.result;
-            document.getElementById('imagePreview').style.display = 'block';
+        // visual feedback on the button
+        const button = (e && e.currentTarget) ? e.currentTarget : (e && e.target ? e.target : null);
+        if (!button) return;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="bi bi-check-lg mr-2"></i> Hitungan Difinalisasi!';
+        button.classList.remove('from-yellow-400', 'to-yellow-500');
+        button.classList.add('bg-green-500', 'text-white');
+
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.classList.remove('bg-green-500', 'text-white');
+        }, 2000);
+    }
+
+    // Image preview
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('previewImg');
+                const container = document.getElementById('imagePreview');
+                if (preview) preview.src = e.target.result;
+                if (container) container.classList.remove('hidden');
+            }
+            reader.readAsDataURL(input.files[0]);
         }
-        reader.readAsDataURL(input.files[0]);
     }
-}
 
-function number_format(number, decimals, dec_point, thousands_sep) {
-    number = (number + '').replace(/[^0-9+\-Ee.]/g, '');
-    var n = !isFinite(+number) ? 0 : +number,
-        prec = !isFinite(+decimals) ? 0 : Math.abs(decimals),
-        sep = (typeof thousands_sep === 'undefined') ? ',' : thousands_sep,
-        dec = (typeof dec_point === 'undefined') ? '.' : dec_point,
-        s = '',
-        toFixedFix = function (n, prec) {
-            var k = Math.pow(10, prec);
-            return '' + Math.round(n * k) / k;
-        };
-    s = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.');
-    if (s[0].length > 3) {
-        s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
+    // Helper: number format
+    function number_format(number, decimals, dec_point, thousands_sep) {
+        number = (number + '').replace(/[^0-9+\-Ee.]/g, '');
+        var n = !isFinite(+number) ? 0 : +number,
+            prec = !isFinite(+decimals) ? 0 : Math.abs(decimals),
+            sep = (typeof thousands_sep === 'undefined') ? ',' : thousands_sep,
+            dec = (typeof dec_point === 'undefined') ? '.' : dec_point,
+            s = '',
+            toFixedFix = function(n, prec) {
+                var k = Math.pow(10, prec);
+                return '' + Math.round(n * k) / k;
+            };
+        s = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.');
+        if (s[0].length > 3) {
+            s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
+        }
+        if ((s[1] || '').length < prec) {
+            s[1] = s[1] || '';
+            s[1] += new Array(prec - s[1].length + 1).join('0');
+        }
+        return s.join(dec);
     }
-    if ((s[1] || '').length < prec) {
-        s[1] = s[1] || '';
-        s[1] += new Array(prec - s[1].length + 1).join('0');
-    }
-    return s.join(dec);
-}
 </script>
-@endpush
-@endsection

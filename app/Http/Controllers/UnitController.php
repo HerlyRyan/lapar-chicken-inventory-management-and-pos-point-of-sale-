@@ -100,23 +100,23 @@ class UnitController extends Controller
             'abbreviation.required' => 'Singkatan wajib diisi.',
             'abbreviation.unique' => 'Singkatan sudah digunakan. Silakan gunakan singkatan lain.',
         ]);
-        
+
         Unit::create([
             'unit_name' => $request->unit_name,
             'abbreviation' => $request->abbreviation,
             'description' => $request->description,
             'is_active' => $request->is_active ?? true,
         ]);
-        
+
         return redirect()->route('units.index')->with('success', 'Satuan berhasil ditambahkan.');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Unit $unit)
     {
-        //
+        return view('units.show', compact('unit'));
     }
 
     /**
@@ -143,14 +143,14 @@ class UnitController extends Controller
             'abbreviation.required' => 'Singkatan wajib diisi.',
             'abbreviation.unique' => 'Singkatan sudah digunakan. Silakan gunakan singkatan lain.',
         ]);
-        
+
         $unit->update([
             'unit_name' => $request->unit_name,
             'abbreviation' => $request->abbreviation,
             'description' => $request->description,
             'is_active' => $request->is_active ?? false,
         ]);
-        
+
         return redirect()->route('units.index')->with('success', 'Satuan berhasil diperbarui.');
     }
 
@@ -177,8 +177,8 @@ class UnitController extends Controller
         $unit->update(['is_active' => !$unit->is_active]);
 
         $status = $unit->is_active ? 'diaktifkan' : 'dinonaktifkan';
-        
+
         return redirect()->route('units.index')
-                        ->with('success', "Satuan berhasil {$status}.");
+            ->with('success', "Satuan berhasil {$status}.");
     }
 }

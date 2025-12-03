@@ -37,13 +37,13 @@ class PurchaseReceiptController extends Controller
             $term = trim($request->get('q'));
             $query->where(function ($q) use ($term) {
                 $q->where('receipt_number', 'like', "%{$term}%")
-                  ->orWhereHas('purchaseOrder', function ($qp) use ($term) {
-                      $qp->where('order_number', 'like', "%{$term}%")
-                         ->orWhere('order_code', 'like', "%{$term}%");
-                  })
-                  ->orWhereHas('purchaseOrder.supplier', function ($qs) use ($term) {
-                      $qs->where('name', 'like', "%{$term}%");
-                  });
+                    ->orWhereHas('purchaseOrder', function ($qp) use ($term) {
+                        $qp->where('order_number', 'like', "%{$term}%")
+                            ->orWhere('order_code', 'like', "%{$term}%");
+                    })
+                    ->orWhereHas('purchaseOrder.supplier', function ($qs) use ($term) {
+                        $qs->where('name', 'like', "%{$term}%");
+                    });
             });
         }
 
@@ -55,7 +55,63 @@ class PurchaseReceiptController extends Controller
      */
     public function index(Request $request)
     {
-        $query = $this->buildFilteredQuery($request)->with(['purchaseOrder.supplier', 'receiver']);
+        $query = PurchaseReceipt::with(['purchaseOrder.supplier', 'receiver']);
+
+        $columns = [
+            ['key' => 'receipt_number', 'label' => 'No Penerimaan'],
+            ['key' => 'receipt_date', 'label' => 'Tanggal'],
+            ['key' => 'purchase_order_id', 'label' => 'Pesanan'],
+            ['key' => 'supplier', 'label' => 'Supplier'],
+            ['key' => 'status', 'label' => 'Status'],
+            ['key' => 'received_by', 'label' => 'Penerima'],
+            ['key' => 'total_amount', 'label' => 'Total Bayar'],
+        ];
+
+        if ($request->filled('search')) {
+            $term = trim($request->get('search'));
+            $query->where(function ($q) use ($term) {
+                $q->where('receipt_number', 'like', "%{$term}%")
+                    ->orWhereHas('purchaseOrder', function ($qp) use ($term) {
+                        $qp->where('order_number', 'like', "%{$term}%")
+                            ->orWhere('order_code', 'like', "%{$term}%");
+                    })
+                    ->orWhereHas('purchaseOrder.supplier', function ($qs) use ($term) {
+                        $qs->where('name', 'like', "%{$term}%");
+                    });
+            });
+        }
+
+        // === FILTER STATUS ===
+        if ($status = $request->get('is_active')) {
+            $query->where('is_active', $status);
+        }
+
+        // === SORTING ===
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
+
+            // 🧩 Deteksi kolom relasi
+            switch ($sortBy) {
+                case 'supplier':
+                    $query->leftJoin('purchase_orders', 'purchase_orders.id', '=', 'purchase_receipts.purchase_order_id')
+                        ->leftJoin('suppliers', 'suppliers.id', '=', 'purchase_orders.supplier_id')
+                        ->orderBy('suppliers.name', $sortDir)
+                        ->select('purchase_receipts.*');
+                    break;
+
+                default:
+                    $query->orderBy($sortBy, $sortDir);
+            }
+        }
+
+        // filter tanggal
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('receipt_date', [$request->start_date, $request->end_date]);
+        } elseif ($request->filled('start_date')) {
+            $query->whereDate('receipt_date', '>=', $request->start_date);
+        } elseif ($request->filled('end_date')) {
+            $query->whereDate('receipt_date', '<=', $request->end_date);
+        }
 
         // Sorting
         $sort = $request->get('sort', 'receipt_date');
@@ -63,23 +119,6 @@ class PurchaseReceiptController extends Controller
         $allowedSorts = ['receipt_number', 'receipt_date', 'status', 'created_at', 'total_payment'];
         if (!in_array($sort, $allowedSorts, true)) {
             $sort = 'receipt_date';
-        }
-
-        // If sorting by Total Bayar, prefer snapshot total_amount; fallback to computed subqueries
-        if ($sort === 'total_payment') {
-            $query->select('purchase_receipts.*')
-                ->selectRaw('COALESCE(
-                    total_amount,
-                    (
-                        (SELECT COALESCE(SUM(pri.received_quantity * pri.unit_price), 0)
-                         FROM purchase_receipt_items pri
-                         WHERE pri.purchase_receipt_id = purchase_receipts.id)
-                        +
-                        (SELECT COALESCE(SUM(prac.amount), 0)
-                         FROM purchase_receipt_additional_costs prac
-                         WHERE prac.purchase_receipt_id = purchase_receipts.id)
-                    )
-                ) AS total_payment');
         }
 
         // Aggregate totals for filtered receipts (prefer snapshot columns)
@@ -110,10 +149,8 @@ class PurchaseReceiptController extends Controller
                 ->value('s');
         }
 
-        $purchaseReceipts = $query
-            ->orderBy($sort, $direction)
-            ->paginate(10)
-            ->appends($request->query());
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $purchaseReceipts */
+        $purchaseReceipts = $query->paginate(10);
 
         // Pending (ordered) purchase orders without any receipt yet
         $pendingOrders = PurchaseOrder::where('status', PurchaseOrder::STATUS_ORDERED)
@@ -121,6 +158,28 @@ class PurchaseReceiptController extends Controller
             ->with('supplier')
             ->orderBy('order_date', 'desc')
             ->get();
+
+        $statuses = [
+            'accepted' => 'Diterima',
+            'rejected' => 'Ditolak',
+            'partial' => 'Sebagian',
+        ];
+
+        $selects = [
+            [
+                'name' => 'status',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+        ];
+
+        // === RESPONSE ===
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $purchaseReceipts->items(),
+                'links' => (string) $purchaseReceipts->links('vendor.pagination.tailwind'),
+            ]);
+        }
 
         return view('purchase-receipts.index', compact(
             'purchaseReceipts',
@@ -130,7 +189,9 @@ class PurchaseReceiptController extends Controller
             'totalDiscount',
             'totalTax',
             'totalBelanja',
-            'filteredReceiptsCount'
+            'filteredReceiptsCount',
+            'columns',
+            'selects'
         ));
     }
 
@@ -175,8 +236,16 @@ class PurchaseReceiptController extends Controller
             fprintf($out, "\xEF\xBB\xBF");
             // Header row
             fputcsv($out, [
-                'No. Penerimaan', 'Tanggal', 'Supplier', 'Status', 'Penerima',
-                'Subtotal Barang', 'Biaya Tambahan', 'Diskon', 'Pajak', 'Total Bayar'
+                'No. Penerimaan',
+                'Tanggal',
+                'Supplier',
+                'Status',
+                'Penerima',
+                'Subtotal Barang',
+                'Biaya Tambahan',
+                'Diskon',
+                'Pajak',
+                'Total Bayar'
             ]);
 
             foreach ($receipts as $r) {
@@ -208,10 +277,10 @@ class PurchaseReceiptController extends Controller
     {
         // Check if we have a purchase order ID
         $purchaseOrderId = $request->query('purchase_order_id');
-        
+
         // Show a list of ordered purchase orders that don't have a completed receipt
         $pendingOrders = PurchaseOrder::where('status', PurchaseOrder::STATUS_ORDERED)
-            ->whereDoesntHave('receipt', function($query) {
+            ->whereDoesntHave('receipt', function ($query) {
                 $query->whereIn('status', [
                     PurchaseReceipt::STATUS_ACCEPTED,
                     PurchaseReceipt::STATUS_REJECTED
@@ -219,7 +288,7 @@ class PurchaseReceiptController extends Controller
             })
             ->with('supplier')
             ->get();
-        
+
         // The create view will handle selecting PO and fetching its items via API
         return view('purchase-receipts.create', compact('pendingOrders'));
     }
@@ -324,13 +393,17 @@ class PurchaseReceiptController extends Controller
                 $ordered = (float) $purchaseOrderItem->quantity;
                 $received = (float) ($itemData['received_quantity'] ?? 0);
                 // Enforce received within [0, ordered]
-                if ($received < 0) { $received = 0.0; }
-                if ($received > $ordered) { $received = $ordered; }
+                if ($received < 0) {
+                    $received = 0.0;
+                }
+                if ($received > $ordered) {
+                    $received = $ordered;
+                }
                 $rejected = round($ordered - $received, 2);
                 $computedStatus = $received == 0.0
                     ? PurchaseReceiptItem::STATUS_REJECTED
                     : ($received == $ordered ? PurchaseReceiptItem::STATUS_ACCEPTED : PurchaseReceiptItem::STATUS_PARTIAL);
-                
+
                 // Handle item photo upload (nested file input)
                 $itemPhotoPath = null;
                 $uploadedFile = $request->file("items.$idx.condition_photo");
@@ -390,11 +463,13 @@ class PurchaseReceiptController extends Controller
             DB::commit();
 
             // Send WhatsApp group notification (privacy-safe); errors are ignored
-            try { $receipt->sendWhatsAppNotificationToGroup(); } catch (\Exception $e) {}
+            try {
+                $receipt->sendWhatsAppNotificationToGroup();
+            } catch (\Exception $e) {
+            }
 
             return redirect()->route('purchase-receipts.index')
                 ->with('success', 'Purchase receipt created successfully');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Failed to create purchase receipt: ' . $e->getMessage()])
@@ -545,13 +620,17 @@ class PurchaseReceiptController extends Controller
                 $item = $purchaseReceipt->items()->findOrFail($itemId);
                 $ordered = (float) $item->ordered_quantity; // use stored ordered qty
                 $received = (float) ($itemData['received_quantity'] ?? 0);
-                if ($received < 0) { $received = 0.0; }
-                if ($received > $ordered) { $received = $ordered; }
+                if ($received < 0) {
+                    $received = 0.0;
+                }
+                if ($received > $ordered) {
+                    $received = $ordered;
+                }
                 $rejected = round($ordered - $received, 2);
                 $computedStatus = $received == 0.0
                     ? PurchaseReceiptItem::STATUS_REJECTED
                     : ($received == $ordered ? PurchaseReceiptItem::STATUS_ACCEPTED : PurchaseReceiptItem::STATUS_PARTIAL);
-                
+
                 // Handle item photo upload (nested file input)
                 $uploadedFile = $request->file("items.$itemId.condition_photo");
                 if ($uploadedFile) {
@@ -584,7 +663,9 @@ class PurchaseReceiptController extends Controller
                 $oldQty = (float) ($oldSnapshot[$rmId] ?? 0);
                 $newQty = (float) ($newSnapshot[$rmId] ?? 0);
                 $delta = $newQty - $oldQty;
-                if ($delta === 0.0) { continue; }
+                if ($delta === 0.0) {
+                    continue;
+                }
                 $raw = \App\Models\RawMaterial::find($rmId);
                 if ($raw) {
                     if ($delta > 0) {
@@ -624,11 +705,13 @@ class PurchaseReceiptController extends Controller
             DB::commit();
 
             // Send WhatsApp group notification (privacy-safe); errors are ignored
-            try { $purchaseReceipt->sendWhatsAppNotificationToGroup(); } catch (\Exception $e) {}
+            try {
+                $purchaseReceipt->sendWhatsAppNotificationToGroup();
+            } catch (\Exception $e) {
+            }
 
             return redirect()->route('purchase-receipts.show', $purchaseReceipt)
                 ->with('success', 'Purchase receipt updated successfully');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Failed to update purchase receipt: ' . $e->getMessage()])
@@ -670,7 +753,6 @@ class PurchaseReceiptController extends Controller
 
             return redirect()->route('purchase-receipts.index')
                 ->with('success', 'Purchase receipt deleted successfully');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Failed to delete purchase receipt: ' . $e->getMessage()]);

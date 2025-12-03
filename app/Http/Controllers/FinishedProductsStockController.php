@@ -166,7 +166,7 @@ class FinishedProductsStockController extends Controller
 
         $oldStock = (float) $branchStock->quantity;
         $newStock = $oldStock;
-
+        
         $type = $request->input('adjustment_type');
         $qty = (float) $request->input('quantity');
         $notes = $request->input('reason') . ($request->filled('notes') ? (' - ' . $request->input('notes')) : '');
@@ -174,31 +174,27 @@ class FinishedProductsStockController extends Controller
         switch ($type) {
             case 'add':
                 $branchStock->updateStock('in', $qty, $notes, optional($user)->id);
-                $newStock = $oldStock + $qty;
+                $newStock = $branchStock->fresh()->quantity;
                 break;
             case 'reduce':
                 if ($qty > $oldStock) {
                     return redirect()->back()->with('error', 'Jumlah pengurangan tidak boleh lebih besar dari stok saat ini.');
                 }
                 $branchStock->updateStock('out', $qty, $notes, optional($user)->id);
-                $newStock = $oldStock - $qty;
+                $newStock = $branchStock->fresh()->quantity;
                 break;
             case 'set':
-                // Simulate set by applying the difference as in/out to keep movement log consistent
-                if ($qty >= $oldStock) {
-                    $diff = $qty - $oldStock;
-                    if ($diff > 0) {
-                        $branchStock->updateStock('in', $diff, $notes, optional($user)->id);
-                    }
-                } else {
-                    $diff = $oldStock - $qty;
-                    if ($diff > 0) {
-                        $branchStock->updateStock('out', $diff, $notes, optional($user)->id);
-                    }
+                // hitung difference lalu panggil updateStock hanya dengan diff (movement amount)
+                $diff = $qty - $oldStock;
+                if ($diff > 0) {
+                    $branchStock->updateStock('in', $diff, $notes, optional($user)->id);
+                } elseif ($diff < 0) {
+                    $branchStock->updateStock('out', abs($diff), $notes, optional($user)->id);
                 }
-                $newStock = $qty;
+                $newStock = $branchStock->fresh()->quantity;
                 break;
         }
+
 
         $adjustmentMessages = [
             'add' => 'Stok berhasil ditambahkan',
@@ -209,5 +205,22 @@ class FinishedProductsStockController extends Controller
         return redirect()
             ->route('finished-products-stock.index', ['branch_id' => $targetBranch->id])
             ->with('success', $adjustmentMessages[$type] . '. Stok ' . $finishedProduct->name . ' sekarang: ' . number_format($newStock, 3));
+    }
+
+    public function items(Branch $branch)
+    {
+        $products = FinishedBranchStock::with('finishedProduct')
+            ->where('branch_id', $branch->id)
+            ->get(['id', 'finished_product_id', 'quantity']);
+
+        // ubah format agar frontend dapat langsung pakai
+        $data = $products->map(fn($item) => [
+            'id' => $item->id,
+            'name' => $item->finishedProduct->name ?? '(Tanpa nama)',
+            'price' => $item->finishedProduct->price,
+            'stock' => $item->finishedProduct->stock,
+        ]);
+
+        return response()->json(['products' => $data]);
     }
 }

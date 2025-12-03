@@ -31,13 +31,30 @@ class ProductionApprovalController extends Controller
         // Search by request code or purpose
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('request_code', 'like', "%{$search}%")
-                  ->orWhere('purpose', 'like', "%{$search}%");
+                    ->orWhere('purpose', 'like', "%{$search}%");
             });
         }
 
         $productionRequests = $query->paginate(15);
+
+        $statuses = [
+            'pending' => 'Ditunda',
+            'approved' => 'Diterima',
+            'rejected' => 'Ditolak',
+            'in_progress' => 'Dalam Proses',
+            'completed' => 'Selesai',
+            'cancelled' => 'Dibatalkan',
+        ];
+
+        $selects = [
+            [
+                'name' => 'status',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+        ];
 
         return view('production-approvals.index', compact('productionRequests'));
     }
@@ -50,8 +67,8 @@ class ProductionApprovalController extends Controller
     public function show(Request $request, ProductionRequest $productionRequest)
     {
         $productionRequest->load([
-            'requestedBy', 
-            'approvedBy', 
+            'requestedBy',
+            'approvedBy',
             'items.rawMaterial.unit'
         ]);
 
@@ -80,10 +97,10 @@ class ProductionApprovalController extends Controller
      */
     public function approve(Request $request, ProductionRequest $productionRequest)
     {
-        // Only allow approval of pending requests
         if (!$productionRequest->isPending()) {
-            return redirect()->route('production-approvals.index')
-                ->with('error', 'Hanya pengajuan dengan status "Menunggu Persetujuan" yang dapat disetujui.');
+            return $request->expectsJson()
+                ? response()->json(['error' => 'Hanya pengajuan dengan status "Menunggu Persetujuan" yang dapat disetujui.'], 400)
+                : redirect()->route('production-approvals.index')->with('error', 'Hanya pengajuan dengan status "Menunggu Persetujuan" yang dapat disetujui.');
         }
 
         $request->validate([
@@ -93,22 +110,26 @@ class ProductionApprovalController extends Controller
         try {
             $this->approveOne($productionRequest, $request->approval_notes);
         } catch (\Throwable $e) {
-            return redirect()->route('production-approvals.index')->with('error', $e->getMessage());
+            return $request->expectsJson()
+                ? response()->json(['error' => $e->getMessage()], 500)
+                : redirect()->route('production-approvals.index')->with('error', $e->getMessage());
         }
 
-        return redirect()->route('production-approvals.index')
-            ->with('success', 'Pengajuan produksi berhasil disetujui. Stok bahan mentah telah dikurangi dan produksi dapat dimulai.');
+        return $request->expectsJson()
+            ? response()->json(['success' => 'Pengajuan produksi berhasil disetujui.'])
+            : redirect()->route('production-approvals.index')->with('success', 'Pengajuan produksi berhasil disetujui.');
     }
+
 
     /**
      * Reject the production request
      */
     public function reject(Request $request, ProductionRequest $productionRequest)
     {
-        // Only allow rejection of pending requests
         if (!$productionRequest->isPending()) {
-            return redirect()->route('production-approvals.index')
-                ->with('error', 'Hanya pengajuan dengan status "Menunggu Persetujuan" yang dapat ditolak.');
+            return $request->expectsJson()
+                ? response()->json(['error' => 'Hanya pengajuan dengan status "Menunggu Persetujuan" yang dapat ditolak.'], 400)
+                : redirect()->route('production-approvals.index')->with('error', 'Hanya pengajuan dengan status "Menunggu Persetujuan" yang dapat ditolak.');
         }
 
         $request->validate([
@@ -117,9 +138,11 @@ class ProductionApprovalController extends Controller
 
         $this->rejectOne($productionRequest, $request->approval_notes);
 
-        return redirect()->route('production-approvals.index')
-            ->with('success', 'Pengajuan produksi berhasil ditolak.');
+        return $request->expectsJson()
+            ? response()->json(['success' => 'Pengajuan produksi berhasil ditolak.'])
+            : redirect()->route('production-approvals.index')->with('success', 'Pengajuan produksi berhasil ditolak.');
     }
+
 
     /**
      * Bulk approve pending production requests
@@ -132,10 +155,14 @@ class ProductionApprovalController extends Controller
             'approval_notes' => 'nullable|string|max:1000'
         ]);
 
-        $success = 0; $failed = [];
+        $success = 0;
+        $failed = [];
         foreach ($data['ids'] as $id) {
             $pr = ProductionRequest::with(['items.rawMaterial'])->find($id);
-            if (!$pr || !$pr->isPending()) { $failed[] = [$id, 'Status bukan pending']; continue; }
+            if (!$pr || !$pr->isPending()) {
+                $failed[] = [$id, 'Status bukan pending'];
+                continue;
+            }
             try {
                 $this->approveOne($pr, $data['approval_notes'] ?? null);
                 $success++;
@@ -162,10 +189,14 @@ class ProductionApprovalController extends Controller
             'approval_notes' => 'required|string|max:1000'
         ]);
 
-        $success = 0; $failed = [];
+        $success = 0;
+        $failed = [];
         foreach ($data['ids'] as $id) {
             $pr = ProductionRequest::find($id);
-            if (!$pr || !$pr->isPending()) { $failed[] = [$id, 'Status bukan pending']; continue; }
+            if (!$pr || !$pr->isPending()) {
+                $failed[] = [$id, 'Status bukan pending'];
+                continue;
+            }
             try {
                 $this->rejectOne($pr, $data['approval_notes']);
                 $success++;

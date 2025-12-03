@@ -3,116 +3,219 @@
 @section('title', 'Daftar Permintaan Penggunaan Bahan')
 
 @section('content')
-<div class="container-fluid">
-    <h1 class="mt-4">Permintaan Penggunaan Bahan</h1>
-    <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-        <li class="breadcrumb-item active">Permintaan Penggunaan Bahan</li>
-    </ol>
+    <div class="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30">
+        {{-- Page Header --}}
+        <x-index.header title="Permintaan Penggunaan Bahan" subtitle="Kelola permintaan penggunaan bahan"
+            addRoute="{{ isset($currentBranchId) && $currentBranchId ? route('semi-finished-usage-requests.create', ['branch_id' => $currentBranchId]) : route('semi-finished-usage-requests.create') }}"
+            addText="Buat Permintaan Baru" />
 
-    @if(session('success'))
-        <div class="alert alert-success">
-            {{ session('success') }}
-        </div>
-    @endif
+        {{-- Main Content --}}
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+            <div x-data="sortableTable(@js($requests->items()))" @sort-column.window="sortBy($event.detail)"
+                class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
+                {{-- Card Header --}}
+                <x-index.card-header title="Daftar Permintaan" />
 
-    @if(session('error'))
-        <div class="alert alert-danger">
-            {{ session('error') }}
-        </div>
-    @endif
+                {{-- Filter Section --}}
+                <x-filter-bar searchPlaceholder="Cari nomor permintaan..." :selects="$selects ?? []" />
 
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <div>
-                <i class="fas fa-list-alt mr-1"></i>
-                Daftar Permintaan
-            </div>
-            <div>
-                <a href="{{ (isset($currentBranchId) && $currentBranchId) ? route('semi-finished-usage-requests.create', ['branch_id' => $currentBranchId]) : route('semi-finished-usage-requests.create') }}" class="btn btn-primary btn-sm">
-                    <i class="fas fa-plus"></i> Buat Permintaan Baru
-                </a>
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="row mb-3">
-                <div class="col-md-8">
-                    <form method="GET" action="{{ route('semi-finished-usage-requests.index') }}" class="form-inline">
-                        <div class="form-group mr-2">
-                            <label for="status" class="mr-1">Status:</label>
-                            <select name="status" id="status" class="form-control form-control-sm">
-                                <option value="all" {{ request('status') == 'all' ? 'selected' : '' }}>Semua Status</option>
-                                <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Menunggu Persetujuan</option>
-                                <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Disetujui</option>
-                                <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Ditolak</option>
-                                <option value="processing" {{ request('status') == 'processing' ? 'selected' : '' }}>Sedang Diproses</option>
-                                <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Selesai</option>
-                                <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Dibatalkan</option>
-                            </select>
-                        </div>
+                {{-- Desktop Table --}}
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <x-index.table-head :columns="$columns" />
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template x-for="(req, index) in sortedRows" :key="req.id">
+                                <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="index + 1"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+                                        x-text="req.request_number"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                                        x-text="req.requesting_branch.name"></td>
+                                    <td class="px-6 py-4 text-sm text-gray-900">
+                                        <div class="max-w-xs truncate" :title="req.purpose" x-text="req.purpose"></div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"
+                                        x-text="(new Date(req.requested_date)).toLocaleDateString()"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"
+                                        x-text="req.required_date ? (new Date(req.required_date)).toLocaleDateString() : '-'">
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <span
+                                            :class="{
+                                                'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800': req
+                                                    .status === 'pending',
+                                                'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800': req
+                                                    .status === 'completed',
+                                                'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800': req
+                                                    .status === 'rejected',
+                                                'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800': [
+                                                    'pending', 'completed', 'rejected'
+                                                ].indexOf(req.status) === -1
+                                            }"
+                                            x-text="({ pending: 'Menunggu Persetujuan', completed: 'Selesai', rejected: 'Ditolak' })[req.status] || 'Tidak Diketahui'">
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <div x-data="{
+                                            viewUrl: '/semi-finished-usage-requests/' + req.id,
+                                            editUrl: '/semi-finished-usage-requests/' + req.id + '/edit',
+                                            deleteUrl: '/semi-finished-usage-requests/' + req.id,
+                                            itemName: 'Permintaan ' + req.request_number,
+                                        
+                                        }">
+                                            <div class="flex items-center gap-2 sm:gap-3">
+                                                {{-- Confirm & Reject (only when status is pending) --}}
+                                                <template x-if="req.status === 'pending'" x-data="materialModals()">
+                                                    <div class="flex items-center gap-2 sm:gap-3">
+                                                        <button type="button"
+                                                            @click="openAccept(req.id, req.request_number ?? req.number ?? req.id)"
+                                                            class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                                                            bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700
+                                                            text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                                            title="Terima">
+                                                            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none"
+                                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2" d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        </button>
 
-                        @if(auth()->user()->hasRole(['admin', 'super-admin']))
-                            <div class="form-group mr-2">
-                                <label for="branch_id" class="mr-1">Cabang:</label>
-                                <select name="branch_id" id="branch_id" class="form-control form-control-sm">
-                                    <option value="all">Semua Cabang</option>
-                                    @foreach($branches as $branch)
-                                        <option value="{{ $branch->id }}" {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
-                                            {{ $branch->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        @endif
+                                                        <button type="button"
+                                                            @click="openReject(req.id, req.request_number ?? req.number ?? req.id)"
+                                                            class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                                                            bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
+                                                            text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                                            title="Tolak">
+                                                            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none"
+                                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                        </button>
 
-                        <button type="submit" class="btn btn-sm btn-secondary">
-                            <i class="fas fa-filter"></i> Filter
-                        </button>
-                    </form>
+                                                        <!-- === Modal Area === -->
+                                                        <template x-if="openModal === 'accept'">
+                                                            @include('material-usage-requests.accept-modal')
+                                                        </template>
+
+                                                        <template x-if="openModal === 'reject'">
+                                                            @include('material-usage-requests.reject-modal')
+                                                        </template>
+                                                    </div>
+                                                </template>
+
+                                                {{-- Default action buttons --}}
+                                                <x-index.action-buttons :view="true" :edit="true"
+                                                    :delete="true" />
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+
+                            <template x-if="sortedRows.length === 0">
+                                <x-index.none-data />
+                            </template>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
 
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover" width="100%" cellspacing="0">
-                    <thead>
-                        <tr>
-                            <th>Nomor Permintaan</th>
-                            <th>Cabang</th>
-                            <th>Tujuan</th>
-                            <th>Tanggal Permintaan</th>
-                            <th>Tanggal Dibutuhkan</th>
-                            <th>Status</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($requests as $request)
-                            <tr>
-                                <td>{{ $request->request_number }}</td>
-                                <td>{{ $request->requestingBranch->name }}</td>
-                                <td>{{ Str::limit($request->purpose, 30) }}</td>
-                                <td>{{ $request->requested_date->format('d/m/Y') }}</td>
-                                <td>{{ $request->required_date ? $request->required_date->format('d/m/Y') : '-' }}</td>
-                                <td>{!! $request->status_badge !!}</td>
-                                <td>
-                                    <a href="{{ route('semi-finished-usage-requests.show', $request) }}" class="btn btn-info btn-sm">
-                                        <i class="fas fa-eye"></i> Detail
-                                    </a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="text-center">Tidak ada data permintaan penggunaan bahan</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                {{-- Mobile Cards --}}
+                <div class="md:hidden divide-y divide-gray-200">
+                    <template x-for="(req, index) in sortedRows" :key="req.id">
+                        <div class="p-4 hover:bg-gray-50 transition-colors duration-150">
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-sm font-medium text-gray-900 truncate" x-text="req.request_number">
+                                        </h3>
+                                        <span class="text-xs text-gray-500 ml-2" x-text="req.requesting_branch_name"></span>
+                                    </div>
+                                    <p class="text-sm text-gray-500 truncate mt-1" x-text="req.purpose"></p>
+                                </div>
+                            </div>
 
-            <div class="d-flex justify-content-center mt-3">
-                {{ $requests->links() }}
+                            <div class="space-y-2 text-sm text-gray-700">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Tgl Permintaan:</span>
+                                    <span x-text="(new Date(req.requested_date)).toLocaleDateString()"></span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Tgl Dibutuhkan:</span>
+                                    <span
+                                        x-text="req.required_date ? (new Date(req.required_date)).toLocaleDateString() : '-'"></span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Status:</span>
+                                    <div x-html="req.status_badge"></div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 pt-3 border-t border-gray-200">
+                                <div x-data="{
+                                    viewUrl: '/semi-finished-usage-requests/' + req.id,
+                                    editUrl: '/semi-finished-usage-requests/' + req.id + '/edit',
+                                    deleteUrl: '/semi-finished-usage-requests/' + req.id,
+                                    itemName: 'Permintaan ' + req.request_number,
+                                
+                                }">
+                                    <div class="flex items-center gap-2 sm:gap-3">
+                                        {{-- Confirm & Reject (only when status is pending) --}}
+                                        <template x-if="req.status === 'pending'" x-data="materialModals()">
+                                            <div class="flex items-center gap-2 sm:gap-3">
+                                                <button type="button"
+                                                    @click="openAccept(req.id, req.request_number ?? req.number ?? req.id)"
+                                                    class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                                                            bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700
+                                                            text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                                    title="Terima">
+                                                    <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                </button>
+
+                                                <button type="button"
+                                                    @click="openReject(req.id, req.request_number ?? req.number ?? req.id)"
+                                                    class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                                                            bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
+                                                            text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                                    title="Tolak">
+                                                    <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none"
+                                                        stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+
+                                                <!-- === Modal Area === -->
+                                                <template x-if="openModal === 'accept'">
+                                                    @include('material-usage-requests.accept-modal')
+                                                </template>
+
+                                                <template x-if="openModal === 'reject'">
+                                                    @include('material-usage-requests.reject-modal')
+                                                </template>
+                                            </div>
+                                        </template>
+
+                                        {{-- Default action buttons --}}
+                                        <x-index.action-buttons :view="true" :edit="true" :delete="true" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                {{-- Pagination --}}
+                <template x-if="sortedRows.length !== 0">
+                    <div class="px-4 py-3 sm:px-6">
+                        {{ $requests->links('vendor.pagination.tailwind') }}
+                    </div>
+                </template>
             </div>
         </div>
     </div>
-</div>
 @endsection

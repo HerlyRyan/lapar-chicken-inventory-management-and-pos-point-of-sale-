@@ -27,15 +27,12 @@ class SemiFinishedStockController extends Controller
         $query = SemiFinishedProduct::query()
             ->select('semi_finished_products.*')
             ->selectSub(function ($sub) use ($contextBranch) {
-                $sub->from('semi_finished_branch_stocks as sfbs')
-                    ->selectRaw('COALESCE(SUM(sfbs.quantity), 0)')
-                    ->whereColumn('sfbs.semi_finished_product_id', 'semi_finished_products.id');
+                $sub->from('semi_finished_branch_stocks as sfbs')->selectRaw('COALESCE(SUM(sfbs.quantity), 0)')->whereColumn('sfbs.semi_finished_product_id', 'semi_finished_products.id');
 
                 if ($contextBranch) {
                     $sub->where('sfbs.branch_id', $contextBranch->id);
                 } else {
-                    $sub->leftJoin('branches as b', 'b.id', '=', 'sfbs.branch_id')
-                        ->where('b.type', 'production');
+                    $sub->leftJoin('branches as b', 'b.id', '=', 'sfbs.branch_id')->where('b.type', 'production');
                 }
             }, 'center_stock')
             ->where('semi_finished_products.is_active', true)
@@ -45,8 +42,7 @@ class SemiFinishedStockController extends Controller
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
-                $q->where('semi_finished_products.name', 'like', "%{$search}%")
-                    ->orWhere('semi_finished_products.code', 'like', "%{$search}%");
+                $q->where('semi_finished_products.name', 'like', "%{$search}%")->orWhere('semi_finished_products.code', 'like', "%{$search}%");
             });
         }
 
@@ -75,14 +71,18 @@ class SemiFinishedStockController extends Controller
         }
 
         // Order: empty -> low -> warning -> normal, then name
-        $semiFinishedProducts = $query->orderByRaw('
-            CASE 
+        $semiFinishedProducts = $query
+            ->orderByRaw(
+                '
+            CASE
                 WHEN center_stock = 0 THEN 1
                 WHEN center_stock < minimum_stock THEN 2
                 WHEN center_stock < minimum_stock * 2 THEN 3
                 ELSE 4
             END, semi_finished_products.name ASC
-        ')->paginate(24);
+        ',
+            )
+            ->paginate(24);
 
         // Categories for filter dropdown
         $categories = \App\Models\Category::where('is_active', true)->orderBy('name')->get();
@@ -139,12 +139,15 @@ class SemiFinishedStockController extends Controller
         }
 
         // Create or fetch stock record for this branch-product
-        $branchStock = SemiFinishedBranchStock::firstOrCreate([
-            'branch_id' => $targetBranch->id,
-            'semi_finished_product_id' => $semiFinishedProduct->id,
-        ], [
-            'quantity' => 0,
-        ]);
+        $branchStock = SemiFinishedBranchStock::firstOrCreate(
+            [
+                'branch_id' => $targetBranch->id,
+                'semi_finished_product_id' => $semiFinishedProduct->id,
+            ],
+            [
+                'quantity' => 0,
+            ],
+        );
 
         $oldStock = (float) $branchStock->quantity;
         $newStock = $oldStock;

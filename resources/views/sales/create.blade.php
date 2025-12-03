@@ -1,281 +1,502 @@
 @extends('layouts.app')
+@php use Illuminate\Support\Facades\Storage; @endphp
 
-@section('title', 'Buat Penjualan Baru (POS)')
-
-@push('styles')
-<style>
-    body {
-        overflow-x: hidden; /* prevent horizontal scroll */
-        overflow-y: auto;   /* allow page to scroll so footer won't cover */
-    }
-    .pos-container {
-        display: grid;
-        grid-template-columns: 60% 40%;
-        gap: 1.5rem;
-        height: calc(100vh - 140px - var(--footer-height, 56px)); /* account for fixed footer */
-    }
-    .product-panel .card-body {
-        overflow-y: auto;
-        max-height: calc(100vh - 200px - var(--footer-height, 56px)); /* avoid footer overlap */
-        padding-bottom: 2rem;
-    }
-    .product-grid {
-        overflow-y: auto;
-        max-height: calc(100vh - 250px - var(--footer-height, 56px));
-    }
-    .checkout-panel {
-        display: flex;
-        flex-direction: column;
-        max-height: calc(100vh - 140px - var(--footer-height, 56px));
-    }
-    .checkout-panel .card-body {
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        max-height: calc(100vh - 200px - var(--footer-height, 56px));
-        padding-bottom: calc(var(--footer-height, 56px) + 24px); /* ensure last button clears footer */
-    }
-    .cart-items-container {
-        flex-grow: 1;
-        overflow-y: auto;
-        max-height: 300px; /* Fixed height for cart items */
-        margin-bottom: 1rem;
-        border: 1px solid #f0f0f0;
-        border-radius: 0.25rem;
-        padding: 0.5rem;
-    }
-    .product-card {
-        cursor: pointer;
-        transition: all 0.2s ease-in-out;
-    }
-    .product-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-    }
-    .product-card.out-of-stock {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-    .product-card.out-of-stock .add-to-cart-btn {
-        pointer-events: none;
-    }
-    #loading-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(255, 255, 255, 0.85);
-        z-index: 1056; /* Higher than modals */
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .total-section h5 {
-        font-weight: bold;
-    }
-    /* Custom scrollbar styling */
-    .product-grid::-webkit-scrollbar,
-    .cart-items-container::-webkit-scrollbar {
-        width: 8px;
-    }
-    .product-grid::-webkit-scrollbar-track,
-    .cart-items-container::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 10px;
-    }
-    .product-grid::-webkit-scrollbar-thumb,
-    .cart-items-container::-webkit-scrollbar-thumb {
-        background: #dc2626;
-        border-radius: 10px;
-    }
-    .product-grid::-webkit-scrollbar-thumb:hover,
-    .cart-items-container::-webkit-scrollbar-thumb:hover {
-        background: #b91c1c;
-    }
-</style>
-@endpush
+@section('title', 'Tambah Penjualan')
 
 @section('content')
-<div id="pos-app">
-    <div id="loading-overlay" style="display: none;">
-        <div class="spinner-border text-danger" role="status" style="width: 3rem; height: 3rem;">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-    </div>
+    <div class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 py-6">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8" x-data="saleForm()">
+            {{-- Header Section --}}
+            <x-form.header title="Penjualan Baru" backRoute="{{ route('sales.index') }}" />
 
-    <div id="error-message" class="alert alert-danger alert-dismissible fade show" style="display: none;" role="alert">
-        <!-- Error message will be inserted here -->
-        <button type="button" class="btn-close" onclick="this.parentElement.style.display='none'"></button>
-    </div>
+            <div class="mt-6 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+                <x-form.card-header title="Buat Penjualan" type="add" />
 
-    <div class="d-flex justify-content-end mb-3">
-        <a href="{{ route('sales.index') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-list-ul me-1"></i> Ke Daftar Penjualan
-        </a>
-    </div>
+                <div class="p-6 sm:p-8">
+                    <form action="{{ route('sales.store') }}" method="POST" id="saleForm"
+                        @submit.prevent="prepareSubmission">
+                        @csrf
 
-    @if(!request('branch_id') && !$branches->isEmpty())
-        <div class="card shadow-lg border-0 mt-5">
-            <div class="card-body text-center p-5">
-                <i class="bi bi-shop-window fs-1 text-danger mb-3"></i>
-                <h3 class="card-title fw-bold">Pilih Cabang Penjualan</h3>
-                <p class="card-text text-muted mb-4">Untuk memulai sesi penjualan, silakan pilih cabang terlebih dahulu.</p>
-                <div class="col-md-5 mx-auto">
-                    <select id="branch_id_selector" class="form-select form-select-lg">
-                        <option value="" selected disabled>-- Pilih Cabang --</option>
-                        @foreach($branches as $branch)
-                            <option value="{{ $branch->id }}">{{ $branch->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-        </div>
-        @push('scripts')
-        <script>
-            // Fallback: ensure redirect works even if main JS hasn't initialized yet
-            (function attachBranchRedirect(){
-                function bind() {
-                    var sel = document.getElementById('branch_id_selector');
-                    if (!sel) return;
-                    sel.addEventListener('change', function (e) {
-                        var val = e.target && e.target.value;
-                        if (val) {
-                            window.location.href = '/sales/create?branch_id=' + val;
-                        }
-                    });
-                }
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', bind);
-                } else {
-                    bind();
-                }
-            })();
-        </script>
-        @endpush
-    @else
-        <form id="checkout-form" novalidate>
-            @csrf
-            <input type="hidden" name="branch_id" value="{{ request('branch_id') }}">
-            <div class="pos-container">
-                <!-- Left Panel: Products -->
-                <div class="product-panel card shadow-sm border-0">
-                    <div class="card-header bg-white py-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                             <h5 class="mb-0 fw-bold text-danger"><i class="bi bi-grid-3x3-gap me-2"></i>Pilih Produk</h5>
-                             <div class="w-50">
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                    <input type="text" id="search-input" class="form-control" placeholder="Cari produk atau paket...">
+                        {{-- Step 1: Branch Selection (Always visible, determines item availability) --}}
+                        <div class="mb-8 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+                            <label for="branch_id" class="block text-lg font-bold text-gray-800 mb-2">
+                                Pilih Cabang <span class="text-red-500">*</span>
+                            </label>
+                            <select name="branch_id" id="branch_id" x-model="branchId" required @change="fetchBranchItems"
+                                class="w-full px-4 py-3 border border-orange-300 rounded-xl focus:ring-orange-500 focus:border-orange-500 text-base">
+                                <option value="">Pilih cabang...</option>
+                                @foreach ($branches ?? [] as $b)
+                                    <option value="{{ $b->id }}" {{ old('branch_id') == $b->id ? 'selected' : '' }}>
+                                        {{ $b->name }} ({{ $b->code }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('branch_id')
+                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        {{-- Main Content: Item Selection (Left) and Cart (Right) --}}
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8" x-show="branchId" x-cloak>
+
+                            {{-- LEFT COLUMN: Item Selection (Products & Packages) --}}
+                            <div class="lg:col-span-2">
+                                <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                                    <i class="bi bi-box-seam-fill text-orange-500 mr-2"></i> Pilih Produk & Paket
+                                    <span x-show="isLoading" class="ml-3 text-sm text-gray-500">Memuat...</span>
+                                </h3>
+
+                                {{-- Search and Tabs --}}
+                                <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                                    <input type="text" x-model="searchTerm" placeholder="Cari item..."
+                                        class="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-orange-500 focus:border-orange-500">
+
+                                    <div class="flex space-x-2 p-1 bg-gray-100 rounded-xl">
+                                        <button type="button" @click="activeTab = 'products'"
+                                            :class="{ 'bg-white shadow-md text-orange-600': activeTab === 'products', 'text-gray-600': activeTab !== 'products' }"
+                                            class="px-4 py-2 rounded-lg font-medium transition-colors">Produk</button>
+                                        <button type="button" @click="activeTab = 'packages'"
+                                            :class="{ 'bg-white shadow-md text-orange-600': activeTab === 'packages', 'text-gray-600': activeTab !== 'packages' }"
+                                            class="px-4 py-2 rounded-lg font-medium transition-colors">Paket</button>
+                                    </div>
                                 </div>
-                             </div>
-                        </div>
-                    </div>
-                    <div class="card-body d-flex flex-column">
-                        <div id="category-filters" class="d-flex flex-wrap gap-2 mb-3 border-bottom pb-3">
-                            <!-- Category buttons will be rendered here by JS -->
-                        </div>
-                        <div id="product-list" class="row product-grid flex-grow-1 p-2">
-                            <!-- Product cards will be rendered here by JS -->
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Right Panel: Checkout -->
-                <div class="checkout-panel card shadow-sm border-0">
-                    <div class="card-header bg-white py-3">
-                        <h5 class="mb-0 fw-bold text-danger"><i class="bi bi-cart3 me-2"></i>Detail Pesanan</h5>
-                    </div>
-                    <div class="card-body d-flex flex-column">
-                        <!-- Customer Info -->
-                        <div class="mb-3">
-                             <h6 class="fw-bold">Informasi Pelanggan (Opsional)</h6>
-                             <div class="mb-2">
-                                 <input type="text" id="customer_name" name="customer_name" class="form-control" placeholder="Nama Pelanggan">
-                             </div>
-                             <div>
-                                 <input type="text" id="customer_phone" name="customer_phone" class="form-control" placeholder="No. Telepon">
-                             </div>
-                        </div>
-                        
-                        <!-- Cart Items -->
-                        <div class="cart-items-container table-responsive mb-3">
-                            <table class="table table-sm table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Produk</th>
-                                        <th>Qty</th>
-                                        <th class="text-end">Subtotal</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="cart-items">
-                                    <!-- Cart items will be rendered here by JS -->
-                                </tbody>
-                            </table>
-                        </div>
+                                {{-- Item Cards --}}
+                                <div
+                                    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 h-[600px] overflow-y-auto pr-2">
+                                    <template x-if="activeTab === 'products'">
+                                        <template x-for="item in filteredProducts" :key="item.id">
+                                            <div
+                                                class="bg-white border border-gray-100 rounded-xl shadow-lg p-4 transition-all hover:shadow-xl">
+                                                <div class="font-semibold text-gray-900" x-text="item.name"></div>
+                                                <div class="text-sm text-gray-500 mb-3" x-text="'Stok: ' + item.stock">
+                                                </div>
+                                                <div class="text-lg font-bold text-orange-600 mb-4"
+                                                    x-text="'Rp ' + item.price.toLocaleString('id-ID')"></div>
 
-                        <!-- Totals -->
-                        <div class="mt-auto">
-                            <div class="total-section border-top pt-3">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <h6 class="text-muted">Subtotal</h6>
-                                    <h6 id="subtotal" class="fw-bold">Rp 0</h6>
+                                                <div class="flex items-center space-x-2">
+                                                    <input type="number" min="1" x-model.number="item.quantity"
+                                                        class="w-16 px-2 py-1 border border-gray-300 rounded-lg text-center focus:ring-orange-500" />
+                                                    <button type="button" @click="addToCart(item, 'product')"
+                                                        :disabled="item.quantity < 1 || (item.item_type === 'product' && item
+                                                            .quantity > item.stock)"
+                                                        class="flex-1 bg-green-600 text-white rounded-lg px-3 py-1 text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                                        <i class="bi bi-cart-plus mr-1"></i> Tambah
+                                                    </button>
+                                                </div>
+                                                <p x-show="item.item_type === 'product' && item.quantity > item.stock"
+                                                    class="text-xs text-red-500 mt-1">Stok tidak cukup!</p>
+                                            </div>
+                                        </template>
+                                    </template>
+
+                                    <template x-if="activeTab === 'packages'">
+                                        <template x-for="item in filteredPackages" :key="item.id">
+                                            <div
+                                                class="bg-white border border-gray-100 rounded-xl shadow-lg p-4 transition-all hover:shadow-xl">
+                                                <div class="font-semibold text-gray-900" x-text="item.name"></div>
+                                                <div class="text-sm text-gray-500 mb-3">Paket</div>
+                                                <div class="text-lg font-bold text-orange-600 mb-4"
+                                                    x-text="'Rp ' + item.price.toLocaleString('id-ID')"></div>
+
+                                                <div class="flex items-center space-x-2">
+                                                    <input type="number" min="1" x-model.number="item.quantity"
+                                                        class="w-16 px-2 py-1 border border-gray-300 rounded-lg text-center focus:ring-orange-500" />
+                                                    <button type="button" @click="addToCart(item, 'package')"
+                                                        :disabled="item.quantity < 1"
+                                                        class="flex-1 bg-green-600 text-white rounded-lg px-3 py-1 text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                                        <i class="bi bi-cart-plus mr-1"></i> Tambah
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </template>
+                                    <template
+                                        x-if="filteredProducts.length === 0 && activeTab === 'products' && !isLoading">
+                                        <p class="text-gray-500 col-span-full">Tidak ada produk ditemukan.</p>
+                                    </template>
+                                    <template
+                                        x-if="filteredPackages.length === 0 && activeTab === 'packages' && !isLoading">
+                                        <p class="text-gray-500 col-span-full">Tidak ada paket ditemukan.</p>
+                                    </template>
                                 </div>
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 class="text-muted">Diskon</h6>
-                                    <div class="d-flex gap-2 w-50">
-                                        <input type="number" id="discount-value" name="discount_value" class="form-control form-control-sm" value="0">
-                                        <select id="discount-type" name="discount_type" class="form-select form-select-sm">
-                                            <option value="nominal">Rp</option>
-                                            <option value="percentage">%</option>
+                            </div>
+
+                            {{-- RIGHT COLUMN: Cart and Totals --}}
+                            <div class="lg:col-span-1">
+                                <div class="sticky top-6">
+                                    <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                                        <i class="bi bi-basket-fill text-orange-500 mr-2"></i> Keranjang Belanja
+                                    </h3>
+
+                                    <div
+                                        class="bg-gray-50 p-4 rounded-xl mb-4 h-[300px] overflow-y-auto border border-gray-200">
+                                        <template x-if="cart.items.length === 0">
+                                            <p class="text-gray-500 text-center py-4">Keranjang kosong.</p>
+                                        </template>
+                                        <template x-for="(item, index) in cart.items" :key="index">
+                                            <div
+                                                class="flex items-center justify-between border-b border-gray-200 py-3 last:border-b-0">
+                                                <input type="hidden" :name="'items[' + index + '][item_type]'"
+                                                    :value="item.item_type">
+                                                <input type="hidden" :name="'items[' + index + '][item_id]'"
+                                                    :value="item.item_id">
+                                                <input type="hidden" :name="'items[' + index + '][item_name]'"
+                                                    :value="item.item_name">
+                                                <input type="hidden" :name="'items[' + index + '][unit_price]'"
+                                                    :value="item.unit_price">
+
+                                                <div class="flex-1">
+                                                    <p class="font-medium text-sm text-gray-800" x-text="item.item_name">
+                                                    </p>
+                                                    <p class="text-xs text-gray-500"
+                                                        x-text="item.item_type.toUpperCase()"></p>
+                                                    <p class="text-sm text-orange-600 font-semibold"
+                                                        x-text="item.quantity + ' x Rp ' + item.unit_price.toLocaleString('id-ID')">
+                                                    </p>
+                                                </div>
+
+                                                <div class="flex items-center space-x-2">
+                                                    <input type="number" min="1"
+                                                        :name="'items[' + index + '][quantity]'"
+                                                        x-model.number="item.quantity" @input="updateItemQuantity(index)"
+                                                        class="w-14 px-1 py-1 border rounded-lg text-center text-sm" />
+
+                                                    <input type="hidden" :name="'items[' + index + '][subtotal]'"
+                                                        :value="item.subtotal">
+
+                                                    <button type="button" @click="removeFromCart(index)"
+                                                        class="text-red-600 hover:text-red-800 transition-colors p-1">
+                                                        <i class="bi bi-trash-fill"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </template>
+                                        @error('items')
+                                            <p class="mt-2 text-sm text-red-600">Keranjang tidak boleh kosong.</p>
+                                        @enderror
+                                    </div>
+
+                                    {{-- Basic Info - Hidden in Left Column --}}
+                                    <div class="space-y-4 mb-4">
+                                        <div>
+                                            <label for="customer_name"
+                                                class="block text-sm font-semibold text-gray-700 mb-2">Nama
+                                                Pelanggan</label>
+                                            <input type="text" name="customer_name" id="customer_name"
+                                                x-model="customerName" class="w-full px-4 py-3 border rounded-xl"
+                                                placeholder="Nama pelanggan (opsional)">
+                                        </div>
+
+                                        <div>
+                                            <label for="phone"
+                                                class="block text-sm font-semibold text-gray-700 mb-2">Telepon</label>
+                                            <div
+                                                class="flex rounded-xl border focus-within:ring-2 focus-within:ring-orange-500 transition-all">
+                                                <span
+                                                    class="inline-flex items-center px-4 text-gray-500 bg-gray-50 border-r border-gray-300 rounded-l-xl text-sm font-medium">+62</span>
+                                                <input type="text" name="customer_phone" id="phone"
+                                                    x-model="customerPhone"
+                                                    class="flex-1 px-4 py-3 border-0 rounded-r-xl focus:ring-0"
+                                                    placeholder="813xxxxxxxx" @input="formatPhoneNumber" maxlength="15">
+                                            </div>
+                                            @error('customer_phone')
+                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                    </div>
+
+                                    {{-- Discount and Payment --}}
+                                    <div class="grid grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <label class="block text-sm font-semibold text-gray-700 mb-2">Diskon
+                                                Tipe</label>
+                                            <select name="discount_type" x-model="cart.discount_type"
+                                                @change="recalculateTotals" class="w-full px-4 py-3 border rounded-xl">
+                                                <option value="none">none</option>
+                                                <option value="percentage">percentage</option>
+                                                <option value="nominal">nominal</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold text-gray-700 mb-2">Nilai
+                                                Diskon</label>
+                                            <input type="number" name="discount_value"
+                                                x-model.number="cart.discount_value" min="0" step="0.01"
+                                                @input="recalculateTotals" class="w-full px-4 py-3 border rounded-xl">
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Metode Pembayaran
+                                            <span class="text-red-500">*</span></label>
+                                        <select name="payment_method" x-model="cart.payment_method"
+                                            @change="recalculateTotals" class="w-full px-4 py-3 border rounded-xl"
+                                            required>
+                                            <option value="cash">cash</option>
+                                            <option value="qris">qris</option>
                                         </select>
                                     </div>
-                                </div>
-                                <hr>
-                                <div class="d-flex justify-content-between mb-3">
-                                    <h5 class="text-danger">Grand Total</h5>
-                                    <h5 id="grand-total" class="text-danger">Rp 0</h5>
-                                </div>
-                            </div>
 
-                            <!-- Payment -->
-                            <div class="payment-section border-top pt-3">
-                                <h6 class="fw-bold">Metode Pembayaran</h6>
-                                <div class="d-flex justify-content-around mb-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="payment_method" id="payment_cash" value="cash" checked>
-                                        <label class="form-check-label" for="payment_cash"><i class="bi bi-cash-coin"></i> Tunai</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="payment_method" id="payment_qris" value="qris">
-                                        <label class="form-check-label" for="payment_qris"><i class="bi bi-qr-code-scan"></i> QRIS</label>
-                                    </div>
-                                </div>
-                                <div class="mb-2">
-                                    <label for="amount-paid" class="form-label">Jumlah Bayar</label>
-                                    <input type="number" id="amount-paid" name="amount_paid" class="form-control" placeholder="Masukkan jumlah pembayaran">
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <h6 class="text-muted">Kembalian</h6>
-                                    <h6 id="change" class="fw-bold">Rp 0</h6>
-                                </div>
-                            </div>
+                                    {{-- Totals Summary --}}
+                                    <div class="mt-6 border-t border-gray-200 pt-4 space-y-3">
+                                        <div class="flex justify-between text-gray-700">
+                                            <span>Subtotal:</span>
+                                            <span x-text="'Rp ' + cart.subtotal_amount.toLocaleString('id-ID')"></span>
+                                            <input type="hidden" name="subtotal_amount" :value="cart.subtotal_amount">
+                                        </div>
+                                        <div class="flex justify-between text-red-500">
+                                            <span>Diskon:</span>
+                                            <span x-text="'- Rp ' + cart.discount_amount.toLocaleString('id-ID')"></span>
+                                            <input type="hidden" name="discount_amount" :value="cart.discount_amount">
+                                        </div>
+                                        <div class="flex justify-between text-xl font-bold text-gray-900 border-t pt-2">
+                                            <span>Total Akhir:</span>
+                                            <span x-text="'Rp ' + cart.final_amount.toLocaleString('id-ID')"></span>
+                                            <input type="hidden" name="final_amount" :value="cart.final_amount">
+                                        </div>
 
-                            <div class="d-grid mt-3">
-                                <button type="submit" class="btn btn-danger btn-lg fw-bold">
-                                    <i class="bi bi-check-circle me-2"></i>Selesaikan Pembayaran
-                                </button>
+                                        <div class="pt-2">
+                                            <label class="block text-sm font-semibold text-gray-700 mb-2">Bayar
+                                                (tunai)</label>
+                                            <input type="number" name="paid_amount" x-model.number="cart.paid_amount"
+                                                min="0" @input="recalculateTotals"
+                                                :readonly="cart.payment_method !== 'cash'"
+                                                class="w-full px-4 py-3 border rounded-xl"
+                                                :class="{ 'bg-gray-50': cart.payment_method !== 'cash' }">
+                                        </div>
+
+                                        <div class="flex justify-between text-lg font-bold text-green-600 border-t pt-2">
+                                            <span>Kembalian:</span>
+                                            <span x-text="'Rp ' + cart.change_amount.toLocaleString('id-ID')"></span>
+                                            <input type="hidden" name="change_amount" :value="cart.change_amount">
+                                        </div>
+                                    </div>
+
+                                    {{-- Actions --}}
+                                    <div class="border-t border-gray-200 pt-6 mt-6">
+                                        <button type="submit"
+                                            :disabled="cart.items.length === 0 || (cart.payment_method === 'cash' && cart
+                                                .paid_amount < cart.final_amount)"
+                                            class="w-full inline-flex items-center justify-center px-8 py-3 bg-gradient-to-r from-orange-600 to-red-600 rounded-xl text-lg font-medium text-white hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                                            <i class="bi bi-cash-stack mr-2"></i> Simpan Penjualan
+                                        </button>
+                                        <a href="{{ route('sales.index') }}"
+                                            class="mt-3 w-full inline-flex items-center justify-center px-6 py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-all">
+                                            Batal
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </form>
                 </div>
             </div>
-        </form>
-    @endif
-</div>
+        </div>
+    </div>
 @endsection
 
-@push('scripts')
-<script src="{{ asset('js/sales-pos.js') }}?v={{ filemtime(public_path('js/sales-pos.js')) }}"></script>
-@endpush
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('saleForm', () => ({
+            branchId: '{{ old('branch_id') ?? '' }}',
+            customerName: '{{ old('customer_name') ?? '' }}',
+            customerPhone: '{{ old('customer_phone') ?? '' }}',
+            activeTab: 'products', // 'products' or 'packages'
+            isLoading: false,
+
+            // Item Data
+            rawProducts: [],
+            rawPackages: [],
+            searchTerm: '',
+
+            // Cart State
+            cart: {
+                items: @json(old('items') ?? []), // Initial old input
+                discount_type: '{{ old('discount_type', 'none') }}',
+                discount_value: parseFloat('{{ old('discount_value', 0) }}'),
+                payment_method: '{{ old('payment_method', 'cash') }}',
+                subtotal_amount: parseInt('{{ old('subtotal_amount', 0) }}'),
+                discount_amount: parseInt('{{ old('discount_amount', 0) }}'),
+                final_amount: parseInt('{{ old('final_amount', 0) }}'),
+                paid_amount: parseInt('{{ old('paid_amount', 0) }}'),
+                change_amount: parseInt('{{ old('change_amount', 0) }}'),
+            },
+
+            // --- COMPUTED PROPERTIES (for Item Cards) ---
+            get filteredProducts() {
+                return this.rawProducts.filter(item =>
+                    item.name.toLowerCase().includes(this.searchTerm.toLowerCase())
+                );
+            },
+            get filteredPackages() {
+                return this.rawPackages.filter(item =>
+                    item.name.toLowerCase().includes(this.searchTerm.toLowerCase())
+                );
+            },
+
+            // --- METHODS ---
+            init() {
+                // Initialize items in cart for totals calculation
+                if (this.cart.items.length > 0) {
+                    this.cart.items = this.cart.items.map(item => ({
+                        ...item,
+                        quantity: parseInt(item.quantity) || 1,
+                        unit_price: parseFloat(item.unit_price) || 0,
+                        subtotal: (parseInt(item.quantity) || 1) * (parseFloat(item
+                            .unit_price) || 0)
+                    }));
+                    this.recalculateTotals();
+                }
+
+                // If branch selected on load (e.g., old input), fetch items
+                if (this.branchId) {
+                    this.fetchBranchItems();
+                }
+            },
+
+            async fetchBranchItems() {
+                if (!this.branchId) return;
+
+                this.isLoading = true;
+                try {
+                    const res = await fetch(`/branches/${this.branchId}/items`);
+                    if (!res.ok) throw new Error('Failed to fetch items');
+                    const data = await res.json();
+
+                    // Reset products/packages and map them to include an Alpine quantity state
+                    this.rawProducts = (data.products || []).map(p => ({
+                        ...p,
+                        quantity: 1, // Alpine state for item card input
+                        item_type: 'product'
+                    }));
+                    this.rawPackages = (data.packages || []).map(p => ({
+                        ...p,
+                        quantity: 1, // Alpine state for item card input
+                        item_type: 'package'
+                    }));
+
+                } catch (err) {
+                    console.error('Gagal memuat data item:', err);
+                    alert('Gagal memuat daftar produk/paket.');
+                    this.rawProducts = [];
+                    this.rawPackages = [];
+                } finally {
+                    this.isLoading = false;
+                }
+            },
+
+            addToCart(item, type) {
+                // Check if item already exists in cart
+                const existingIndex = this.cart.items.findIndex(
+                    cartItem => cartItem.item_id == item.id && cartItem.item_type === type
+                );
+
+                if (existingIndex !== -1) {
+                    // Item exists, update quantity
+                    this.cart.items[existingIndex].quantity += item.quantity;
+                } else {
+                    // Item new, add to cart
+                    const newItem = {
+                        item_id: item.id,
+                        item_type: type,
+                        item_name: item.name,
+                        unit_price: parseFloat(item.price) || 0,
+                        quantity: item.quantity,
+                        subtotal: (item.quantity * parseFloat(item.price)) || 0
+                    };
+                    this.cart.items.push(newItem);
+                }
+
+                // Reset item card quantity
+                item.quantity = 1;
+
+                this.recalculateTotals();
+            },
+
+            removeFromCart(index) {
+                this.cart.items.splice(index, 1);
+                this.recalculateTotals();
+            },
+
+            updateItemQuantity(index) {
+                const item = this.cart.items[index];
+                item.quantity = Math.max(1, item.quantity); // Ensure quantity is min 1
+                item.subtotal = item.quantity * item.unit_price;
+                this.recalculateTotals();
+            },
+
+            recalculateTotals() {
+                let subtotal = 0;
+
+                // 1. Calculate Subtotal from Cart Items
+                this.cart.items.forEach(item => {
+                    item.subtotal = item.quantity * item.unit_price;
+                    subtotal += item.subtotal;
+                });
+                this.cart.subtotal_amount = subtotal;
+
+                // 2. Calculate Discount Amount
+                let discountAmount = 0;
+                const discValue = this.cart.discount_value;
+
+                if (this.cart.discount_type === 'percentage') {
+                    discountAmount = Math.round((subtotal * discValue) / 100);
+                } else if (this.cart.discount_type === 'nominal') {
+                    discountAmount = Math.round(discValue);
+                }
+
+                // Clamp discount amount
+                discountAmount = Math.max(0, Math.min(discountAmount, subtotal));
+                this.cart.discount_amount = discountAmount;
+
+                // 3. Calculate Final Amount
+                const finalAmount = Math.max(0, subtotal - discountAmount);
+                this.cart.final_amount = finalAmount;
+
+                // 4. Calculate Paid and Change
+                if (this.cart.payment_method === 'qris') {
+                    this.cart.paid_amount = finalAmount;
+                }
+                const paid = this.cart.payment_method === 'cash' ? this.cart.paid_amount :
+                    finalAmount;
+                this.cart.paid_amount = paid; // Ensure consistency
+                this.cart.change_amount = Math.max(0, paid - finalAmount);
+            },
+
+            formatPhoneNumber(event) {
+                let value = event.target.value.replace(/\D/g, '');
+                event.target.value = value;
+                this.customerPhone = value;
+            },
+
+            // Submission Logic
+            prepareSubmission() {
+                // Final re-calculation
+                this.recalculateTotals();
+
+                // Validation: Check if cart is empty
+                if (this.cart.items.length === 0) {
+                    alert('Keranjang belanja tidak boleh kosong!');
+                    return;
+                }
+
+                // Validation: Check if paid amount is sufficient for cash payment
+                if (this.cart.payment_method === 'cash' && this.cart.paid_amount < this.cart
+                    .final_amount) {
+                    alert('Jumlah bayar tidak mencukupi!');
+                    return;
+                }
+
+                // Final phone format before submission
+                const phoneInput = document.getElementById('phone');
+                if (phoneInput && phoneInput.value) {
+                    phoneInput.value = '62' + phoneInput.value.replace(/^0+/, '');
+                }
+
+                // The form is ready, submit it
+                document.getElementById('saleForm').submit();
+            }
+        }));
+    });
+</script>

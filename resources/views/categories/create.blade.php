@@ -1,158 +1,141 @@
 @extends('layouts.app')
+@php use Illuminate\Support\Facades\Storage; @endphp
 
 @section('title', 'Tambah Kategori')
 
 @section('content')
-<div class="container-fluid">
-    <!-- Header Section -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <h2 class="h3 mb-0">
-                <i class="bi bi-plus-circle me-2"></i>Tambah Kategori
-            </h2>
-            <p class="text-muted mb-0">Buat kategori baru untuk produk siap jual</p>
-        </div>
-        <div class="col-md-6 text-end">
-            <a href="{{ route('categories.index') }}" class="btn btn-secondary">
-                <i class="bi bi-arrow-left me-2"></i>Kembali
-            </a>
-        </div>
-    </div>
+    <div class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 py-6">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            {{-- Header Section --}}
+            <x-form.header title="Kategori" backRoute="{{ route('categories.index') }}" />
 
-    <!-- Form Section -->
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-tag me-2"></i>Informasi Kategori
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form action="{{ route('categories.store') }}" method="POST">
+            {{-- Main Form Card --}}
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+                {{-- Card Header --}}
+                <x-form.card-header title="Tambah Kategori" type="add" />
+
+                {{-- Card Body --}}
+                <div class="p-6 sm:p-8">
+                    <form action="{{ route('categories.store') }}" method="POST" id="categoryForm">
                         @csrf
-                        
-                        <div class="row">
-                            <!-- Nama Kategori -->
-                            <div class="col-md-6 mb-3">
-                                <label for="name" class="form-label">
-                                    Nama Kategori <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" 
-                                       class="form-control @error('name') is-invalid @enderror" 
-                                       id="name" 
-                                       name="name" 
-                                       value="{{ old('name') }}"
-                                       placeholder="Contoh: Ayam Goreng"
-                                       required>
-                                @error('name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+
+                        <div class="mb-8">
+                            <div class="flex items-center mb-6">
+                                <div
+                                    class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="bi bi-tag text-white text-sm"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900">Informasi Kategori</h3>
                             </div>
 
-                            <!-- Kode Kategori -->
-                            <div class="col-md-6 mb-3">
-                                <label for="code" class="form-label">
-                                    Kode Kategori <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" 
-                                       class="form-control @error('code') is-invalid @enderror" 
-                                       id="code" 
-                                       name="code" 
-                                       value="{{ old('code') }}"
-                                       placeholder="Contoh: AG"
-                                       style="text-transform: uppercase;"
-                                       required>
-                                @error('code')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                <div class="form-text">Kode unik untuk kategori (akan otomatis menjadi huruf besar)</div>
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {{-- Nama Kategori (span 2) --}}
+                                <div class="lg:col-span-2">
+                                    <label for="name" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Nama Kategori <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="text" name="name" id="name"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('name') border-red-300 ring-2 ring-red-200 @enderror"
+                                        value="{{ old('name') }}" required placeholder="Contoh: Ayam Goreng">
+                                    <p class="mt-2 text-sm text-gray-600">
+                                        <i class="bi bi-info-circle mr-1"></i>Nama kategori yang tampil di daftar produk
+                                    </p>
+                                    @error('name')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                {{-- Kode Kategori --}}
+                                <div>
+                                    <label for="code" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Kode Kategori <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="text" name="code" id="code" maxlength="10"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('code') border-red-300 ring-2 ring-red-200 @enderror"
+                                        value="{{ old('code') }}" required placeholder="Contoh: AG">
+                                    <p class="mt-2 text-sm text-gray-600">
+                                        <i class="bi bi-info-circle mr-1"></i>Kode unik (otomatis UPPERCASE). Maks 10 karakter.
+                                    </p>
+                                    @error('code')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                {{-- Deskripsi (span 2) --}}
+                                <div class="lg:col-span-2">
+                                    <label for="description" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Deskripsi
+                                    </label>
+                                    <textarea name="description" id="description" rows="3"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('description') border-red-300 ring-2 ring-red-200 @enderror"
+                                        placeholder="Deskripsi kategori (opsional)">{{ old('description') }}</textarea>
+                                    <p class="mt-2 text-sm text-gray-600">
+                                        <i class="bi bi-info-circle mr-1"></i>Opsional. Keterangan singkat mengenai kategori.
+                                    </p>
+                                    @error('description')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                {{-- Status --}}
+                                <div class="lg:col-span-2">
+                                    <div class="bg-gray-50 rounded-xl p-4">
+                                        <label class="flex items-center cursor-pointer">
+                                            <input type="checkbox" name="is_active" id="is_active"
+                                                class="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                                                value="1" {{ old('is_active', true) ? 'checked' : '' }}>
+                                            <span class="ml-3">
+                                                <span class="text-sm font-semibold text-gray-900">Kategori Aktif</span>
+                                                <span class="block text-xs text-gray-600 mt-1">
+                                                    <i class="bi bi-info-circle mr-1"></i>Centang agar kategori muncul saat menambah produk
+                                                </span>
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Deskripsi -->
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Deskripsi</label>
-                            <textarea class="form-control @error('description') is-invalid @enderror" 
-                                      id="description" 
-                                      name="description" 
-                                      rows="3"
-                                      placeholder="Deskripsi kategori (opsional)">{{ old('description') }}</textarea>
-                            @error('description')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <!-- Color and Icon fields removed -->
-
-                        <!-- Material type field removed -->
-
-                        <!-- Status Aktif -->
-                        <div class="mb-4">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" 
-                                       type="checkbox" 
-                                       id="is_active" 
-                                       name="is_active" 
-                                       value="1"
-                                       {{ old('is_active', '1') ? 'checked' : '' }}>
-                                <label class="form-check-label" for="is_active">
-                                    Status Aktif
-                                </label>
+                        {{-- Form Actions --}}
+                        <div class="border-t border-gray-200 pt-6">
+                            <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
+                                <a href="{{ route('categories.index') }}"
+                                    class="inline-flex items-center justify-center px-6 py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm hover:shadow-md">
+                                    Batal
+                                </a>
+                                <button type="submit"
+                                    class="inline-flex items-center justify-center px-8 py-3 bg-gradient-to-r from-orange-600 to-red-600 border border-transparent rounded-xl text-sm font-medium text-white hover:from-orange-700 hover:to-red-700 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                                    <i class="bi bi-check-lg mr-2"></i>
+                                    Simpan Kategori
+                                </button>
                             </div>
-                            <div class="form-text">Kategori aktif akan muncul dalam pilihan saat menambah produk</div>
-                        </div>
-
-                        <!-- Buttons -->
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-2"></i>Simpan Kategori
-                            </button>
-                            <a href="{{ route('categories.index') }}" class="btn btn-secondary">
-                                <i class="bi bi-x-lg me-2"></i>Batal
-                            </a>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Auto-generate code from name
-    const nameInput = document.getElementById('name');
-    const codeInput = document.getElementById('code');
-    
-    nameInput.addEventListener('input', function() {
-        if (!codeInput.dataset.manuallyEdited) {
-            const words = this.value.split(' ');
-            const code = words.map(word => word.charAt(0)).join('').toUpperCase();
-            codeInput.value = code.substring(0, 10); // Limit to 10 characters
-        }
-    });
-    
-    codeInput.addEventListener('input', function() {
-        this.dataset.manuallyEdited = 'true';
-        this.value = this.value.toUpperCase();
-    });
-
-    // Color picker sync
-    const colorPicker = document.getElementById('color');
-    const colorText = document.getElementById('color-text');
-    
-    colorPicker.addEventListener('input', function() {
-        colorText.value = this.value;
-    });
-
-    // Icon preview
-    const iconInput = document.getElementById('icon');
-    const iconPreview = document.getElementById('icon-preview');
-    
-    iconInput.addEventListener('input', function() {
-        iconPreview.className = this.value || 'bi-tag';
-    });
-});
-</script>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const nameInput = document.getElementById('name');
+            const codeInput = document.getElementById('code');
+
+            // Auto-generate code from name unless manually edited
+            nameInput.addEventListener('input', function() {
+                if (!codeInput.dataset.manuallyEdited) {
+                    const words = this.value.trim().split(/\s+/).filter(Boolean);
+                    const code = words.map(w => w.charAt(0)).join('').toUpperCase();
+                    codeInput.value = code.substring(0, 10);
+                }
+            });
+
+            codeInput.addEventListener('input', function() {
+                this.dataset.manuallyEdited = 'true';
+                this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
+            });
+        });
+    </script>
+@endpush

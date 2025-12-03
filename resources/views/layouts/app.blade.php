@@ -28,7 +28,7 @@
 <body class="min-h-screen bg-orange-50 text-gray-800">
     {{-- Success Alert --}}
     <x-toast />
-    <x-loading-overlay/>
+    <x-loading-overlay />
     <div x-data="{
         sidebarOpen: false,
         handleResize() {
@@ -86,6 +86,9 @@
 </div>
 
 <script>
+    // Ambil token dari meta tag Laravel
+    const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
     function confirmDelete(url, name = 'data ini') {
         const modal = document.getElementById('deleteModal');
         const form = document.getElementById('deleteForm');
@@ -115,7 +118,251 @@
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') closeDeleteModal();
     });
-</script>
 
+    function distributionModals() {
+        return {
+            openModal: null,
+            currentId: null,
+            acceptNotes: '',
+            rejectReason: '',
+            rejectNotes: '',
+
+            init() {
+                // event listener dari tombol
+                window.addEventListener('open-accept-modal', (e) => {
+                    this.openModal = 'accept';
+                    this.currentId = e.detail.id;
+                    this.acceptNotes = '';
+                });
+
+                window.addEventListener('open-reject-modal', (e) => {
+                    this.openModal = 'reject';
+                    this.currentId = e.detail.id;
+                    this.rejectReason = '';
+                    this.rejectNotes = '';
+                });
+            },
+
+            closeModal() {
+                this.openModal = null;
+            }
+        }
+    }
+
+    function materialModals() {
+        return {
+            openModal: null, // 'accept' | 'reject' | null
+            currentId: null,
+            requestNumber: null,
+            approvalNote: '',
+            rejectReason: '',
+            rejectNotes: '',
+            isSubmitting: false,
+
+            // tambahkan base url langsung di sini
+            baseApproveUrl: "{{ route('material-usage-requests.approve', ['semiFinishedUsageRequest' => 'ID_PLACEHOLDER']) }}",
+            baseRejectUrl: "{{ route('material-usage-requests.reject', ['semiFinishedUsageRequest' => 'ID_PLACEHOLDER']) }}",
+
+            init() {
+                // opsional: listen ke event global kalau ada pihak lain yang mau trigger (tidak wajib)
+                window.addEventListener('open-accept-modal', (e) => {
+                    this.openAccept(e.detail.id, e.detail.number)
+                });
+                window.addEventListener('open-reject-modal', (e) => {
+                    this.openReject(e.detail.id, e.detail.number)
+                });
+            },
+
+            openAccept(id, number = null) {
+                this.resetForm();
+                this.currentId = id;
+                this.requestNumber = number;
+                this.openModal = 'accept';
+                // fokus element bisa diatur di sini jika mau
+            },
+
+            openReject(id, number = null) {
+                this.resetForm();
+                this.currentId = id;
+                this.requestNumber = number;
+                this.openModal = 'reject';
+            },
+
+            closeModal() {
+                this.openModal = null;
+                // clear state jika perlu
+            },
+
+            resetForm() {
+                this.approvalNote = '';
+                this.rejectReason = '';
+                this.rejectNotes = '';
+                this.isSubmitting = false;
+            },
+
+            async submitApprove() {
+                if (!this.currentId) return;
+                this.isSubmitting = true;
+                try {
+                    const url = this.baseApproveUrl.replace('ID_PLACEHOLDER', this.currentId);
+
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': token,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            approval_note: this.approvalNote
+                        })
+                    });
+
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => null);
+                        throw new Error(err?.message || 'Gagal memproses permintaan');
+                    }
+
+                    window.dispatchEvent(new CustomEvent('request-updated', {
+                        detail: {
+                            id: this.currentId,
+                            action: 'approved'
+                        }
+                    }));
+                    this.closeModal();
+
+                } catch (err) {
+                    console.error(err);
+                    alert('Gagal menyetujui: ' + err.message);
+                } finally {
+                    this.isSubmitting = false;
+                }
+            },
+
+            async submitReject() {
+                if (!this.currentId) return;
+                if (!this.rejectReason) {
+                    alert('Silakan pilih alasan penolakan.');
+                    return;
+                }
+
+                this.isSubmitting = true;
+                try {
+                    const url = this.baseRejectUrl.replace('ID_PLACEHOLDER', this.currentId);
+
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': token,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            reason: this.rejectReason,
+                            notes: this.rejectNotes
+                        })
+                    });
+
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => null);
+                        throw new Error(err?.message || 'Gagal memproses penolakan');
+                    }
+
+                    window.dispatchEvent(new CustomEvent('request-updated', {
+                        detail: {
+                            id: this.currentId,
+                            action: 'rejected'
+                        }
+                    }));
+                    this.closeModal();
+
+                } catch (err) {
+                    console.error(err);
+                    alert('Gagal menolak: ' + err.message);
+                } finally {
+                    this.isSubmitting = false;
+                }
+            }
+
+        }
+    }
+
+    function approvalHandler() {
+        return {
+            showModal: false,
+            action: null,
+            requestId: null,
+            notes: '',
+            modalTitle: '',
+            modalMessage: '',
+            requireNotes: false,
+
+            init() {
+                console.log('Alpine approvalHandler ready');
+            },
+
+            openModal(id, action) {
+                console.log('openModal called ✅', { id, action });
+                this.requestId = id;
+                this.action = action;
+                this.showModal = true;
+                this.notes = '';
+
+                if (action === 'approve') {
+                    this.modalTitle = 'Setujui Pengajuan Produksi';
+                    this.modalMessage = `
+                    <div class='alert alert-success'>
+                        <i class='bi bi-check-circle me-2'></i>
+                        Setelah disetujui, stok bahan mentah akan dikurangi secara otomatis.
+                    </div>`;
+                    this.requireNotes = false;
+                } else {
+                    this.modalTitle = 'Tolak Pengajuan Produksi';
+                    this.modalMessage = `
+                    <div class='alert alert-danger'>
+                        <i class='bi bi-x-circle me-2'></i>
+                        Harap berikan alasan penolakan dengan jelas.
+                    </div>`;
+                    this.requireNotes = true;
+                }
+            },
+
+            closeModal() {
+                this.showModal = false;
+            },
+
+            submitApproval() {
+                // Validasi manual
+                if (this.requireNotes && !this.notes.trim()) {
+                    alert('Catatan wajib diisi untuk penolakan.');
+                    return;
+                }
+
+                // Kirim request ke backend
+                fetch(`/production-approvals/${this.requestId}/${this.action}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            approval_notes: this.notes
+                        })
+                    })
+                    .then(res => {
+                        if (!res.ok) throw new Error('Gagal memproses permintaan');
+                        return res.json();
+                    })
+                    .then(data => {
+                        alert(data.message || 'Berhasil diproses');
+                        window.location.reload(); // refresh tabel
+                    })
+                    .catch(err => alert(err.message))
+                    .finally(() => this.closeModal());
+            }
+        }
+    }
+</script>
 
 </html>

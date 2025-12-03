@@ -131,7 +131,6 @@ class RawMaterialController extends Controller
         ]);
     }
 
-
     public function create()
     {
         $units = Unit::active()->orderBy('unit_name')->get();

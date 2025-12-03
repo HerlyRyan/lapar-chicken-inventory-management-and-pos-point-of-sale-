@@ -16,15 +16,21 @@ Alpine.data('sortableTable', (initialData) => ({
         try {
             const params = new URLSearchParams({
                 search: Alpine.store('table').search || '',
+                start_date: Alpine.store('table').start_date || '',
+                end_date: Alpine.store('table').end_date || '',
                 sort_by: this.sortColumn || '',
                 sort_dir: this.sortDirection || 'asc',
                 ...Alpine.store('table').filters,
             });
+
+            // console.log('Params:', params.toString());
             const response = await fetch(`${this.endpoint}?${params.toString()}`, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
             });
+
             const result = await response.json();
             this.rows = result.data || [];
+
             const pagination = document.querySelector('.pagination-wrapper');
             if (pagination) pagination.innerHTML = result.links || '';
         } catch (error) {
@@ -101,6 +107,8 @@ Alpine.data('sortableTable', (initialData) => ({
     init() {
         this.$watch('$store.table.search', () => this.debouncedFetch());
         this.$watch('$store.table.filters', () => this.fetchData(), { deep: true });
+        this.$watch('$store.table.start_date', () => this.fetchData())
+        this.$watch('$store.table.end_date', () => this.fetchData())
     },
 
     debouncedFetch: Alpine.debounce(function () {
@@ -110,9 +118,13 @@ Alpine.data('sortableTable', (initialData) => ({
 
 Alpine.store('table', {
     search: '',
+    start_date: '',
+    end_date: '',
     filters: {},
     reset() {
         this.search = '';
+        this.start_date = '';
+        this.end_date = '';
         for (const key in this.filters) this.filters[key] = '';
     }
 });

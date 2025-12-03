@@ -37,6 +37,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Dev\DevController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\StockOpnameController;
+use App\Models\FinishedBranchStock;
 
 /*
 |--------------------------------------------------------------------------
@@ -388,6 +389,8 @@ if (app()->environment('local')) {
 }
 
 Route::get('/home', [HomeController::class, 'index'])->name('home');
+
+Route::get('/branches/{branch}/items', [FinishedProductsStockController::class, 'items'])->name('branches.items');
 
 // General fallback route for 404s (must be the last route)
 Route::fallback(function () {

@@ -3,159 +3,142 @@
 @section('title', 'Edit Kategori')
 
 @section('content')
-<div class="container-fluid">
-    <!-- Header Section -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <h2 class="h3 mb-0">
-                <i class="bi bi-pencil me-2"></i>Edit Kategori
-            </h2>
-            <p class="text-muted mb-0">Perbarui informasi kategori: {{ $category->name }}</p>
-        </div>
-        <div class="col-md-6 text-end">
-            <a href="{{ route('categories.index') }}" class="btn btn-secondary">
-                <i class="bi bi-arrow-left me-2"></i>Kembali
-            </a>
-        </div>
-    </div>
+    @php use Illuminate\Support\Facades\Storage; @endphp
 
-    <!-- Form Section -->
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-tag me-2"></i>Edit Informasi Kategori
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form action="{{ route('categories.update', $category) }}" method="POST">
+    <div class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 py-6">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            {{-- Header --}}
+            <x-form.header edit="true" :name="$category->name" title="Kategori" backRoute="{{ route('categories.index') }}"
+                detailRoute="{{ route('categories.show', $category) }}" />
+
+            {{-- Card --}}
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+                {{-- Card Header --}}
+                <x-form.card-header title="Edit Kategori" type="edit" />
+
+                <div class="p-6 sm:p-8">
+                    <form action="{{ route('categories.update', $category) }}" method="POST" id="categoryForm">
                         @csrf
                         @method('PUT')
-                        
-                        <div class="row">
-                            <!-- Nama Kategori -->
-                            <div class="col-md-6 mb-3">
-                                <label for="name" class="form-label">
-                                    Nama Kategori <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" 
-                                       class="form-control @error('name') is-invalid @enderror" 
-                                       id="name" 
-                                       name="name" 
-                                       value="{{ old('name', $category->name) }}"
-                                       placeholder="Contoh: Ayam Goreng"
-                                       required>
-                                @error('name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+
+                        {{-- Informasi Kategori --}}
+                        <div class="mb-8">
+                            <div class="flex items-center mb-6">
+                                <div
+                                    class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="bi bi-tag text-white text-sm"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900">Informasi Kategori</h3>
                             </div>
 
-                            <!-- Kode Kategori -->
-                            <div class="col-md-6 mb-3">
-                                <label for="code" class="form-label">
-                                    Kode Kategori <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" 
-                                       class="form-control @error('code') is-invalid @enderror" 
-                                       id="code" 
-                                       name="code" 
-                                       value="{{ old('code', $category->code) }}"
-                                       placeholder="Contoh: AG"
-                                       style="text-transform: uppercase;"
-                                       required>
-                                @error('code')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                <div class="form-text">Kode unik untuk kategori (akan otomatis menjadi huruf besar)</div>
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div class="lg:col-span-2">
+                                    <label for="name" class="block text-sm font-semibold text-gray-700 mb-2">Nama
+                                        Kategori <span class="text-red-500">*</span></label>
+                                    <input type="text" name="name" id="name"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('name') border-red-300 ring-2 ring-red-200 @enderror"
+                                        value="{{ old('name', $category->name) }}" required
+                                        placeholder="Contoh: Ayam Goreng">
+                                    <p class="mt-2 text-sm text-gray-600"><i class="bi bi-info-circle mr-1"></i>Nama
+                                        kategori</p>
+                                    @error('name')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label for="code" class="block text-sm font-semibold text-gray-700 mb-2">Kode
+                                        Kategori <span class="text-red-500">*</span></label>
+                                    <input type="text" name="code" id="code"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('code') border-red-300 ring-2 ring-red-200 @enderror"
+                                        value="{{ old('code', $category->code) }}" required placeholder="Contoh: AG"
+                                        style="text-transform:uppercase">
+                                    <p class="mt-2 text-sm text-gray-600"><i class="bi bi-info-circle mr-1"></i>Kode unik (otomatis huruf besar)</p>
+                                    @error('code')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div class="lg:col-span-2">
+                                    <label for="description" class="block text-sm font-semibold text-gray-700 mb-2">Deskripsi</label>
+                                    <textarea name="description" id="description" rows="3"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('description') border-red-300 ring-2 ring-red-200 @enderror"
+                                        placeholder="Deskripsi kategori (opsional)">{{ old('description', $category->description) }}</textarea>
+                                    <p class="mt-2 text-sm text-gray-600"><i class="bi bi-info-circle mr-1"></i>Opsional.
+                                        Deskripsi singkat</p>
+                                    @error('description')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Deskripsi -->
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Deskripsi</label>
-                            <textarea class="form-control @error('description') is-invalid @enderror" 
-                                      id="description" 
-                                      name="description" 
-                                      rows="3"
-                                      placeholder="Deskripsi kategori (opsional)">{{ old('description', $category->description) }}</textarea>
-                            @error('description')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
+                        {{-- Status --}}
+                        <div class="mb-8">
+                            <div class="flex items-center mb-6">
+                                <div
+                                    class="w-8 h-8 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="bi bi-toggle-on text-white text-sm"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900">Status</h3>
+                            </div>
 
-                        <!-- Color and Icon fields removed -->
-
-                        <!-- Material type field removed -->
-
-                        <!-- Status Aktif -->
-                        <div class="mb-4">
-                            <div class="form-check form-switch">
+                            <div class="bg-gray-50 rounded-xl p-4">
+                                {{-- Hidden input ensures false is submitted when unchecked --}}
                                 <input type="hidden" name="is_active" value="0">
-<input class="form-check-input" 
-                                       type="checkbox" 
-                                       id="is_active" 
-                                       name="is_active" 
-                                       value="1"
-                                       {{ old('is_active', $category->is_active) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="is_active">
-                                    Status Aktif
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="checkbox" name="is_active" id="is_active"
+                                        class="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                                        value="1" {{ old('is_active', $category->is_active) ? 'checked' : '' }}>
+                                    <span class="ml-3">
+                                        <span class="text-sm font-semibold text-gray-900">Kategori Aktif</span>
+                                        <span class="block text-xs text-gray-600 mt-1"><i class="bi bi-info-circle mr-1"></i>Centang jika kategori dapat dipilih saat menambah produk</span>
+                                    </span>
                                 </label>
                             </div>
-                            <div class="form-text">Kategori aktif akan muncul dalam pilihan saat menambah produk</div>
                         </div>
 
-                        <!-- Info tentang produk terkait -->
+                        {{-- Info Produk Terkait --}}
                         @if($category->finishedProducts->count() > 0)
-                            <div class="alert alert-info">
-                                <i class="bi bi-info-circle me-2"></i>
-                                <strong>Informasi:</strong> Kategori ini memiliki {{ $category->finishedProducts->count() }} produk terkait.
-                                Perubahan akan mempengaruhi semua produk dalam kategori ini.
+                            <div class="mb-6">
+                                <div class="bg-blue-50 border border-blue-100 text-blue-900 rounded-lg p-4">
+                                    <i class="bi bi-info-circle-fill mr-2"></i>
+                                    <strong>Informasi:</strong> Kategori ini memiliki {{ $category->finishedProducts->count() }} produk terkait.
+                                    Perubahan akan mempengaruhi semua produk dalam kategori ini.
+                                </div>
                             </div>
                         @endif
 
-                        <!-- Buttons -->
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-warning">
-                                <i class="bi bi-check-lg me-2"></i>Perbarui Kategori
-                            </button>
-                            <a href="{{ route('categories.show', $category) }}" class="btn btn-info">
-                                <i class="bi bi-eye me-2"></i>Lihat Detail
-                            </a>
-                            <a href="{{ route('categories.index') }}" class="btn btn-secondary">
-                                <i class="bi bi-x-lg me-2"></i>Batal
-                            </a>
+                        {{-- Actions --}}
+                        <div class="border-t border-gray-200 pt-6">
+                            <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
+                                <a href="{{ route('categories.index') }}"
+                                    class="inline-flex items-center justify-center px-6 py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm hover:shadow-md">
+                                    Batal
+                                </a>
+                                <button type="submit"
+                                    class="inline-flex items-center justify-center px-8 py-3 bg-gradient-to-r from-orange-600 to-red-600 border border-transparent rounded-xl text-sm font-medium text-white hover:from-orange-700 hover:to-red-700 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                                    <i class="bi bi-check-circle mr-2"></i> Simpan Perubahan
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Code input uppercase
-    const codeInput = document.getElementById('code');
-    codeInput.addEventListener('input', function() {
-        this.value = this.value.toUpperCase();
-    });
-
-    // Color picker sync
-    const colorPicker = document.getElementById('color');
-    const colorText = document.getElementById('color-text');
-    
-    colorPicker.addEventListener('input', function() {
-        colorText.value = this.value;
-    });
-
-    // Icon preview
-    const iconInput = document.getElementById('icon');
-    const iconPreview = document.getElementById('icon-preview');
-    
-    iconInput.addEventListener('input', function() {
-        iconPreview.className = this.value || 'bi-tag';
-    });
-});
-</script>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Ensure code input is uppercase
+            const codeInput = document.getElementById('code');
+            if (codeInput) {
+                codeInput.addEventListener('input', function() {
+                    this.value = this.value.toUpperCase();
+                });
+            }
+        });
+    </script>
+@endpush

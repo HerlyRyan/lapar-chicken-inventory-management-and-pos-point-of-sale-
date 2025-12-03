@@ -250,6 +250,16 @@ class SaleController extends Controller
     public function index(Request $request)
     {
         $query = Sale::with(['branch', 'user', 'items']);
+
+        $columns = [
+            ['key' => 'sale_number', 'label' => 'No. Transaksi'],
+            ['key' => 'created_at', 'label' => 'Tanggal'],
+            ['key' => 'branch_id', 'label' => 'Cabang'],
+            ['key' => 'customer', 'label' => 'Pelanggan'],
+            ['key' => 'final_amount', 'label' => 'Total'],
+            ['key' => 'payment_method', 'label' => 'Pembayaran'],
+            ['key' => 'status', 'label' => 'Status'],
+        ];
         
         // Search functionality
         if ($request->has('search') && !empty($request->search)) {
@@ -262,49 +272,87 @@ class SaleController extends Controller
         }
         
         // Filter by branch
-        if ($request->has('branch_id') && !empty($request->branch_id)) {
+        if ($request->filled('branch_id') && !empty($request->branch_id)) {
             $query->where('branch_id', $request->branch_id);
         }
         
         // Filter by status
-        if ($request->has('status') && $request->status != 'all') {
+        if ($request->filled('status') && $request->status != 'all') {
             $query->where('status', $request->status);
         }
         
         // Filter by payment method
-        if ($request->has('payment_method') && $request->payment_method != 'all') {
+        if ($request->filled('payment_method') && $request->payment_method != 'all') {
             $query->where('payment_method', $request->payment_method);
         }
         
         // Filter by date range
-        if ($request->has('date_from') && !empty($request->date_from)) {
-            $query->whereDate('created_at', '>=', $request->date_from);
+        if ($request->filled('start_date') && !empty($request->start_date)) {
+            $query->whereDate('created_at', '>=', $request->start_date);
         }
         
-        if ($request->has('date_to') && !empty($request->date_to)) {
-            $query->whereDate('created_at', '<=', $request->date_to);
+        if ($request->filled('end_date') && !empty($request->end_date)) {
+            $query->whereDate('created_at', '<=', $request->end_date);
         }
 
-        // Sorting
-        $sortColumn = $request->get('sort', 'created_at');
-        $sortDirection = $request->get('direction', 'desc');
+        // === SORTING ===
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
 
-        // Validate sort column and direction
-        $allowedColumns = ['sale_number', 'created_at', 'final_amount', 'payment_method', 'status'];
-        if (!in_array($sortColumn, $allowedColumns)) {
-            $sortColumn = 'created_at';
+            // 🧩 Deteksi kolom relasi
+            switch ($sortBy) {
+                case 'requested_by':
+                    $query->leftjoin('users', 'users.id', '=', 'production_requests.requested_by')
+                        ->orderBy('users.name', $sortDir)
+                        ->select('production_requests.*');
+                    break;
+
+                default:
+                    $query->orderBy($sortBy, $sortDir);
+            }
         }
-        $sortDirection = in_array(strtolower($sortDirection), ['asc', 'desc']) ? strtolower($sortDirection) : 'desc';
 
-        $query->orderBy($sortColumn, $sortDirection);
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $sales */
+        $sales = $query->paginate(10);
 
-        $sales = $query->paginate(20);
-        $sales->appends(request()->query());
-        
         // Get all branches for filter dropdown
-        $branches = Branch::where('is_active', true)->get();
+        $branches = Branch::where('is_active', true)->orderBy('name')->pluck('name', 'id')->toArray();
+
+        $statuses = [
+            'pending' => 'Pending',
+            'completed' => 'Selesai',
+            'cancelled' => 'Dibatalkan',
+        ];
+
+        $paymentMethod = [
+            'cash' => 'Tunai',
+            'qris' => 'QRIS',
+        ];
+
+        $selects = [
+            ['name' => 'branch_id', 'label' => 'Semua Cabang', 'options' => $branches],
+            [
+                'name' => 'status',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+            [
+                'name' => 'payment_method',
+                'label' => 'Semua Metode Pembayaran',
+                'options' => $paymentMethod,
+            ],
+
+        ];
+
+        // === RESPONSE ===
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $sales->items(),
+                'links' => (string) $sales->links('vendor.pagination.tailwind'),
+            ]);
+        }
         
-        return view('sales.index', compact('sales', 'branches', 'sortColumn', 'sortDirection'));
+        return view('sales.index', compact('sales', 'branches', 'columns', 'selects'));
     }
 
     /**
@@ -342,7 +390,7 @@ class SaleController extends Controller
             'items.*.item_id' => 'required|integer',
             'items.*.item_name' => 'required|string',
             'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_price' => 'required|integer|min:0',
+            'items.*.unit_price' => 'required|numeric|min:0',
             // Client subtotal will be ignored; keep nullable for compatibility
             'items.*.subtotal' => 'nullable|integer|min:0',
         ]);
@@ -352,6 +400,9 @@ class SaleController extends Controller
         try {
             // Generate sale number
             $saleNumber = 'TRX-' . date('Ymd') . '-' . str_pad(Sale::whereDate('created_at', today())->count() + 1, 4, '0', STR_PAD_LEFT);
+
+            // Generate sale code (contoh: SL2508085130)
+            $saleCode = 'SL' . date('ymd') . random_int(1000, 9999);
 
             // Recompute totals server-side using integer math
             $items = collect($request->items)->map(function ($item) {
@@ -434,6 +485,7 @@ class SaleController extends Controller
 
             // Create sale with computed values
             $sale = Sale::create([
+                'sale_code' => $saleCode,
                 'sale_number' => $saleNumber,
                 'branch_id' => $request->branch_id,
                 'user_id' => Auth::id(),

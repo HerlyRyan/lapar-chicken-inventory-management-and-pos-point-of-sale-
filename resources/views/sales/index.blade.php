@@ -3,237 +3,172 @@
 @section('title', 'Daftar Penjualan')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 fw-bold mb-1" style="color: var(--primary-red);">
-            <i class="bi bi-receipt me-2"></i>Daftar Penjualan
-            @if(request('branch_id'))
-                @php $selectedBranch = $branches->firstWhere('id', request('branch_id')); @endphp
-                @if($selectedBranch)
-                    <span class="badge bg-info fs-6 ms-2">{{ $selectedBranch->name }}</span>
-                @endif
-            @else
-                <span class="badge bg-secondary fs-6 ms-2">Semua Cabang</span>
-            @endif
-        </h1>
-        <p class="text-muted mb-0">
-            Kelola data transaksi penjualan
-            @if(request('branch_id'))
-                @php $selectedBranch = $branches->firstWhere('id', request('branch_id')); @endphp
-                @if($selectedBranch)
-                    - {{ $selectedBranch->name }} ({{ $selectedBranch->code }})
-                @endif
-            @else
-                - Tampilkan semua cabang
-            @endif
-        </p>
-    </div>
-    <a href="{{ route('sales.create') }}" class="btn btn-primary shadow px-4 d-flex align-items-center" style="min-width: 160px; white-space: nowrap;">
-        <i class="bi bi-plus-circle me-2"></i>
-        <span>Buat Penjualan Baru</span>
-    </a>
-</div>
+    <div class="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30">
+        {{-- Page Header --}}
+        <x-index.header title="Penjualan" subtitle="Kelola data transaksi penjualan" addRoute="{{ route('sales.create') }}"
+            addText="Buat Penjualan Baru" />
 
-<div class="card border-0 shadow-lg">
-    <div class="card-header text-white py-3" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #7f1d1d 100%);">
-        <h5 class="mb-0 fw-bold">
-            <i class="bi bi-list-ul me-2"></i>Daftar Transaksi Penjualan
-        </h5>
-    </div>
-    <div class="card-body">
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+            <div x-data="sortableTable(@js($sales->items()))" @sort-column.window="sortBy($event.detail)"
+                class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
 
-        @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-        
-        <!-- Search Filter -->
-        <form method="GET" action="{{ route('sales.index') }}" class="row g-3 mb-4 table-filter-form">
-            <div class="col-md-4">
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nomor transaksi atau pelanggan..." class="form-control">
-                </div>
-            </div>
-            <div class="col-md-2">
-                <select name="branch_id" class="form-select">
-                    <option value="">Semua Cabang</option>
-                    @foreach($branches as $branch)
-                        <option value="{{ $branch->id }}" {{ request('branch_id') == $branch->id ? 'selected' : '' }}>{{ $branch->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select name="status" class="form-select">
-                    <option value="all">Semua Status</option>
-                    <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Selesai</option>
-                    <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Dibatalkan</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select name="payment_method" class="form-select">
-                    <option value="all">Semua Pembayaran</option>
-                    <option value="cash" {{ request('payment_method') == 'cash' ? 'selected' : '' }}>Tunai</option>
-                    <option value="qris" {{ request('payment_method') == 'qris' ? 'selected' : '' }}>QRIS</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-outline-primary">
-                        <i class="bi bi-filter me-1"></i>Filter
-                    </button>
-                    @if(request('search') || request('branch_id') || request('status') != 'all' || request('payment_method') != 'all' || request('date_from') || request('date_to'))
-                        <a href="{{ route('sales.index') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-clockwise me-1"></i>Reset
-                        </a>
-                    @endif
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="row g-2">
-                    <div class="col-md-6">
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
-                            <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control" placeholder="Dari Tanggal">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
-                            <input type="date" name="date_to" value="{{ request('date_to') }}" class="form-control" placeholder="Sampai Tanggal">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </form>
+                {{-- Card Header --}}
+                <x-index.card-header title="Daftar Transaksi Penjualan" />
 
-        <div class="table-responsive">
-            <table class="table table-hover table-striped standard-table mb-0">
-                <thead class="sticky-top bg-white">
-                    <tr>
-                        <th>{!! sortColumn('sale_number', 'No. Transaksi', $sortColumn, $sortDirection) !!}</th>
-                        <th>{!! sortColumn('created_at', 'Tanggal', $sortColumn, $sortDirection) !!}</th>
-                        <th>Cabang</th>
-                        <th>Pelanggan</th>
-                        <th>{!! sortColumn('final_amount', 'Total', $sortColumn, $sortDirection) !!}</th>
-                        <th>{!! sortColumn('payment_method', 'Pembayaran', $sortColumn, $sortDirection) !!}</th>
-                        <th>{!! sortColumn('status', 'Status', $sortColumn, $sortDirection) !!}</th>
-                        <th class="text-center">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($sales as $sale)
-                        <tr>
-                            <td>{{ $sale->sale_number }}</td>
-                            <td>{{ $sale->created_at->format('d/m/Y H:i') }}</td>
-                            <td>{{ $sale->branch->name ?? 'N/A' }}</td>
-                            <td>{{ $sale->customer_name ?? 'Umum' }}</td>
-                            <td>Rp {{ number_format($sale->final_amount, 0, ',', '.') }}</td>
-                            <td>
-                                <span class="badge bg-{{ $sale->payment_method === 'cash' ? 'success' : 'info' }}">
-                                    {{ $sale->payment_method === 'cash' ? 'Tunai' : 'QRIS' }}
-                                </span>
-                            </td>
-                            <td>
-                                <span class="badge bg-{{ $sale->status === 'completed' ? 'success' : ($sale->status === 'cancelled' ? 'danger' : 'warning') }}">
-                                    {{ $sale->status === 'completed' ? 'Selesai' : ($sale->status === 'cancelled' ? 'Dibatalkan' : ucfirst($sale->status)) }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="d-flex justify-content-center gap-1">
-                                    <a href="{{ route('sales.show', $sale) }}" class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="Lihat Detail">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    @if($sale->status === 'completed')
-                                        <button type="button"
-                                                class="btn btn-sm btn-danger btn-cancel-sale"
-                                                data-action="{{ route('sales.destroy', $sale) }}"
-                                                data-sale-number="{{ $sale->sale_number }}"
-                                                data-bs-toggle="tooltip"
-                                                title="Batalkan Transaksi">
+                {{-- Filter Bar (reuse component, fallback to inline selects) --}}
+                <x-filter-bar searchPlaceholder="Cari nomor transaksi atau pelanggan..." :selects="$selects ?? []" date="true" />
+
+                <div class="hidden md:block overflow-x-auto px-6 pb-6">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <x-index.table-head :columns="$columns" />
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template x-for="(sale, index) in sortedRows" :key="sale.id">
+                                <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="index + 1"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+                                        x-text="sale.sale_number"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+                                        x-text="new Date(sale.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })">
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                                        x-text="(sale.branch && sale.branch.name) ? sale.branch.name : 'N/A'"></td>
+                                    <td class="px-6 py-4 text-sm text-gray-900" x-text="sale.customer_name || 'Umum'"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Rp <span
+                                            x-text="Number(sale.final_amount).toLocaleString('id-ID')"></span></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <template x-if="sale.payment_method === 'cash'">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Tunai</span>
+                                        </template>
+                                        <template x-if="sale.payment_method === 'qris'">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">QRIS</span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <template x-if="sale.status === 'completed'">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Selesai</span>
+                                        </template>
+                                        <template x-if="sale.status === 'cancelled'">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Dibatalkan</span>
+                                        </template>
+                                        <template x-if="sale.status !== 'completed' && sale.status !== 'cancelled'">
+                                            <span
+                                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
+                                                x-text="sale.status"></span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <div x-data="{
+                                            viewUrl: '/sales/' + sale.id,
+                                            cancelUrl: '/sales/' + sale.id,
+                                            saleNumber: sale.sale_number,
+                                            status: sale.status
+                                        }" class="flex items-center gap-2">
+                                            <x-index.action-buttons :view="true" />
+
+                                            <template x-if="status === 'completed'">
+                                                <button
+                                                    @click="$dispatch('open-cancel-modal', { action: cancelUrl, saleNumber: saleNumber })"
+                                                    class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                       bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
+                       text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                                    title="Batalkan Transaksi">
+                                                    <i class="bi bi-x-circle"></i>
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+
+                            <template x-if="sortedRows.length === 0">
+                                <x-index.none-data />
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                {{-- Mobile Cards --}}
+                <div class="md:hidden divide-y divide-gray-200 px-4 pb-6">
+                    <template x-for="(sale, index) in sortedRows" :key="sale.id">
+                        <div class="p-4 hover:bg-gray-50 transition-colors duration-150">
+                            <div class="flex items-start justify-between mb-2">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-sm font-medium text-gray-900 truncate" x-text="sale.sale_number">
+                                        </h3>
+                                        <span class="text-xs text-gray-500 ml-2" x-text="sale.created_at"></span>
+                                    </div>
+                                    <p class="text-sm text-gray-500 mt-1"
+                                        x-text="(sale.branch && sale.branch.name) ? sale.branch.name : 'N/A'"></p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Pelanggan</span>
+                                    <span class="text-sm text-gray-900" x-text="sale.customer_name || 'Umum'"></span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Total</span>
+                                    <span class="text-sm text-gray-900">Rp <span
+                                            x-text="Number(sale.final_amount).toLocaleString('id-ID')"></span></span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Status</span>
+                                    <template x-if="sale.status === 'completed'">
+                                        <span
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Selesai</span>
+                                    </template>
+                                    <template x-if="sale.status === 'cancelled'">
+                                        <span
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Dibatalkan</span>
+                                    </template>
+                                    <template x-if="sale.status !== 'completed' && sale.status !== 'cancelled'">
+                                        <span
+                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
+                                            x-text="sale.status"></span>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 pt-3 border-t border-gray-200">
+                                <div x-data="{
+                                    viewUrl: '/sales/' + sale.id,
+                                    cancelUrl: '/sales/' + sale.id,
+                                    saleNumber: sale.sale_number,
+                                    status: sale.status
+                                }" class="flex items-center gap-2">
+                                    <x-index.action-buttons :view="true" />
+
+                                    <template x-if="status === 'completed'">
+                                        <button
+                                            @click="$dispatch('open-cancel-modal', { action: cancelUrl, saleNumber: saleNumber })"
+                                            class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                       bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
+                       text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                            title="Batalkan Transaksi">
                                             <i class="bi bi-x-circle"></i>
                                         </button>
-                                    @endif
+                                    </template>
                                 </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="8" class="text-center py-5">
-                                <div class="text-muted">
-                                    <i class="bi bi-receipt fs-1 mb-3"></i>
-                                    <h5 class="text-muted">Belum ada data penjualan</h5>
-                                    <p class="mb-0">Data transaksi penjualan akan muncul di sini</p>
-                                </div>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
 
-        <!-- Pagination -->
-        <div class="d-flex justify-content-between align-items-center mt-4">
-            <div>
-                <p class="text-muted mb-0">Menampilkan {{ $sales->firstItem() ?? 0 }} - {{ $sales->lastItem() ?? 0 }} dari {{ $sales->total() }} data</p>
-            </div>
-            <div>
-                {{ $sales->links() }}
+                {{-- Pagination --}}
+                <template x-if="sortedRows.length !== 0">
+                    <div class="px-6 pb-6">
+                        {{ $sales->links('vendor.pagination.tailwind') }}
+                    </div>
+                </template>
             </div>
         </div>
     </div>
-</div>
-<!-- Cancel Sale Confirmation Modal -->
-<div class="modal fade" id="cancelSaleModal" tabindex="-1" aria-labelledby="cancelSaleModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="cancelSaleModalLabel">Konfirmasi Pembatalan</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="mb-0">Yakin ingin membatalkan transaksi <strong id="cancel-sale-number"></strong>?<br>Stok akan dikembalikan ke produk siap jual sesuai jumlah pada transaksi ini.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-                <form id="cancel-sale-form" method="POST" action="#">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-x-circle me-1"></i>Batalkan Transaksi
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-    </div>
-
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const modalEl = document.getElementById('cancelSaleModal');
-    const saleNumberEl = document.getElementById('cancel-sale-number');
-    const formEl = document.getElementById('cancel-sale-form');
-
-    document.querySelectorAll('.btn-cancel-sale').forEach(function(btn){
-        btn.addEventListener('click', function(){
-            const action = this.getAttribute('data-action');
-            const saleNumber = this.getAttribute('data-sale-number') || '';
-            formEl.setAttribute('action', action);
-            saleNumberEl.textContent = saleNumber;
-            const bsModal = new bootstrap.Modal(modalEl);
-            bsModal.show();
-        });
-    });
-});
-</script>
-@endpush
+    {{-- Cancel Modal --}}
+    @include('sales.cancel-modal')
 @endsection

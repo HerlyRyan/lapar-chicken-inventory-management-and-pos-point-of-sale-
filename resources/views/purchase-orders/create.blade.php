@@ -2,282 +2,235 @@
 
 @section('title', 'Buat Purchase Order')
 
-@section('styles')
-    <link href="{{ asset('css/purchase-order.css') }}" rel="stylesheet">
-@endsection
-
 @section('content')
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">Buat Purchase Order</h1>
-        <a href="{{ route('purchase-orders.index') }}" class="btn btn-light border shadow-sm">
-            <i class="bi bi-arrow-left me-1"></i> Kembali
-        </a>
-    </div>
+    <div class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 py-6">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            {{-- Header --}}
+            <x-form.header title="Purchase Order" backRoute="{{ route('purchase-orders.index') }}" />
 
-    <!-- Form Section -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-lg border-0 rounded-lg">
-                <div class="card-header" style="background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%); border-bottom: 3px solid #b91c1c;">
-                    <h5 class="text-white m-0 fw-bold"><i class="bi bi-cart3 me-2"></i>Detail Purchase Order</h5>
-                </div>
-                <div class="card-body" style="background: #fefefe;">
-                        @if ($errors->any())
-                            <div class="alert alert-danger">
-                                <h6 class="mb-2 fw-bold"><i class="bi bi-exclamation-triangle me-1"></i>Terjadi kesalahan:</h6>
-                                <ul class="mb-0 ps-3">
-                                    @foreach ($errors->all() as $error)
-                                        <li>{{ $error }}</li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        @endif
-                        @if (session('success'))
-                            <div class="alert alert-success">
-                                <i class="bi bi-check-circle me-1"></i>{{ session('success') }}
-                            </div>
-                        @endif
-                        @if (session('error'))
-                            <div class="alert alert-danger">
-                                <i class="bi bi-exclamation-triangle me-1"></i>{{ session('error') }}
-                            </div>
-                        @endif
+            {{-- Card --}}
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+                <x-form.card-header title="Buat Purchase Order" type="add" />
+
+                <div class="p-6 sm:p-8">
+                    @if ($errors->any())
+                        <div class="mb-4 p-4 rounded-lg bg-red-50 border border-red-100 text-red-700">
+                            <h6 class="font-semibold mb-2"><i class="bi bi-exclamation-triangle me-1"></i> Terjadi kesalahan:</h6>
+                            <ul class="list-disc pl-5">
+                                @foreach ($errors->all() as $error)
+                                    <li class="text-sm">{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    @if (session('success'))
+                        <div class="mb-4 p-3 rounded-lg bg-green-50 border border-green-100 text-green-700">
+                            <i class="bi bi-check-circle me-1"></i> {{ session('success') }}
+                        </div>
+                    @endif
+
+                    @if (session('error'))
+                        <div class="mb-4 p-3 rounded-lg bg-red-50 border border-red-100 text-red-700">
+                            <i class="bi bi-exclamation-triangle me-1"></i> {{ session('error') }}
+                        </div>
+                    @endif
+
                     <form id="purchase-order-form" action="{{ route('purchase-orders.store') }}" method="POST">
                         @csrf
-                        
-                        <!-- Basic Info -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h5 class="border-start border-3 border-primary ps-2 mb-3">Informasi Dasar</h5>
-                            </div>
-                            
-                            <!-- Generated Order Number (Auto) - Readonly -->
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label" for="po_number">Nomor Purchase Order</label>
-                                <div id="po_number" class="form-control bg-light">Auto Generate</div>
-                                <small class="text-muted">Nomor akan dibuat otomatis saat PO disimpan</small>
-                            </div>
-                            
-                            <!-- Supplier Selection -->
-                            <div class="col-md-6 mb-3">
-                                <label for="supplier_id" class="form-label">Supplier <span class="text-danger">*</span></label>
-                                <select name="supplier_id" id="supplier_id" class="form-select @error('supplier_id') is-invalid @enderror" required>
-                                    <option value="">-- Pilih Supplier --</option>
-                                    @foreach($suppliers as $supplier)
-                                    <option value="{{ $supplier->id }}" {{ old('supplier_id') == $supplier->id ? 'selected' : '' }}
-                                            data-phone="{{ $supplier->phone }}"
-                                            data-code="{{ $supplier->code }}">
-                                        {{ $supplier->name }} ({{ $supplier->code }})
-                                    </option>
-                                    @endforeach
-                                </select>
-                                @error('supplier_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                <small class="text-muted">Hanya supplier aktif yang ditampilkan</small>
-                            </div>
-                            
-                            <!-- Order Date (hidden) -->
-                            <input type="hidden" name="order_date" id="order_date" value="{{ date('Y-m-d') }}">
-                            
-                            <!-- Requested Delivery Date -->
-                            <div class="col-md-6 mb-3">
-                                <label for="requested_delivery_date" class="form-label">Tanggal Pengiriman yang Diminta</label>
-                                <input type="date" name="requested_delivery_date" id="requested_delivery_date" 
-                                       class="form-control @error('requested_delivery_date') is-invalid @enderror"
-                                       value="{{ old('requested_delivery_date', date('Y-m-d', strtotime('+3 days'))) }}">
-                                @error('requested_delivery_date')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            
-                            <!-- Phone Number (from supplier) -->
-                            <div class="col-md-6 mb-3">
-                                <label for="supplier_phone" class="form-label">Nomor WhatsApp Supplier</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-success text-white"><i class="bi bi-whatsapp"></i></span>
-                                    <input type="text" id="supplier_phone" class="form-control" readonly>
+
+                        {{-- Informasi Dasar --}}
+                        <div class="mb-8">
+                            <div class="flex items-center mb-4">
+                                <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="bi bi-info-circle text-white text-sm"></i>
                                 </div>
-                                <small class="text-muted">Terisi otomatis dari data supplier</small>
+                                <h3 class="text-lg font-semibold text-gray-900">Informasi Dasar</h3>
                             </div>
-                            
-                            <!-- Notes -->
-                            <div class="col-12">
-                                <label for="notes" class="form-label">Catatan</label>
-                                <textarea name="notes" id="notes" rows="3" 
-                                          class="form-control @error('notes') is-invalid @enderror">{{ old('notes') }}</textarea>
-                                @error('notes')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                        
-                        <!-- Items Section -->
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <h5 class="border-start border-3 border-primary ps-2 mb-3">Item Pesanan</h5>
-                                <div class="alert alert-info" id="supplier-info">
-                                    <i class="bi bi-info-circle me-1"></i> Pilih supplier terlebih dahulu untuk melihat bahan mentah yang tersedia.
-                                    <br><small><strong>Catatan:</strong> Jika supplier diganti, semua item akan direset.</small>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="po_number" class="block text-sm font-medium text-gray-700 mb-2">Nomor Purchase Order</label>
+                                    <div id="po_number" class="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 text-gray-600">Auto Generate</div>
+                                    <p class="text-sm text-gray-500 mt-1">Nomor akan dibuat otomatis saat PO disimpan</p>
+                                </div>
+
+                                <div>
+                                    <label for="supplier_id" class="block text-sm font-medium text-gray-700 mb-2">Supplier <span class="text-red-500">*</span></label>
+                                    <select name="supplier_id" id="supplier_id" required
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('supplier_id') border-red-300 ring-2 ring-red-200 @enderror">
+                                        <option value="">-- Pilih Supplier --</option>
+                                        @foreach($suppliers as $supplier)
+                                            <option value="{{ $supplier->id }}" {{ old('supplier_id') == $supplier->id ? 'selected' : '' }}
+                                                data-phone="{{ $supplier->phone }}" data-code="{{ $supplier->code }}">
+                                                {{ $supplier->name }} ({{ $supplier->code }})
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('supplier_id')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                    <p class="text-sm text-gray-500 mt-1">Hanya supplier aktif yang ditampilkan</p>
+                                </div>
+
+                                <input type="hidden" name="order_date" id="order_date" value="{{ date('Y-m-d') }}">
+
+                                <div>
+                                    <label for="requested_delivery_date" class="block text-sm font-medium text-gray-700 mb-2">Tanggal Pengiriman yang Diminta</label>
+                                    <input type="date" name="requested_delivery_date" id="requested_delivery_date"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('requested_delivery_date') border-red-300 ring-2 ring-red-200 @enderror"
+                                        value="{{ old('requested_delivery_date', date('Y-m-d', strtotime('+3 days'))) }}">
+                                    @error('requested_delivery_date')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label for="supplier_phone" class="block text-sm font-medium text-gray-700 mb-2">Nomor WhatsApp Supplier</label>
+                                    <div class="flex rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 items-center">
+                                        <span class="inline-flex items-center text-sm text-white bg-green-500 rounded px-2 py-1 mr-3">
+                                            <i class="bi bi-whatsapp"></i>
+                                        </span>
+                                        <input type="text" id="supplier_phone" class="flex-1 bg-transparent outline-none" readonly>
+                                    </div>
+                                    <p class="text-sm text-gray-500 mt-1">Terisi otomatis dari data supplier</p>
+                                </div>
+
+                                <div class="lg:col-span-2">
+                                    <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">Catatan</label>
+                                    <textarea name="notes" id="notes" rows="3"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('notes') border-red-300 ring-2 ring-red-200 @enderror">{{ old('notes') }}</textarea>
+                                    @error('notes')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
                                 </div>
                             </div>
                         </div>
-                        
-                        <style>
-                            #items-table {
-                                display: table !important;
-                                table-layout: fixed !important;
-                                width: 100% !important;
-                            }
-                            #items-table tbody {
-                                display: table-row-group !important;
-                            }
-                            #items-table .item-row {
-                                display: table-row !important;
-                            }
-                            #items-table .item-row td {
-                                display: table-cell !important;
-                                vertical-align: middle !important;
-                                padding: 8px !important;
-                            }
-                            #items-table .item-row td:nth-child(1) { width: 5% !important; }
-                            #items-table .item-row td:nth-child(2) { width: 28% !important; }
-                            #items-table .item-row td:nth-child(3) { width: 12% !important; }
-                            #items-table .item-row td:nth-child(4) { width: 10% !important; }
-                            #items-table .item-row td:nth-child(5) { width: 15% !important; }
-                            #items-table .item-row td:nth-child(6) { width: 15% !important; }
-                            #items-table .item-row td:nth-child(7) { width: 15% !important; }
-                        </style>
-                        
-                        <div class="card shadow-sm mb-4" style="border-radius: 12px; overflow: hidden;">
-                            <div class="card-header bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                                <h6 class="mb-0 fw-bold"><i class="bi bi-table me-2"></i>Daftar Item Pesanan</h6>
+
+                        {{-- Item Pesanan --}}
+                        <div class="mb-6">
+                            <div class="flex items-center mb-4">
+                                <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="bi bi-table text-white text-sm"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900">Item Pesanan</h3>
                             </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-bordered mb-0" id="items-table" style="table-layout: fixed; width: 100%;">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th style="width: 5%;" class="text-center py-3 fw-bold">#</th>
-                                                <th style="width: 28%;" class="py-3 fw-bold">Bahan Mentah</th>
-                                                <th style="width: 12%;" class="py-3 fw-bold text-center">Kuantitas</th>
-                                                <th style="width: 10%;" class="py-3 fw-bold text-center">Satuan</th>
-                                                <th style="width: 15%;" class="py-3 fw-bold text-center">Harga Satuan</th>
-                                                <th style="width: 15%;" class="py-3 fw-bold text-center">Total</th>
-                                                <th style="width: 15%;" class="py-3 fw-bold text-center">Aksi</th>
+
+                            <div class="rounded-xl border border-gray-200 overflow-hidden shadow-sm bg-white">
+                                <div class="p-4 bg-gradient-to-r from-indigo-200 to-purple-200">
+                                    <p class="text-sm text-gray-700 mb-0"><i class="bi bi-info-circle me-1"></i> Pilih supplier terlebih dahulu untuk melihat bahan mentah yang tersedia. Jika supplier diganti, semua item akan direset.</p>
+                                </div>
+
+                                <div class="p-4 overflow-x-auto">
+                                    <table class="w-full table-auto border-collapse min-w-[720px]">
+                                        <thead>
+                                            <tr class="text-sm text-gray-700 bg-gray-50">
+                                                <th class="p-3 text-center">#</th>
+                                                <th class="p-3">Bahan Mentah</th>
+                                                <th class="p-3 text-center">Kuantitas</th>
+                                                <th class="p-3 text-center">Satuan</th>
+                                                <th class="p-3 text-center">Harga Satuan</th>
+                                                <th class="p-3 text-center">Total</th>
+                                                <th class="p-3 text-center">Aksi</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="item-rows">
+                                        <tbody id="item-rows" class="min-h-[120px]">
                                             <tr class="empty-row">
-                                                <td colspan="7" class="text-center py-5" style="background: #fafbfc;">
-                                                    <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 120px;">
-                                                        <i class="bi bi-cart-x text-muted mb-3" style="font-size: 3rem; opacity: 0.5;"></i>
-                                                        <h6 class="text-muted mb-1">Belum ada item pesanan</h6>
-                                                        <p class="text-muted small mb-0">Klik tombol "Tambah Bahan Mentah" untuk menambah item</p>
+                                                <td colspan="7" class="p-8 text-center text-gray-500">
+                                                    <div class="flex flex-col items-center">
+                                                        <i class="bi bi-cart-x text-3xl mb-3 opacity-50"></i>
+                                                        <h6 class="font-medium">Belum ada item pesanan</h6>
+                                                        <p class="text-sm">Klik tombol "Tambah Bahan Mentah" untuk menambah item</p>
                                                     </div>
                                                 </td>
                                             </tr>
                                         </tbody>
                                         <tfoot>
-                                            <tr class="table-primary" style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);">
-                                                <td colspan="5" class="text-end py-3 fw-bold fs-6">TOTAL KESELURUHAN:</td>
-                                                <td colspan="2" class="py-3" id="grand-total-cell">
-                                                    <span id="grand-total" class="fs-4 fw-bold text-primary">Rp 0</span>
+                                            <tr>
+                                                <td colspan="5" class="text-right p-3 font-semibold text-gray-700">TOTAL KESELURUHAN:</td>
+                                                <td colspan="2" class="p-3 text-center">
+                                                    <span id="grand-total" class="text-primary text-lg font-bold">Rp 0</span>
                                                 </td>
                                             </tr>
                                         </tfoot>
                                     </table>
                                 </div>
-                            </div>
-                            <div class="card-footer" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-top: 2px solid #e2e8f0;">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div class="d-flex gap-2">
-                                        <button type="button" id="add-item" class="btn btn-success shadow-sm" style="border-radius: 8px; padding: 8px 16px;">
+
+                                <div class="p-4 bg-gray-50 flex flex-col gap-2 items-center justify-between">
+                                    <div class="flex gap-2">
+                                        <button type="button" id="add-item" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-xl shadow-sm hover:bg-green-700">
                                             <i class="bi bi-plus-circle me-2"></i>Tambah Bahan Mentah
                                         </button>
-                                        <button type="button" id="validate-prices" class="btn btn-outline-info shadow-sm" style="border-radius: 8px; padding: 8px 16px;">
+                                        <button type="button" id="validate-prices" class="inline-flex items-center px-4 py-2 border border-indigo-200 rounded-xl text-indigo-700 bg-white hover:bg-indigo-50">
                                             <i class="bi bi-arrow-clockwise me-2"></i>Validasi Harga Terbaru
                                         </button>
                                     </div>
-                                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Item akan otomatis dihitung setelah memilih bahan dan mengisi kuantitas</small>
+                                    <div class="text-sm text-gray-500"><i class="bi bi-info-circle me-1"></i>Item akan otomatis dihitung setelah memilih bahan dan mengisi kuantitas</div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Template for new items (hidden) -->
+
+                        {{-- Item Template --}}
                         <template id="item-template">
-                            <tr class="item-row">
-                                <td class="row-number align-middle text-center fw-bold py-2" style="background: #f8fafc; color: #667eea;">1</td>
-                                <td class="py-2">
-                                    <select name="items[__index__][raw_material_id]" class="form-select raw-material-select" required style="font-size: 0.9em;">
+                            <tr class="item-row align-top">
+                                <td class="p-3 text-center font-semibold row-number">1</td>
+                                <td class="p-3">
+                                    <select name="items[__index__][raw_material_id]" class="form-select raw-material-select w-full px-3 py-2 border rounded" required>
                                         <option value="">-- Pilih Bahan Mentah --</option>
                                     </select>
-                                    <input type="text" name="items[__index__][notes]" class="form-control form-control-sm mt-2 item-notes" placeholder="Catatan item (opsional)" maxlength="500" style="font-size: 0.85em;">
+                                    <input type="text" name="items[__index__][notes]" class="w-full mt-2 px-3 py-2 border rounded text-sm" placeholder="Catatan item (opsional)" maxlength="500">
                                 </td>
-                                <td class="py-2">
-                                    <input type="number" name="items[__index__][quantity]" class="form-control item-quantity text-center" min="1" step="1" required 
-                                           style="font-size: 0.9em;" placeholder="1">
+                                <td class="p-3 text-center">
+                                    <input type="number" name="items[__index__][quantity]" class="w-full sm:w-20 mx-auto px-2 py-2 border rounded text-center item-quantity" min="1" step="1" required placeholder="1">
                                 </td>
-                                <td class="unit-name align-middle text-center fw-medium py-2" style="color: #64748b; font-size: 0.9em; background: #f8fafc;">-</td>
-                                <td class="py-2">
-                                    <div class="input-group">
-                                        <span class="input-group-text" style="background: #667eea; color: white; font-size: 0.85em;">Rp</span>
-                                        <input type="number" name="items[__index__][unit_price]" class="form-control item-price text-end" min="0" required 
-                                               style="font-size: 0.9em;" placeholder="0">
+                                <td class="p-3 text-center unit-name">-</td>
+                                <td class="p-3">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <span class="text-sm bg-indigo-600 text-white px-2 py-1 rounded">Rp</span>
+                                        <input type="number" name="items[__index__][unit_price]" class="w-full sm:w-32 px-2 py-2 border rounded text-end item-price" min="0" required placeholder="0" step="1">
                                     </div>
                                 </td>
-                                <td class="item-total align-middle text-center fw-bold py-2" style="color: #059669; font-size: 0.95em; background: #f0fdf4;">Rp 0</td>
-                                <td class="text-center align-middle py-2">
-                                    <button type="button" class="btn btn-sm btn-outline-danger remove-item" 
-                                            style="width: 30px; height: 30px;" title="Hapus item ini">
-                                        <i class="bi bi-trash" style="font-size: 0.75em;"></i>
+                                <td class="p-3 text-center item-total font-bold text-green-600 whitespace-nowrap">Rp 0</td>
+                                <td class="p-3 text-center">
+                                    <button type="button" class="btn-remove inline-flex items-center justify-center w-8 h-8 rounded bg-red-50 border border-red-100 text-red-600" title="Hapus item">
+                                        <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
                             </tr>
                         </template>
-                        
-                        <hr class="my-4">
-                        
-                        <!-- Form Actions -->
-                        <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-end gap-2">
-                                    <button type="submit" class="btn btn-outline-primary shadow-sm" name="submit_action" value="save_draft">
-                                        <i class="bi bi-save me-1"></i> Simpan sebagai Draft
-                                    </button>
-                                    <button type="submit" class="btn btn-success shadow-sm" id="order-button" name="submit_action" value="order_now">
-                                        <i class="bi bi-whatsapp me-1"></i> Kirim Pesanan via WhatsApp
-                                    </button>
-                                </div>
-                                <div class="mt-3 text-center">
-                                    <small class="text-muted d-block">
-                                        <i class="bi bi-info-circle me-1"></i> <strong>Draft:</strong> Simpan tanpa kirim • <strong>WhatsApp:</strong> Langsung kirim ke supplier
-                                    </small>
-                                </div>
+
+                        {{-- Actions --}}
+                        <div class="border-t border-gray-200 pt-6">
+                            <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
+                                <a href="{{ route('purchase-orders.index') }}" class="inline-flex items-center justify-center px-6 py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-shadow shadow-sm">
+                                    Kembali
+                                </a>
+
+                                <button type="submit" name="submit_action" value="save_draft"
+                                    class="inline-flex items-center justify-center px-6 py-3 bg-white border border-indigo-200 rounded-xl text-sm font-medium text-indigo-700 hover:bg-indigo-50 shadow-sm">
+                                    <i class="bi bi-save me-2"></i> Simpan sebagai Draft
+                                </button>
+
+                                <button type="submit" id="order-button" name="submit_action" value="order_now"
+                                    class="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl text-sm font-medium shadow-lg hover:shadow-xl">
+                                    <i class="bi bi-whatsapp me-2"></i> Kirim Pesanan via WhatsApp
+                                </button>
                             </div>
-                        </div>
+                            <div class="mt-3 text-center">
+                                <small class="text-gray-500"><i class="bi bi-info-circle me-1"></i><strong>Draft:</strong> Simpan tanpa kirim • <strong>WhatsApp:</strong> Langsung kirim ke supplier</small>
+                            </div>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-</div>
 @endsection
 
-@push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css">
-@endpush
-
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
-<!-- Pass data to JavaScript -->
 <script>
-    // Make raw materials data available to the JavaScript class
+    // provide raw materials to JS file
     window.rawMaterials = @json($rawMaterials ?? []);
 </script>
-<!-- Include the consolidated JavaScript file -->
+
 <script src="{{ asset('js/purchase-orders.js') }}"></script>
-@endpush
+

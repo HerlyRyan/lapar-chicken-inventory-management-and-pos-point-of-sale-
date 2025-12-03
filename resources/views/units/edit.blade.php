@@ -3,127 +3,127 @@
 @section('title', 'Edit Satuan')
 
 @section('content')
-<div class="container-fluid">
-    <!-- Header Section -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <h2 class="h3 mb-0">
-                <i class="bi bi-pencil-square me-2"></i>Edit Satuan
-            </h2>
-            <p class="text-muted mb-0">Perbarui informasi satuan: {{ $unit->unit_name }}</p>
-        </div>
-        <div class="col-md-6 text-end">
-            <a href="{{ route('units.index') }}" class="btn btn-secondary">
-                <i class="bi bi-arrow-left me-2"></i>Kembali
-            </a>
-        </div>
-    </div>
+    <div class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 py-6">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            {{-- Header --}}
+            <x-form.header edit="true" :name="$unit->unit_name" title="Satuan" backRoute="{{ route('units.index') }}"
+                detailRoute="{{ route('units.show', $unit) }}" />
 
-    <!-- Form Section -->
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-rulers me-2"></i>Informasi Satuan
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form action="{{ route('units.update', $unit) }}" method="POST">
+            {{-- Card --}}
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+                {{-- Card Header --}}
+                <x-form.card-header title="Edit Satuan" type="edit" />
+
+                <div class="p-6 sm:p-8">
+                    <form action="{{ route('units.update', $unit) }}" method="POST" id="unitForm">
                         @csrf
                         @method('PUT')
-                        
-                        <!-- Nama Satuan -->
-                        <div class="mb-3">
-                            <label for="unit_name" class="form-label">
-                                Nama Satuan <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" 
-                                   class="form-control @error('unit_name') is-invalid @enderror" 
-                                   id="unit_name" 
-                                   name="unit_name" 
-                                   value="{{ old('unit_name', $unit->unit_name) }}"
-                                   placeholder="Contoh: Kilogram, Liter, Pieces"
-                                   required>
-                            @error('unit_name')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <div class="form-text">Nama lengkap satuan yang akan digunakan</div>
+
+                        {{-- Informasi Satuan --}}
+                        <div class="mb-8">
+                            <div class="flex items-center mb-6">
+                                <div
+                                    class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="bi bi-rulers text-white text-sm"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900">Informasi Satuan</h3>
+                            </div>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div class="lg:col-span-2">
+                                    <label for="unit_name" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Nama Satuan <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="text" name="unit_name" id="unit_name"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('unit_name') border-red-300 ring-2 ring-red-200 @enderror"
+                                        value="{{ old('unit_name', $unit->unit_name) }}" required
+                                        placeholder="Contoh: Kilogram, Liter, Pieces">
+                                    <p class="mt-2 text-sm text-gray-600"><i class="bi bi-info-circle mr-1"></i>Nama lengkap satuan yang akan digunakan</p>
+                                    @error('unit_name')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label for="abbreviation" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Singkatan <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="text" name="abbreviation" id="abbreviation"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('abbreviation') border-red-300 ring-2 ring-red-200 @enderror"
+                                        value="{{ old('abbreviation', $unit->abbreviation) }}" required placeholder="Contoh: kg, ltr, pcs"
+                                        maxlength="10" style="text-transform: lowercase;">
+                                    <p class="mt-2 text-sm text-gray-600"><i class="bi bi-info-circle mr-1"></i>Singkatan unik untuk satuan (maksimal 10 karakter)</p>
+                                    @error('abbreviation')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div class="lg:col-span-2">
+                                    <label for="description" class="block text-sm font-semibold text-gray-700 mb-2">Deskripsi</label>
+                                    <textarea name="description" id="description" rows="3"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('description') border-red-300 ring-2 ring-red-200 @enderror"
+                                        placeholder="Deskripsi satuan (opsional)">{{ old('description', $unit->description) }}</textarea>
+                                    <p class="mt-2 text-sm text-gray-600"><i class="bi bi-info-circle mr-1"></i>Opsional. Deskripsi singkat satuan</p>
+                                    @error('description')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Singkatan -->
-                        <div class="mb-3">
-                            <label for="abbreviation" class="form-label">
-                                Singkatan <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" 
-                                   class="form-control @error('abbreviation') is-invalid @enderror" 
-                                   id="abbreviation" 
-                                   name="abbreviation" 
-                                   value="{{ old('abbreviation', $unit->abbreviation) }}"
-                                   placeholder="Contoh: kg, ltr, pcs"
-                                   maxlength="10"
-                                   style="text-transform: lowercase;"
-                                   required>
-                            @error('abbreviation')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <div class="form-text">Singkatan unik untuk satuan (maksimal 10 karakter)</div>
-                        </div>
+                        {{-- Status --}}
+                        <div class="mb-8">
+                            <div class="flex items-center mb-6">
+                                <div
+                                    class="w-8 h-8 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="bi bi-toggle-on text-white text-sm"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900">Status</h3>
+                            </div>
 
-                        <!-- Deskripsi -->
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Deskripsi</label>
-                            <textarea class="form-control @error('description') is-invalid @enderror" 
-                                      id="description" 
-                                      name="description" 
-                                      rows="3"
-                                      placeholder="Deskripsi satuan (opsional)">{{ old('description', $unit->description) }}</textarea>
-                            @error('description')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <!-- Status Aktif -->
-                        <div class="mb-4">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" 
-                                       type="checkbox" 
-                                       id="is_active" 
-                                       name="is_active" 
-                                       value="1"
-                                       {{ old('is_active', $unit->is_active) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="is_active">
-                                    Status Aktif
+                            <div class="bg-gray-50 rounded-xl p-4">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="checkbox" name="is_active" id="is_active"
+                                        class="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                                        value="1" {{ old('is_active', $unit->is_active) ? 'checked' : '' }}>
+                                    <span class="ml-3">
+                                        <span class="text-sm font-semibold text-gray-900">Satuan Aktif</span>
+                                        <span class="block text-xs text-gray-600 mt-1"><i class="bi bi-info-circle mr-1"></i>Centang jika satuan dapat digunakan</span>
+                                    </span>
                                 </label>
                             </div>
-                            <div class="form-text">Satuan aktif akan muncul dalam pilihan saat menambah produk</div>
                         </div>
 
-                        <!-- Buttons -->
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-warning">
-                                <i class="bi bi-check-lg me-2"></i>Simpan Perubahan
-                            </button>
-                            <a href="{{ route('units.index') }}" class="btn btn-secondary">
-                                <i class="bi bi-x-lg me-2"></i>Batal
-                            </a>
+                        {{-- Actions --}}
+                        <div class="border-t border-gray-200 pt-6">
+                            <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
+                                <a href="{{ route('units.index') }}"
+                                    class="inline-flex items-center justify-center px-6 py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm hover:shadow-md">
+                                    Batal
+                                </a>
+                                <button type="submit"
+                                    class="inline-flex items-center justify-center px-8 py-3 bg-gradient-to-r from-orange-600 to-red-600 border border-transparent rounded-xl text-sm font-medium text-white hover:from-orange-700 hover:to-red-700 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                                    <i class="bi bi-check-circle mr-2"></i> Simpan Perubahan
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Make abbreviation lowercase on input
-    const abbreviationInput = document.getElementById('abbreviation');
-    
-    abbreviationInput.addEventListener('input', function() {
-        this.value = this.value.toLowerCase();
-    });
-});
-</script>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const abbr = document.getElementById('abbreviation');
+            if (!abbr) return;
+
+            // enforce lowercase while typing
+            abbr.addEventListener('input', function () {
+                this.value = this.value.toLowerCase();
+            });
+        });
+    </script>
+@endpush

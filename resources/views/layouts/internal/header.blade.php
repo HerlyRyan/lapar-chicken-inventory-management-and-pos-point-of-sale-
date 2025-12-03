@@ -31,7 +31,7 @@
             {{-- 3. Desktop Navigation & Actions --}}
             <div class="hidden lg:flex items-center space-x-4">
                 {{-- Branch Selector --}}
-                @if (isset($showBranchSelector) && $showBranchSelector && isset($branch) && $branch->count() > 0)
+                @if (isset($showBranchSelector) && $showBranchSelector && isset($branchItem) && $branchItem->count() > 0)
                     <div x-data="{ open: false }" class="relative">
                         <button @click="open = !open" type="button"
                                 class="flex items-center px-4 py-2.5 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-200 backdrop-blur-sm border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/30">
@@ -99,8 +99,8 @@
                                 </a>
 
                                 @php
-                                    $productionCenters = $branch->where('type', 'production')->sortBy('code');
-                                    $retailBranches = $branch->where('type', 'branch')->sortBy('code');
+                                    $productionCenters = $branchItem->where('type', 'production')->sortBy('code');
+                                    $retailBranches = $branchItem->where('type', 'branch')->sortBy('code');
                                 @endphp
 
                                 {{-- Production Centers --}}
@@ -113,9 +113,9 @@
                                             Pusat Produksi
                                         </div>
                                     </div>
-                                    @foreach ($productionCenters as $branch)
-                                        <a href="{{ route('dashboard', ['branch_id' => $branch->id]) }}" 
-                                           class="flex items-center justify-between px-6 py-4 hover:bg-orange-50 transition-colors duration-150 {{ isset($selectedBranch) && $selectedBranch && $selectedBranch->id == $branch->id ? 'bg-orange-50 border-l-4 border-orange-500' : '' }}">
+                                    @foreach ($productionCenters as $branchItem)
+                                        <a href="{{ route('dashboard', ['branch_id' => $branchItem->id]) }}" 
+                                           class="flex items-center justify-between px-6 py-4 hover:bg-orange-50 transition-colors duration-150 {{ isset($selectedBranch) && $selectedBranch && $selectedBranch->id == $branchItem->id ? 'bg-orange-50 border-l-4 border-orange-500' : '' }}">
                                             <div class="flex items-center">
                                                 <div class="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center mr-3">
                                                     <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -123,11 +123,11 @@
                                                     </svg>
                                                 </div>
                                                 <div>
-                                                    <div class="font-semibold text-gray-800">{{ $branch->name }}</div>
-                                                    <div class="text-xs text-gray-500">{{ $branch->code }}</div>
+                                                    <div class="font-semibold text-gray-800">{{ $branchItem->name }}</div>
+                                                    <div class="text-xs text-gray-500">{{ $branchItem->code }}</div>
                                                 </div>
                                             </div>
-                                            @if (isset($selectedBranch) && $selectedBranch && $selectedBranch->id == $branch->id)
+                                            @if (isset($selectedBranch) && $selectedBranch && $selectedBranch->id == $branchItem->id)
                                                 <div class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
                                                     <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 24 24">
                                                         <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
@@ -148,9 +148,9 @@
                                             Cabang Retail
                                         </div>
                                     </div>
-                                    @foreach ($retailBranches as $branch)
-                                        <a href="{{ route('dashboard', ['branch_id' => $branch->id]) }}" 
-                                           class="flex items-center justify-between px-6 py-4 hover:bg-orange-50 transition-colors duration-150 {{ isset($selectedBranch) && $selectedBranch && $selectedBranch->id == $branch->id ? 'bg-orange-50 border-l-4 border-orange-500' : '' }}">
+                                    @foreach ($retailBranches as $branchItem)
+                                        <a href="{{ route('dashboard', ['branch_id' => $branchItem->id]) }}" 
+                                           class="flex items-center justify-between px-6 py-4 hover:bg-orange-50 transition-colors duration-150 {{ isset($selectedBranch) && $selectedBranch && $selectedBranch->id == $branchItem->id ? 'bg-orange-50 border-l-4 border-orange-500' : '' }}">
                                             <div class="flex items-center">
                                                 <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg flex items-center justify-center mr-3">
                                                     <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -158,11 +158,11 @@
                                                     </svg>
                                                 </div>
                                                 <div>
-                                                    <div class="font-semibold text-gray-800">{{ $branch->name }}</div>
-                                                    <div class="text-xs text-gray-500">{{ $branch->code }}</div>
+                                                    <div class="font-semibold text-gray-800">{{ $branchItem->name }}</div>
+                                                    <div class="text-xs text-gray-500">{{ $branchItem->code }}</div>
                                                 </div>
                                             </div>
-                                            @if (isset($selectedBranch) && $selectedBranch && $selectedBranch->id == $branch->id)
+                                            @if (isset($selectedBranch) && $selectedBranch && $selectedBranch->id == $branchItem->id)
                                                 <div class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
                                                     <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 24 24">
                                                         <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
@@ -268,7 +268,7 @@
         <div class="lg:hidden border-t border-white/20 py-3" x-data="{ branchOpen: false, userOpen: false }">
             <div class="flex items-center justify-between space-x-3">
                 {{-- Mobile Branch Selector --}}
-                @if (isset($showBranchSelector) && $showBranchSelector && isset($branch) && $branch->count() > 0)
+                @if (isset($showBranchSelector) && $showBranchSelector && isset($branchItem) && $branchItem->count() > 0)
                     <div class="flex-1">
                         <button @click="branchOpen = !branchOpen" 
                                 class="w-full flex items-center justify-between px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors duration-200 text-sm">
@@ -324,17 +324,17 @@
                                 <div class="px-4 py-2 bg-yellow-50 border-t border-gray-100">
                                     <div class="text-xs font-semibold text-yellow-700">Pusat Produksi</div>
                                 </div>
-                                @foreach ($productionCenters as $branch)
-                                    <a href="{{ route('dashboard', ['branch_id' => $branch->id]) }}" 
-                                       class="flex items-center px-4 py-3 hover:bg-orange-50 {{ isset($selectedBranch) && $selectedBranch && $selectedBranch->id == $branch->id ? 'bg-orange-50 border-l-4 border-orange-500' : '' }}">
+                                @foreach ($productionCenters as $branchItem)
+                                    <a href="{{ route('dashboard', ['branch_id' => $branchItem->id]) }}" 
+                                       class="flex items-center px-4 py-3 hover:bg-orange-50 {{ isset($selectedBranch) && $selectedBranch && $selectedBranch->id == $branchItem->id ? 'bg-orange-50 border-l-4 border-orange-500' : '' }}">
                                         <div class="w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center mr-3">
                                             <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
                                                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                                             </svg>
                                         </div>
                                         <div class="min-w-0 flex-1">
-                                            <div class="font-medium text-gray-800 truncate">{{ $branch->name }}</div>
-                                            <div class="text-xs text-gray-500">{{ $branch->code }}</div>
+                                            <div class="font-medium text-gray-800 truncate">{{ $branchItem->name }}</div>
+                                            <div class="text-xs text-gray-500">{{ $branchItem->code }}</div>
                                         </div>
                                     </a>
                                 @endforeach
@@ -344,17 +344,17 @@
                                 <div class="px-4 py-2 bg-blue-50 border-t border-gray-100">
                                     <div class="text-xs font-semibold text-blue-700">Cabang Retail</div>
                                 </div>
-                                @foreach ($retailBranches as $branch)
-                                    <a href="{{ route('dashboard', ['branch_id' => $branch->id]) }}" 
-                                       class="flex items-center px-4 py-3 hover:bg-orange-50 {{ isset($selectedBranch) && $selectedBranch && $selectedBranch->id == $branch->id ? 'bg-orange-50 border-l-4 border-orange-500' : '' }}">
+                                @foreach ($retailBranches as $branchItem)
+                                    <a href="{{ route('dashboard', ['branch_id' => $branchItem->id]) }}" 
+                                       class="flex items-center px-4 py-3 hover:bg-orange-50 {{ isset($selectedBranch) && $selectedBranch && $selectedBranch->id == $branchItem->id ? 'bg-orange-50 border-l-4 border-orange-500' : '' }}">
                                         <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg flex items-center justify-center mr-3">
                                             <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
                                                 <path d="M19 7h-3V6a4 4 0 0 0-8 0v1H5a1 1 0 0 0-1 1v11a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V8a1 1 0 0 0-1-1z"/>
                                             </svg>
                                         </div>
                                         <div class="min-w-0 flex-1">
-                                            <div class="font-medium text-gray-800 truncate">{{ $branch->name }}</div>
-                                            <div class="text-xs text-gray-500">{{ $branch->code }}</div>
+                                            <div class="font-medium text-gray-800 truncate">{{ $branchItem->name }}</div>
+                                            <div class="text-xs text-gray-500">{{ $branchItem->code }}</div>
                                         </div>
                                     </a>
                                 @endforeach

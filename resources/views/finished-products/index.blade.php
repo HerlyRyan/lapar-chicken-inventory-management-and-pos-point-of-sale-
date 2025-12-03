@@ -7,7 +7,16 @@
         {{-- Page Header --}}
         <x-index.header title="Produk Siap Jual" subtitle="Kelola data produk siap jual untuk penjualan"
             addRoute="{{ route('finished-products.create', request()->has('branch_id') ? ['branch_id' => request('branch_id')] : []) }}"
-            addText="Tambah Produk Siap Jual" />
+            addText="Tambah Produk Siap Jual">
+            <a href="{{ route('semi-finished-distributions.create') }}?branch_id={{ request('branch_id', optional($selectedBranch)->id ?? session('selected_dashboard_branch')) }}"
+                class="w-full sm:w-auto inline-flex items-center justify-center px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-semibold rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 text-sm sm:text-base">
+                <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M0 4a2 2 0 012-2h11a2 2 0 012 2v1H0V4zM0 7h15v5a2 2 0 01-2 2H2a2 2 0 01-2-2V7z" />
+                </svg>
+                <span class="hidden sm:inline">Distribusi ke Cabang</span>
+                <span class="sm:hidden">Distribusi ke Cabang</span>
+            </a>
+        </x-index.header>
 
         {{-- Main Content --}}
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
@@ -82,7 +91,7 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
                                         x-text="product.minimum_stock"></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
-                                        x-text="product.price"></td>
+                                        x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(product.price || 0)"></td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <template x-if="product.is_active">
                                             <span
@@ -107,9 +116,20 @@
                                             toggleUrl: '/finished-products/' + product.id + '/toggle-status',
                                             itemName: 'produk ' + product.name,
                                             isActive: product.is_active
-                                        }">
+                                        }" class="flex gap-3">
                                             <x-index.action-buttons :view="true" :edit="true" :delete="true"
                                                 :toggle="true" />
+                                            <button type="button"
+                                                @click="$dispatch('open-adjustment-modal', { id: product.id, name:
+                                                                    product.name, stock: product.display_stock_quantity })"
+                                                class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                                                   bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700
+                                                   text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200">
+                                                <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path
+                                                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
+                                                </svg>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -223,4 +243,6 @@
             </div>
         </div>
     </div>
+
+    @include('finished-products.adjustment-modal')
 @endsection

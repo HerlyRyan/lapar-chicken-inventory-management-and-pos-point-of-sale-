@@ -1,811 +1,660 @@
 @extends('layouts.app')
+@php use Illuminate\Support\Facades\Storage; @endphp
+
+@section('title', 'Tambah Paket Penjualan')
 
 @section('content')
-<!-- No hidden form needed for refresh token -->
-<div class="container-fluid">
-    <x-page-header 
-        title="Tambah Paket Penjualan" 
-        subtitle="Buat paket produk baru untuk standar penjualan"
-        :breadcrumb="[
-            ['label' => 'Dashboard', 'url' => route('dashboard')],
-            ['label' => 'Paket Penjualan', 'url' => route('sales-packages.index')],
-            ['label' => 'Tambah Paket', 'active' => true]
-        ]"
-    />
+    <div class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 py-6">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            {{-- Header --}}
+            <x-form.header title="Paket Penjualan" backRoute="{{ route('sales-packages.index') }}" />
 
-    <form action="{{ route('sales-packages.store') }}" method="POST" enctype="multipart/form-data" id="salesPackageForm" class="compact-form">
-        <input type="hidden" name="_token" value="{{ csrf_token() }}">
-        <!-- Keep explicit CSRF token above to fix issues with AutoLogin middleware -->
-        <div class="row">
-            <!-- Form Section -->
-            <div class="col-lg-9">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">
-                            <i class="bi bi-info-circle me-2"></i>Informasi Paket
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <!-- Row 1: Name -->
-                        <div class="row mb-3">
-                            <div class="col-md-12">
-                                <label for="name" class="form-label">Nama Paket <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control @error('name') is-invalid @enderror" 
-                                       id="name" name="name" value="{{ old('name') }}" 
-                                       placeholder="Contoh: Paket Lapar Aja" required>
-                                @error('name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                <div class="form-text">Kode paket akan dibuat otomatis</div>
-                            </div>
-                        </div>
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden mt-6">
+                <x-form.card-header title="Tambah Paket Penjualan" type="add" />
 
-                        <!-- Row 2: Description and Category side by side -->
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="description" class="form-label">Deskripsi</label>
-                                <textarea class="form-control @error('description') is-invalid @enderror" 
-                                          id="description" name="description" rows="3" 
-                                          placeholder="Deskripsi paket penjualan (opsional)">{{ old('description') }}</textarea>
-                                @error('description')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="col-md-6">
-                                <label for="category_id" class="form-label">Kategori <span class="text-danger">*</span></label>
-                                <select class="form-select @error('category_id') is-invalid @enderror" 
-                                        id="category_id" name="category_id" required>
-                                    <option value="" selected disabled>Pilih Kategori</option>
-                                    @foreach($categories as $category)
-                                        <option value="{{ $category->id }}" 
-                                            data-name="{{ $category->name }}" 
-                                            {{ old('category_id') == $category->id ? 'selected' : '' }}>
-                                            {{ $category->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <input type="hidden" name="category_name" id="category_name" value="{{ old('category_name') }}">
-                                @error('category_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                <div class="form-text">Kategori akan digunakan untuk filter paket penjualan</div>
-                                <div class="form-text mt-1">
-                                    <a href="{{ route('categories.create') }}" target="_blank" rel="noopener" class="text-decoration-underline">
-                                        <i class="bi bi-box-arrow-up-right me-1"></i>Tambah kategori di tab baru
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
+                <div class="p-6 sm:p-8">
+                    <form action="{{ route('sales-packages.store') }}" method="POST" enctype="multipart/form-data"
+                        id="salesPackageForm" class="space-y-6">
+                        @csrf
 
-                        <!-- Row 3: Pricing -->
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label for="discount_percentage" class="form-label">Diskon (%)</label>
-                                <div class="input-group">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="decrement('discount_percentage')">-</button>
-                                    <input type="number" class="form-control @error('discount_percentage') is-invalid @enderror" 
-                                           id="discount_percentage" name="discount_percentage" 
-                                           value="{{ old('discount_percentage') }}" 
-                                           placeholder="0" min="0" max="100" step="0.01">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="increment('discount_percentage')">+</button>
-                                </div>
-                                @error('discount_percentage')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="col-md-4">
-                                <label for="discount_amount" class="form-label">Diskon (Rp)</label>
-                                <div class="input-group">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="decrement('discount_amount')">-</button>
-                                    <input type="number" class="form-control @error('discount_amount') is-invalid @enderror" 
-                                           id="discount_amount" name="discount_amount" 
-                                           value="{{ old('discount_amount') }}" 
-                                           placeholder="0" min="0" step="1">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="increment('discount_amount')">+</button>
-                                </div>
-                                @error('discount_amount')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="col-md-4">
-                                <label for="additional_charge" class="form-label">Biaya Tambahan (Rp)</label>
-                                <div class="input-group">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="decrement('additional_charge')">-</button>
-                                    <input type="number" class="form-control @error('additional_charge') is-invalid @enderror" 
-                                           id="additional_charge" name="additional_charge" 
-                                           value="{{ old('additional_charge') }}" 
-                                           placeholder="0" min="0" step="1">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="increment('additional_charge')">+</button>
-                                </div>
-                                @error('additional_charge')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <div class="alert alert-info py-1 small">
-                                    <i class="bi bi-info-circle me-1"></i>
-                                    <small><strong>Catatan:</strong> Pilih diskon % ATAU nominal. Biaya tambahan untuk packaging, delivery, dll.</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Row 4: Image -->
-                        <div class="row mb-3">
-                            <div class="col-md-12">
-                                <label for="image" class="form-label">Foto Paket</label>
-                                <input type="file" class="form-control @error('image') is-invalid @enderror" 
-                                       id="image" name="image" accept="image/*" onchange="previewImage(this)">
-                                @error('image')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                <div class="form-text">Format: JPG, PNG, GIF. Maksimal 2MB.</div>
-                            </div>
-                        </div>
-
-                        <!-- Image Preview -->
-                        <div class="row mb-3" id="imagePreview" style="display: none;">
-                            <div class="col-md-12">
-                                <img id="previewImg" src="" alt="Preview" class="img-thumbnail" style="max-height: 200px;">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Package Items Section -->
-                <div class="card shadow-sm mt-3">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="bi bi-box-seam me-2"></i>Komponen Paket
-                        </h5>
-                        <button type="button" class="btn btn-light btn-sm" onclick="addPackageItem()">
-                            <i class="bi bi-plus-lg"></i> Tambah Produk
-                        </button>
-                    </div>
-                    <div class="card-body p-2">
-                        <div class="alert alert-info mb-2 py-1 px-2">
-                            <small><i class="bi bi-info-circle me-1"></i>Anda bisa <strong>scroll</strong> untuk melihat seluruh komponen yang ditambahkan.</small>
-                        </div>
-                        <div id="packageItems" class="overflow-auto" style="max-height: 400px; scrollbar-width: thin;">
-                            <!-- Items will be added dynamically -->
-                        </div>
-                        
-                        @error('items')
-                            <div class="alert alert-danger mt-3">{{ $message }}</div>
-                        @enderror
-                        
-                        <!-- Package Items Template -->
-                        <template id="packageItemTemplate">
-                            <div class="package-item border rounded p-3 mb-3" data-index="">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 class="mb-0">Produk <span class="item-number"></span></h6>
-                                    <button type="button" class="btn btn-danger btn-sm" onclick="removePackageItem(this)">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Produk Siap Jual <span class="text-danger">*</span></label>
-                                        <select class="form-select product-select" name="items[][finished_product_id]" required onchange="updateProductInfo(this)">
-                                            <option value="">Pilih Produk</option>
-                                            @foreach($finishedProducts as $product)
-                                                <option value="{{ $product->id }}" 
-                                                        data-price="{{ $product->price }}" 
-                                                        data-unit="{{ $product->unit->abbreviation ?? 'pcs' }}">
-                                                    {{ $product->name }} - Rp {{ number_format($product->price, 0, ',', '.') }}
-                                                </option>
-                                            @endforeach
-                                        </select>
+                        <div class="grid grid-cols-1 gap-6">
+                            <div class="space-y-6">
+                                <div class="bg-white rounded-lg p-5">
+                                    <div class="flex items-center mb-4">
+                                        <div
+                                            class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="bi bi-info-circle text-white text-sm"></i>
+                                        </div>
+                                        <h3 class="text-lg font-semibold text-gray-900">Informasi Paket</h3>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Jumlah <span class="text-danger">*</span></label>
-                                        <div class="input-group">
-                                            <button class="btn btn-outline-secondary" type="button" onclick="decrementItem(this)">-</button>
-                                            <input type="number" class="form-control quantity-input" name="items[][quantity]" min="0.01" step="0.01" placeholder="" required onchange="calculateItemTotal(this)">
-                                            <button class="btn btn-outline-secondary" type="button" onclick="incrementItem(this)">+</button>
+
+                                    {{-- Name --}}
+                                    <div class="mb-4">
+                                        <label for="name" class="block text-sm font-semibold text-gray-700 mb-2">
+                                            Nama Paket <span class="text-red-500">*</span>
+                                        </label>
+                                        <input type="text" id="name" name="name" required
+                                            class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('name') border-red-300 ring-2 ring-red-200 @enderror"
+                                            value="{{ old('name') }}" placeholder="Contoh: Paket Lapar Aja">
+                                        <p class="mt-2 text-sm text-gray-600"><i class="bi bi-info-circle mr-1"></i>Kode
+                                            paket akan dibuat otomatis</p>
+                                        @error('name')
+                                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+
+                                    {{-- Description & Category --}}
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="description"
+                                                class="block text-sm font-semibold text-gray-700 mb-2">Deskripsi</label>
+                                            <textarea id="description" name="description" rows="3"
+                                                class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('description') border-red-300 ring-2 ring-red-200 @enderror"
+                                                placeholder="Deskripsi paket (opsional)">{{ old('description') }}</textarea>
+                                            @error('description')
+                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+
+                                        <div>
+                                            <label for="category_id"
+                                                class="block text-sm font-semibold text-gray-700 mb-2">Kategori <span
+                                                    class="text-red-500">*</span></label>
+                                            <select id="category_id" name="category_id" required
+                                                class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('category_id') border-red-300 ring-2 ring-red-200 @enderror">
+                                                <option value="" selected disabled>Pilih Kategori</option>
+                                                @foreach ($categories as $category)
+                                                    <option value="{{ $category->id }}" data-name="{{ $category->name }}"
+                                                        {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                                                        {{ $category->name }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            <input type="hidden" name="category_name" id="category_name"
+                                                value="{{ old('category_name') }}">
+                                            <p class="mt-2 text-sm text-gray-600"><i
+                                                    class="bi bi-info-circle mr-1"></i>Kategori akan digunakan untuk filter
+                                                paket penjualan</p>
+                                            <p class="mt-1 text-sm"><a href="{{ route('categories.create') }}"
+                                                    target="_blank" rel="noopener" class="text-orange-600 underline"><i
+                                                        class="bi bi-box-arrow-up-right mr-1"></i>Tambah kategori di tab
+                                                    baru</a></p>
+                                            @error('category_id')
+                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                            @enderror
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Total Harga</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text">Rp</span>
-                                            <input type="text" class="form-control total-price" readonly>
+
+                                    {{-- Pricing --}}
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                                        <div>
+                                            <label for="discount_percentage"
+                                                class="block text-sm font-semibold text-gray-700 mb-2">Diskon (%)</label>
+                                            <div class="flex rounded-xl border overflow-hidden">
+                                                <button type="button" class="px-3 bg-gray-50 text-gray-700"
+                                                    onclick="decrement('discount_percentage')">-</button>
+                                                <input type="number" id="discount_percentage" name="discount_percentage"
+                                                    min="0" max="100" step="0.01"
+                                                    class="flex-1 px-3 py-2 focus:outline-none" placeholder="0"
+                                                    value="{{ old('discount_percentage') }}">
+                                                <button type="button" class="px-3 bg-gray-50 text-gray-700"
+                                                    onclick="increment('discount_percentage')">+</button>
+                                            </div>
+                                            @error('discount_percentage')
+                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+
+                                        <div>
+                                            <label for="discount_amount"
+                                                class="block text-sm font-semibold text-gray-700 mb-2">Diskon (Rp)</label>
+                                            <div class="flex rounded-xl border overflow-hidden">
+                                                <button type="button" class="px-3 bg-gray-50 text-gray-700"
+                                                    onclick="decrement('discount_amount')">-</button>
+                                                <input type="number" id="discount_amount" name="discount_amount"
+                                                    min="0" step="1"
+                                                    class="flex-1 px-3 py-2 focus:outline-none" placeholder="0"
+                                                    value="{{ old('discount_amount') }}">
+                                                <button type="button" class="px-3 bg-gray-50 text-gray-700"
+                                                    onclick="increment('discount_amount')">+</button>
+                                            </div>
+                                            @error('discount_amount')
+                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+
+                                        <div>
+                                            <label for="additional_charge"
+                                                class="block text-sm font-semibold text-gray-700 mb-2">Biaya Tambahan
+                                                (Rp)</label>
+                                            <div class="flex rounded-xl border overflow-hidden">
+                                                <button type="button" class="px-3 bg-gray-50 text-gray-700"
+                                                    onclick="decrement('additional_charge')">-</button>
+                                                <input type="number" id="additional_charge" name="additional_charge"
+                                                    min="0" step="1"
+                                                    class="flex-1 px-3 py-2 focus:outline-none" placeholder="0"
+                                                    value="{{ old('additional_charge') }}">
+                                                <button type="button" class="px-3 bg-gray-50 text-gray-700"
+                                                    onclick="increment('additional_charge')">+</button>
+                                            </div>
+                                            @error('additional_charge')
+                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-3">
+                                        <div class="bg-blue-50 rounded-md p-3 text-sm text-blue-700">
+                                            <i class="bi bi-info-circle mr-1"></i>
+                                            <strong>Catatan:</strong> Pilih diskon % ATAU nominal. Biaya tambahan untuk
+                                            packaging, delivery, dll.
+                                        </div>
+                                    </div>
+
+                                    {{-- Image --}}
+                                    <div class="mt-4">
+                                        <label for="image" class="block text-sm font-semibold text-gray-700 mb-2">Foto
+                                            Paket</label>
+                                        <input type="file" id="image" name="image" accept="image/*"
+                                            onchange="previewImage(this)"
+                                            class="w-full text-sm file:border-0 file:bg-gray-100 file:px-3 file:py-2 rounded-xl @error('image') border-red-300 ring-2 ring-red-200 @enderror">
+                                        <p class="mt-2 text-sm text-gray-600">Format: JPG, PNG, GIF. Maksimal 2MB.</p>
+                                        @error('image')
+                                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                        @enderror
+
+                                        <div id="imagePreview" class="mt-3 hidden">
+                                            <img id="previewImg" src="" alt="Preview"
+                                                class="rounded-lg border max-h-48 object-contain">
                                         </div>
                                     </div>
                                 </div>
-                                <div class="mt-2">
-                                    <small class="text-muted product-info">Pilih produk untuk melihat informasi</small>
+
+                                {{-- Package Items --}}
+                                <div class="bg-white rounded-lg p-5">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div class="flex items-center">
+                                            <div
+                                                class="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center mr-3">
+                                                <i class="bi bi-box-seam text-white text-sm"></i>
+                                            </div>
+                                            <h3 class="text-lg font-semibold text-gray-900">Komponen Paket</h3>
+                                        </div>
+                                        <button type="button"
+                                            class="inline-flex items-center px-3 py-2 bg-white border rounded-lg text-sm shadow-sm hover:shadow-md"
+                                            onclick="addPackageItem()">
+                                            <i class="bi bi-plus-lg mr-2"></i> Tambah Produk
+                                        </button>
+                                    </div>
+
+                                    <div class="mb-3 text-sm text-gray-600">
+                                        <i class="bi bi-info-circle mr-1"></i> Anda bisa <strong>scroll</strong> untuk
+                                        melihat seluruh komponen yang ditambahkan.
+                                    </div>
+
+                                    <div id="packageItems" class="space-y-4 max-h-96 overflow-auto pr-2">
+                                        {{-- Items added dynamically --}}
+                                    </div>
+
+                                    @error('items')
+                                        <div class="mt-3 text-sm text-red-600">{{ $message }}</div>
+                                    @enderror
+
+                                    {{-- Template --}}
+                                    <template id="packageItemTemplate">
+                                        <div class="package-item border rounded-xl p-4 min-w-0" data-index="">
+                                            <div class="flex items-center justify-between mb-3">
+                                                <h6 class="text-sm font-semibold">Produk <span class="item-number"></span>
+                                                </h6>
+                                                <button type="button" class="text-red-600 hover:text-red-800"
+                                                    onclick="removePackageItem(this)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+
+                                            <div class="grid grid-cols-1 md:grid-cols-6 gap-3 min-w-0">
+                                                <div class="md:col-span-3 min-w-0">
+                                                    <label class="block text-sm font-medium text-gray-700 mb-2">Produk Siap
+                                                        Jual <span class="text-red-500">*</span></label>
+                                                    <select
+                                                        class="product-select w-full px-3 py-2 border rounded-xl min-w-0"
+                                                        name="items[][finished_product_id]" required
+                                                        onchange="updateProductInfo(this)">
+                                                        <option value="">Pilih Produk</option>
+                                                        @foreach ($finishedProducts as $product)
+                                                            <option value="{{ $product->id }}"
+                                                                data-price="{{ $product->price }}"
+                                                                data-unit="{{ $product->unit->abbreviation ?? 'pcs' }}">
+                                                                {{ $product->name }} - Rp
+                                                                {{ number_format($product->price, 0, ',', '.') }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+
+                                                <div class="md:col-span-2 min-w-0">
+                                                    <label class="block text-sm font-medium text-gray-700 mb-2">Jumlah
+                                                        <span class="text-red-500">*</span></label>
+                                                    <div class="flex rounded-xl border overflow-hidden items-center">
+                                                        <button type="button" class="px-3 bg-gray-50 text-gray-700"
+                                                            onclick="decrementItem(this)">-</button>
+                                                        <input type="number"
+                                                            class="quantity-input flex-1 px-3 py-2 text-center focus:outline-none min-w-0"
+                                                            name="items[][quantity]" min="0.01" step="0.01" value="1"
+                                                            required onchange="calculateItemTotal(this)">
+                                                        <button type="button" class="px-3 bg-gray-50 text-gray-700"
+                                                            onclick="incrementItem(this)">+</button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="md:col-span-1 min-w-0">
+                                                    <label
+                                                        class="block text-sm font-medium text-gray-700 mb-2">Total</label>
+                                                    <div class="flex items-center px-3 py-2 border rounded-xl bg-gray-50 min-w-0">
+                                                        <span class="text-sm text-gray-700 mr-2 flex-shrink-0">Rp</span>
+                                                        <input type="text"
+                                                            class="total-price flex-1 bg-transparent text-right text-sm truncate min-w-0"
+                                                            readonly value="">
+                                                    </div>
+                                                </div>
+
+                                                <div class="md:col-span-6 mt-2">
+                                                    <small class="text-gray-500 product-info block">Pilih produk untuk melihat
+                                                        informasi</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
-                        </template>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Summary Section -->
-            <div class="col-lg-3">
-                <div class="card shadow-sm sticky-top">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0">
-                            <i class="bi bi-calculator me-2"></i>Ringkasan Harga
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span>Harga Dasar:</span>
-                            <span class="fw-bold" id="basePriceDisplay">Rp 0</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span>Diskon:</span>
-                            <span class="text-success fw-bold" id="discountDisplay">Rp 0</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span>Biaya Tambahan:</span>
-                            <span class="text-warning fw-bold" id="additionalChargeDisplay">Rp 0</span>
-                        </div>
-                        <hr>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="h5">Harga Jual Final:</span>
-                            <span class="h4 text-primary fw-bold" id="finalPriceDisplay">Rp 0</span>
-                        </div>
-                        
-                        <!-- Finalize Calculation Button -->
-                        <div class="d-grid">
-                            <button type="button" class="btn btn-warning" onclick="finalizeCalculation()">
-                                <i class="bi bi-calculator me-2"></i>Finalisasi Hitungan
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                            {{-- Summary & Actions --}}
+                            <div class="space-y-6">
+                                <div class="bg-white rounded-lg p-5 shadow-sm">
+                                    <div class="flex items-center mb-3">
+                                        <div
+                                            class="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="bi bi-calculator text-white text-sm"></i>
+                                        </div>
+                                        <h3 class="text-lg font-semibold text-gray-900">Ringkasan Harga</h3>
+                                    </div>
 
-                <!-- Hidden Fields for Calculated Values -->
-                <input type="hidden" name="base_price" id="base_price" value="0">
-                <input type="hidden" name="final_price" id="final_price" value="0">
-                
-                <!-- Form Actions -->
-                <div class="card mt-3">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <a href="{{ route('sales-packages.index') }}" class="btn btn-secondary">
-                                <i class="bi bi-x-lg me-1"></i> Batal
-                            </a>
-                            <button type="submit" class="btn btn-primary" id="directSubmitBtn">
-                                <i class="bi bi-check-lg me-1"></i> Simpan Paket (Direct Submit)
-                            </button>
-                        </div>
-                        @if($errors->any())
-                            <div class="alert alert-danger mt-3">
-                                <ul>
-                                    @foreach ($errors->all() as $error)
-                                        <li>{{ $error }}</li>
-                                    @endforeach
-                                </ul>
+                                    <div class="text-sm text-gray-700 space-y-2">
+                                        <div class="flex justify-between">
+                                            <span>Harga Dasar:</span>
+                                            <span class="font-semibold" id="basePriceDisplay">Rp 0</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>Diskon:</span>
+                                            <span class="text-green-600 font-semibold" id="discountDisplay">Rp 0</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>Biaya Tambahan:</span>
+                                            <span class="text-yellow-600 font-semibold" id="additionalChargeDisplay">Rp
+                                                0</span>
+                                        </div>
+                                        <hr>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-lg font-semibold">Harga Jual Final:</span>
+                                            <span class="text-2xl text-blue-600 font-bold" id="finalPriceDisplay">Rp
+                                                0</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-4">
+                                        <button type="button"
+                                            class="w-full inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-xl text-sm font-medium text-white shadow"
+                                            onclick="finalizeCalculation(event)">
+                                            <i class="bi bi-calculator mr-2"></i> Finalisasi Hitungan
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {{-- Hidden fields --}}
+                                <input type="hidden" name="base_price" id="base_price" value="0">
+                                <input type="hidden" name="final_price" id="final_price" value="0">
+
+                                {{-- Actions --}}
+                                <div class="bg-white rounded-lg p-4">
+                                    <div class="flex gap-3">
+                                        <a href="{{ route('sales-packages.index') }}"
+                                            class="flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 shadow-sm">
+                                            Batal
+                                        </a>
+                                        <button type="submit" id="directSubmitBtn"
+                                            class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-orange-600 to-red-600 rounded-xl text-sm font-medium text-white shadow-lg">
+                                            <i class="bi bi-check-lg mr-2"></i> Simpan Paket
+                                        </button>
+                                    </div>
+
+                                    @if ($errors->any())
+                                        <div class="mt-4 text-sm text-red-600">
+                                            <ul class="list-disc pl-5">
+                                                @foreach ($errors->all() as $error)
+                                                    <li>{{ $error }}</li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    @endif
+                                </div>
                             </div>
-                        @endif
-                    </div>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-    </form>
-</div>
+    </div>
 
-@push('scripts')
+@endsection
+
 <script>
-let packageItemIndex = 0;
-let finishedProducts = @json($finishedProducts->keyBy('id'));
+    let finishedProducts = @json($finishedProducts->keyBy('id'));
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Initial setup
-    setupItemHandlers();
-    setupDiscountHandlers();
-    setupCategoryDropdown();
-    calculateTotalPrice();
-});
-
-// Add the missing setupItemHandlers function
-function setupItemHandlers() {
-    // Add event handlers for existing package items
-    document.querySelectorAll('.package-item').forEach(item => {
-        setupItemEventHandlers(item);
+    document.addEventListener('DOMContentLoaded', function() {
+        setupCategoryDropdown();
+        setupDiscountHandlers();
+        setupInitialItems();
+        calculateTotalPrice();
     });
-    
-    // Add at least one item if none exists
-    if (document.querySelectorAll('.package-item').length === 0) {
-        addPackageItem();
-    }
-}
 
-function setupItemEventHandlers(item) {
-    const productSelect = item.querySelector('.product-select');
-    const quantityInput = item.querySelector('.quantity-input');
-    
-    if (productSelect) {
-        productSelect.addEventListener('change', function() {
+    // Category hidden name sync
+    function setupCategoryDropdown() {
+        const categorySelect = document.getElementById('category_id');
+        const categoryNameInput = document.getElementById('category_name');
+        if (!categorySelect) return;
+
+        if (categorySelect.value) {
+            const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+            categoryNameInput.value = selectedOption.dataset.name || '';
+        }
+
+        categorySelect.addEventListener('change', function() {
+            if (this.value) {
+                const selectedOption = this.options[this.selectedIndex];
+                categoryNameInput.value = selectedOption.dataset.name || '';
+            } else {
+                categoryNameInput.value = '';
+            }
+        });
+    }
+
+    // Discount handlers
+    function setupDiscountHandlers() {
+        const dp = document.getElementById('discount_percentage');
+        const da = document.getElementById('discount_amount');
+        const ac = document.getElementById('additional_charge');
+
+        if (dp) dp.addEventListener('input', function() {
+            if (this.value) da.value = '';
+            calculateTotalPrice();
+        });
+        if (da) da.addEventListener('input', function() {
+            if (this.value) dp.value = '';
+            calculateTotalPrice();
+        });
+        if (ac) ac.addEventListener('input', calculateTotalPrice);
+    }
+
+    // Package items
+    function setupInitialItems() {
+        if (document.querySelectorAll('.package-item').length === 0) {
+            addPackageItem();
+        } else {
+            document.querySelectorAll('.package-item').forEach(item => setupItemEventHandlers(item));
+        }
+    }
+
+    function addPackageItem() {
+        const template = document.getElementById('packageItemTemplate').content.cloneNode(true);
+        const newItem = template.querySelector('.package-item');
+        const newIndex = document.querySelectorAll('.package-item').length;
+
+        newItem.dataset.index = newIndex;
+        newItem.querySelector('.item-number').textContent = newIndex + 1;
+
+        // assign unique ids and names
+        const quantityInput = newItem.querySelector('.quantity-input');
+        if (quantityInput) {
+            quantityInput.id = `quantity_new_${newIndex}`;
+            quantityInput.value = 1;
+        }
+
+        newItem.querySelectorAll('select, input').forEach(input => {
+            if (input.name) {
+                input.name = input.name.replace('items[][', `items[new_${newIndex}][`);
+            }
+        });
+
+        document.getElementById('packageItems').appendChild(newItem);
+        const last = document.querySelectorAll('.package-item');
+        const added = last[last.length - 1];
+        setupItemEventHandlers(added);
+
+        // Trigger initial calculation
+        const q = added.querySelector('.quantity-input');
+        if (q) q.dispatchEvent(new Event('change', {
+            bubbles: true
+        }));
+    }
+
+    function setupItemEventHandlers(item) {
+        const productSelect = item.querySelector('.product-select');
+        const quantityInput = item.querySelector('.quantity-input');
+
+        if (productSelect) productSelect.addEventListener('change', function() {
             updateProductInfo(this);
         });
-    }
-    
-    if (quantityInput) {
-        quantityInput.addEventListener('input', function() {
-            calculateItemTotal(this);
-        });
-        quantityInput.addEventListener('change', function() {
-            calculateItemTotal(this);
-        });
-    }
-}
-
-function submitFormWithAjax(event) {
-    event.preventDefault();
-    
-    // First validate form
-    if (!validateFormBeforeSubmit()) {
-        return false;
-    }
-    
-    // Show loading state
-    const submitBtn = document.querySelector('#salesPackageForm button[type="submit"]');
-    const originalBtnText = submitBtn.innerHTML;
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Menyimpan...';
-    
-    // Get form data including files
-    const form = document.getElementById('salesPackageForm');
-    const formData = new FormData(form);
-    
-    // Important: Do NOT set Content-Type header when using FormData
-    // The browser will automatically set the correct Content-Type with boundary
-    // Only add the CSRF token in the X-CSRF-TOKEN header
-    const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    
-    console.log('Submitting form with token:', token);
-    console.log('Form action URL:', form.action);
-    
-    // Use XMLHttpRequest instead of fetch for better file upload support
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', form.action, true);
-    xhr.setRequestHeader('X-CSRF-TOKEN', token);
-    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-    
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4) {
-            console.log('XHR Response:', xhr.status, xhr.responseText);
-            
-            if (xhr.status === 200 || xhr.status === 201) {
-                // Success - redirect to the package list
-                console.log('Success! Redirecting to index page');
-                window.location.href = '{{ route("sales-packages.index") }}?created=true';
-            } else if (xhr.status === 419) {
-                // CSRF token mismatch
-                alert('CSRF token mismatch. Akan dicoba lagi dengan token baru.');
-                console.error('CSRF token mismatch, refreshing token');
-                
-                // Try to refresh the page to get a new token
-                window.location.reload();
-            } else {
-                // Other errors
-                let errorMessage = 'Gagal menyimpan data. Kode: ' + xhr.status;
-                
-                try {
-                    const response = JSON.parse(xhr.responseText);
-                    if (response.message) {
-                        errorMessage = response.message;
-                    } else if (response.errors) {
-                        errorMessage = Object.values(response.errors).flat().join('\n');
-                    }
-                } catch (e) {
-                    // Not JSON or other parsing error
-                }
-                
-                alert(errorMessage);
-                console.error('Form submission error:', errorMessage);
-                
-                // Reset button state
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalBtnText;
-            }
-        }
-    };
-    
-    // Add progress monitoring
-    xhr.upload.onprogress = function(e) {
-        if (e.lengthComputable) {
-            const percentComplete = (e.loaded / e.total) * 100;
-            console.log('Upload progress: ' + percentComplete + '%');
-        }
-    };
-    
-    xhr.send(formData);
-    console.log('Form submission initiated');
-}
-
-function setupCategoryDropdown() {
-    const categorySelect = document.getElementById('category_id');
-    const categoryNameInput = document.getElementById('category_name');
-    
-    // Set initial value if a category is selected
-    if (categorySelect.value) {
-        const selectedOption = categorySelect.options[categorySelect.selectedIndex];
-        categoryNameInput.value = selectedOption.dataset.name;
-    }
-    
-    // Update hidden input when selection changes
-    categorySelect.addEventListener('change', function() {
-        if (this.value) {
-            const selectedOption = this.options[this.selectedIndex];
-            categoryNameInput.value = selectedOption.dataset.name;
-        } else {
-            categoryNameInput.value = '';
-        }
-    });
-}
-
-function validateFormBeforeSubmit() {
-    // Ensure category_name is set from the selected category
-    const categorySelect = document.getElementById('category_id');
-    const categoryNameInput = document.getElementById('category_name');
-    
-    if (categorySelect.value) {
-        const selectedOption = categorySelect.options[categorySelect.selectedIndex];
-        categoryNameInput.value = selectedOption.dataset.name;
-    }
-    
-    // Make sure we have at least one package item
-    const packageItems = document.querySelectorAll('.package-item');
-    if (packageItems.length === 0) {
-        alert('Silakan tambahkan minimal satu produk ke dalam paket.');
-        return false;
-    }
-    
-    // Make sure each product has a valid selection and quantity
-    let isValid = true;
-    packageItems.forEach((item, index) => {
-        const productSelect = item.querySelector('.product-select');
-        const quantityInput = item.querySelector('.quantity-input');
-        
-        if (!productSelect.value) {
-            alert(`Silakan pilih produk untuk item #${index + 1}`);
-            isValid = false;
-        }
-        
-        const quantity = parseFloat(quantityInput.value);
-        if (isNaN(quantity) || quantity <= 0) {
-            alert(`Jumlah produk untuk item #${index + 1} harus lebih dari 0`);
-            isValid = false;
-        }
-    });
-    
-    // Make sure base price and final price are updated before submission
-    finalizeCalculation();
-    
-    // Ensure our CSRF token is current
-    const metaToken = document.querySelector('meta[name="csrf-token"]');
-    if (metaToken) {
-        const tokenInput = document.querySelector('input[name="_token"]');
-        if (tokenInput) {
-            // Set the token input value to match the meta tag value
-            tokenInput.value = metaToken.getAttribute('content');
-            console.log('CSRF token refreshed from meta tag:', tokenInput.value);
-        }
-    }
-    
-    console.log('Form validation complete, form ready to submit');
-    return isValid;
-}
-
-function addPackageItem() {
-    const template = document.getElementById('packageItemTemplate').content.cloneNode(true);
-    const newItem = template.querySelector('.package-item');
-    const newIndex = document.querySelectorAll('.package-item').length;
-
-    newItem.dataset.index = newIndex;
-    newItem.querySelector('.item-number').textContent = newIndex + 1;
-
-    // Assign unique ID to the quantity input
-    const quantityInput = newItem.querySelector('.quantity-input');
-    quantityInput.id = `quantity_new_${newIndex}`;
-
-    // Update names for inputs
-    newItem.querySelectorAll('select, input').forEach(input => {
-        if (input.name) {
-            input.name = input.name.replace('items[][', `items[new_${newIndex}][`);
-        }
-    });
-
-    document.getElementById('packageItems').appendChild(newItem);
-    initializeSelect2ForLastItem();
-}
-
-// Initialize Select2 for the last added package item
-function initializeSelect2ForLastItem() {
-    // Find the newly added package item
-    const allItems = document.querySelectorAll('.package-item');
-    if (allItems.length === 0) return;
-    
-    const lastItem = allItems[allItems.length - 1];
-    
-    // Setup event handlers for the new item
-    setupItemEventHandlers(lastItem);
-    
-    // Find the product select in the last item
-    const productSelect = lastItem.querySelector('.product-select');
-    if (productSelect) {
-        // Check if Select2 is available as a jQuery plugin
-        if (typeof $ !== 'undefined' && $.fn && $.fn.select2) {
-            $(productSelect).select2({
-                placeholder: 'Pilih Produk',
-                allowClear: true,
-                width: '100%'
+        if (quantityInput) {
+            quantityInput.addEventListener('input', function() {
+                calculateItemTotal(this);
+            });
+            quantityInput.addEventListener('change', function() {
+                calculateItemTotal(this);
             });
         }
-        
-        // Manually trigger an update to ensure item info is displayed
-        updateProductInfo(productSelect);
-    }
-    
-    // Initialize the quantity input with default value 1
-    const quantityInput = lastItem.querySelector('.quantity-input');
-    if (quantityInput && !quantityInput.value) {
-        quantityInput.value = 1;
-        // Trigger change event to calculate price
-        quantityInput.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-}
-
-function removePackageItem(button) {
-    const item = button.closest('.package-item');
-    item.remove();
-    updatePackageItemNumbers();
-    calculateTotalPrice();
-}
-
-function updatePackageItemNumbers() {
-    const items = document.querySelectorAll('.package-item');
-    items.forEach((item, index) => {
-        item.querySelector('.item-number').textContent = index + 1;
-    });
-}
-
-function updateProductInfo(select) {
-    const item = select.closest('.package-item');
-    const productId = select.value;
-    const infoDiv = item.querySelector('.product-info');
-    
-    if (productId && finishedProducts[productId]) {
-        const product = finishedProducts[productId];
-        infoDiv.innerHTML = `
-            <i class="bi bi-info-circle"></i> 
-            Kategori: ${product.category ? product.category.name : '-'} | 
-            Satuan: ${product.unit ? product.unit.unit_name : 'pcs'}
-        `;
-    } else {
-        infoDiv.textContent = 'Pilih produk untuk melihat informasi';
-    }
-    
-    calculateItemTotal(select);
-}
-
-function calculateItemTotal(input) {
-    const item = input.closest('.package-item');
-    const productSelect = item.querySelector('.product-select');
-    const quantityInput = item.querySelector('.quantity-input');
-    const totalPriceInput = item.querySelector('.total-price');
-    
-    const price = parseFloat(productSelect.selectedOptions[0]?.dataset.price || 0);
-    const quantity = parseFloat(quantityInput.value || 0);
-    const total = price * quantity;
-    
-    totalPriceInput.value = total > 0 ? number_format(total, 0, ',', '.') : '';
-    
-    calculateTotalPrice();
-}
-
-function increment(elementId) {
-    const input = document.getElementById(elementId);
-    if (!input) return;
-    const step = parseFloat(input.step) || 1;
-    const max = parseFloat(input.max);
-    let currentValue = parseFloat(input.value) || 0;
-    let newValue = currentValue + step;
-
-    if (!isNaN(max) && newValue > max) {
-        newValue = max;
     }
 
-    input.value = newValue.toFixed(step.toString().includes('.') ? step.toString().split('.')[1].length : 0);
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-}
-
-function decrement(elementId) {
-    const input = document.getElementById(elementId);
-    if (!input) return;
-    const step = parseFloat(input.step) || 1;
-    const min = parseFloat(input.min) || 0;
-    let currentValue = parseFloat(input.value) || 0;
-    let newValue = currentValue - step;
-
-    if (newValue < min) {
-        newValue = min;
+    function removePackageItem(button) {
+        const item = button.closest('.package-item');
+        if (!item) return;
+        item.remove();
+        updatePackageItemNumbers();
+        calculateTotalPrice();
     }
 
-    input.value = newValue.toFixed(step.toString().includes('.') ? step.toString().split('.')[1].length : 0);
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-}
+    function updatePackageItemNumbers() {
+        document.querySelectorAll('.package-item').forEach((item, idx) => {
+            const num = item.querySelector('.item-number');
+            if (num) num.textContent = idx + 1;
+        });
+    }
 
-function incrementItem(button) {
-    const input = button.previousElementSibling;
-    if (input) {
-        // Always use 1 as increment step, regardless of input's step attribute
-        const max = parseFloat(input.max);
-        let currentValue = parseFloat(input.value) || 0;
-        let newValue = currentValue + 1; // Fixed increment by 1
+    function updateProductInfo(select) {
+        const item = select.closest('.package-item');
+        const productId = select.value;
+        const infoDiv = item.querySelector('.product-info');
 
-        if (!isNaN(max) && newValue > max) {
-            newValue = max;
+        if (productId && finishedProducts[productId]) {
+            const product = finishedProducts[productId];
+            infoDiv.innerHTML =
+                `<i class="bi bi-info-circle"></i> Kategori: ${product.category ? product.category.name : '-'} | Satuan: ${product.unit ? product.unit.unit_name : 'pcs'}`;
+        } else {
+            infoDiv.textContent = 'Pilih produk untuk melihat informasi';
         }
 
-        input.value = newValue;
-        input.dispatchEvent(new Event('change', { bubbles: true }));
+        // recalc
+        calculateItemTotal(select);
     }
-}
 
-function decrementItem(button) {
-    const input = button.nextElementSibling;
-    if (input) {
-        // Always use 1 as decrement step, regardless of input's step attribute
-        const min = parseFloat(input.min) || 0;
-        let currentValue = parseFloat(input.value) || 0;
-        let newValue = currentValue - 1; // Fixed decrement by 1
-
-        if (newValue < min) {
-            newValue = min;
-        }
-
-        input.value = newValue;
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-}
-
-function calculateTotalPrice() {
-    let basePrice = 0;
-    
-    // Calculate base price from all items
-    document.querySelectorAll('.package-item').forEach(item => {
+    function calculateItemTotal(el) {
+        const item = el.closest('.package-item');
         const productSelect = item.querySelector('.product-select');
         const quantityInput = item.querySelector('.quantity-input');
-        
-        if (productSelect && productSelect.selectedOptions && productSelect.selectedOptions[0]) {
-            const price = parseFloat(productSelect.selectedOptions[0].dataset.price || 0);
-            const quantity = parseFloat(quantityInput?.value || 0);
-            
-            basePrice += price * quantity;
-        }
-    });
-    
-    // Get discount and additional charge values - ensure we get valid numbers
-    const discountPercentage = parseFloat(document.getElementById('discount_percentage')?.value) || 0;
-    const discountAmount = parseFloat(document.getElementById('discount_amount')?.value) || 0;
-    const additionalCharge = parseFloat(document.getElementById('additional_charge')?.value) || 0;
-    
-    // Calculate discount
-    let discount = 0;
-    if (discountPercentage > 0) {
-        discount = (basePrice * discountPercentage) / 100;
-    } else {
-        discount = discountAmount;
-    }
-    
-    // Calculate final price
-    const finalPrice = basePrice - discount + additionalCharge;
-    
-    // Update displays - with safe DOM element checking
-    const basePriceElement = document.getElementById('basePriceDisplay');
-    const discountElement = document.getElementById('discountDisplay');
-    const additionalChargeElement = document.getElementById('additionalChargeDisplay');
-    const finalPriceElement = document.getElementById('finalPriceDisplay');
-    const baseInputElement = document.getElementById('base_price');
-    const finalInputElement = document.getElementById('final_price');
-    
-    if (basePriceElement) basePriceElement.textContent = 'Rp ' + number_format(basePrice, 0, ',', '.');
-    if (discountElement) discountElement.textContent = '-Rp ' + number_format(discount, 0, ',', '.');
-    if (additionalChargeElement) additionalChargeElement.textContent = 'Rp ' + number_format(additionalCharge, 0, ',', '.');
-    if (finalPriceElement) finalPriceElement.textContent = 'Rp ' + number_format(finalPrice, 0, ',', '.');
-    
-    // Set hidden fields for form submission
-    if (baseInputElement) baseInputElement.value = basePrice;
-    if (finalInputElement) finalInputElement.value = finalPrice;
-    
-    console.log('Price calculation completed - Base Price: ' + basePrice);
-}
+        const totalPriceInput = item.querySelector('.total-price');
 
-function finalizeCalculation() {
-    // Update hidden form fields with calculated values
-    const basePriceElement = document.getElementById('basePriceDisplay');
-    const finalPriceElement = document.getElementById('finalPriceDisplay');
-    const baseInputElement = document.getElementById('base_price');
-    const finalInputElement = document.getElementById('final_price');
-    
-    // Extract numeric values from display text
-    const basePrice = parseFloat(basePriceElement.textContent.replace(/[^\d]/g, '')) || 0;
-    const finalPrice = parseFloat(finalPriceElement.textContent.replace(/[^\d]/g, '')) || 0;
-    
-    // Update hidden fields
-    if (baseInputElement) baseInputElement.value = basePrice;
-    if (finalInputElement) finalInputElement.value = finalPrice;
-    
-    // Recalculate from all fields
-    calculateTotalPrice();
-    
-    // Show feedback
-    const button = event.target;
-    const originalText = button.innerHTML;
-    button.innerHTML = '<i class="bi bi-check-lg me-2"></i>Hitungan Difinalisasi!';
-    button.classList.remove('btn-warning');
-    button.classList.add('btn-success');
-    
-    // Reset button after 2 seconds
-    setTimeout(() => {
-        button.innerHTML = originalText;
-        button.classList.remove('btn-success');
-        button.classList.add('btn-warning');
-    }, 2000);
-}
+        const price = parseFloat(productSelect.selectedOptions[0]?.dataset.price || 0);
+        const quantity = parseFloat(quantityInput.value || 0);
+        const total = price * quantity;
 
-function setupDiscountHandlers() {
-    const discountPercentage = document.getElementById('discount_percentage');
-    const discountAmount = document.getElementById('discount_amount');
-    const additionalCharge = document.getElementById('additional_charge');
-    
-    discountPercentage.addEventListener('input', function() {
-        if (this.value) {
-            discountAmount.value = '';
-        }
+        if (totalPriceInput) totalPriceInput.value = total > 0 ? number_format(total, 0, ',', '.') : '';
         calculateTotalPrice();
-    });
-    
-    discountAmount.addEventListener('input', function() {
-        if (this.value) {
-            discountPercentage.value = '';
-        }
+    }
+
+    // Increment/Decrement generic
+    function increment(elementId) {
+        const input = document.getElementById(elementId);
+        if (!input) return;
+        const step = parseFloat(input.step) || 1;
+        const max = parseFloat(input.max);
+        let current = parseFloat(input.value) || 0;
+        let next = current + step;
+        if (!isNaN(max) && next > max) next = max;
+        input.value = next;
+        input.dispatchEvent(new Event('change', {
+            bubbles: true
+        }));
+    }
+
+    function decrement(elementId) {
+        const input = document.getElementById(elementId);
+        if (!input) return;
+        const step = parseFloat(input.step) || 1;
+        const min = parseFloat(input.min) || 0;
+        let current = parseFloat(input.value) || 0;
+        let next = current - step;
+        if (next < min) next = min;
+        input.value = next;
+        input.dispatchEvent(new Event('change', {
+            bubbles: true
+        }));
+    }
+
+    // Item increment/decrement (buttons sit beside input)
+    function incrementItem(button) {
+        const input = button.previousElementSibling;
+        if (!input) return;
+        let current = parseFloat(input.value) || 0;
+        input.value = current + 1;
+        input.dispatchEvent(new Event('change', {
+            bubbles: true
+        }));
+    }
+
+    function decrementItem(button) {
+        const input = button.nextElementSibling;
+        if (!input) return;
+        const min = parseFloat(input.min) || 0;
+        let current = parseFloat(input.value) || 0;
+        let next = current - 1;
+        if (next < min) next = min;
+        input.value = next;
+        input.dispatchEvent(new Event('change', {
+            bubbles: true
+        }));
+    }
+
+    function calculateTotalPrice() {
+        let basePrice = 0;
+        document.querySelectorAll('.package-item').forEach(item => {
+            const productSelect = item.querySelector('.product-select');
+            const quantityInput = item.querySelector('.quantity-input');
+            if (productSelect && productSelect.selectedOptions && productSelect.selectedOptions[0]) {
+                const price = parseFloat(productSelect.selectedOptions[0].dataset.price || 0);
+                const qty = parseFloat(quantityInput?.value || 0);
+                basePrice += price * qty;
+            }
+        });
+
+        const discountPercentage = parseFloat(document.getElementById('discount_percentage')?.value) || 0;
+        const discountAmount = parseFloat(document.getElementById('discount_amount')?.value) || 0;
+        const additionalCharge = parseFloat(document.getElementById('additional_charge')?.value) || 0;
+
+        let discount = 0;
+        if (discountPercentage > 0) discount = (basePrice * discountPercentage) / 100;
+        else discount = discountAmount;
+
+        const finalPrice = basePrice - discount + additionalCharge;
+
+        const basePriceElement = document.getElementById('basePriceDisplay');
+        const discountElement = document.getElementById('discountDisplay');
+        const additionalChargeElement = document.getElementById('additionalChargeDisplay');
+        const finalPriceElement = document.getElementById('finalPriceDisplay');
+        const baseInputElement = document.getElementById('base_price');
+        const finalInputElement = document.getElementById('final_price');
+
+        if (basePriceElement) basePriceElement.textContent = 'Rp ' + number_format(basePrice, 0, ',', '.');
+        if (discountElement) discountElement.textContent = '-Rp ' + number_format(discount, 0, ',', '.');
+        if (additionalChargeElement) additionalChargeElement.textContent = 'Rp ' + number_format(additionalCharge, 0,
+            ',', '.');
+        if (finalPriceElement) finalPriceElement.textContent = 'Rp ' + number_format(finalPrice, 0, ',', '.');
+
+        if (baseInputElement) baseInputElement.value = basePrice;
+        if (finalInputElement) finalInputElement.value = finalPrice;
+    }
+
+    function finalizeCalculation(e) {
+        // allow event to be optional
+        const basePriceElement = document.getElementById('basePriceDisplay');
+        const finalPriceElement = document.getElementById('finalPriceDisplay');
+        const baseInputElement = document.getElementById('base_price');
+        const finalInputElement = document.getElementById('final_price');
+
+        const basePrice = parseFloat((basePriceElement?.textContent || '').replace(/[^\d]/g, '')) || 0;
+        const finalPrice = parseFloat((finalPriceElement?.textContent || '').replace(/[^\d]/g, '')) || 0;
+
+        if (baseInputElement) baseInputElement.value = basePrice;
+        if (finalInputElement) finalInputElement.value = finalPrice;
+
         calculateTotalPrice();
-    });
-    
-    additionalCharge.addEventListener('input', calculateTotalPrice);
-}
 
-function previewImage(input) {
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('previewImg').src = e.target.result;
-            document.getElementById('imagePreview').style.display = 'block';
+        // visual feedback on the button
+        const button = (e && e.currentTarget) ? e.currentTarget : null;
+        if (!button) return;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="bi bi-check-lg mr-2"></i> Hitungan Difinalisasi!';
+        button.classList.remove('from-yellow-400', 'to-yellow-500');
+        button.classList.add('bg-green-500', 'text-white');
+
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.classList.remove('bg-green-500', 'text-white');
+        }, 2000);
+    }
+
+    // Image preview
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('previewImg');
+                const container = document.getElementById('imagePreview');
+                if (preview) preview.src = e.target.result;
+                if (container) container.classList.remove('hidden');
+            }
+            reader.readAsDataURL(input.files[0]);
         }
-        reader.readAsDataURL(input.files[0]);
     }
-}
 
-function number_format(number, decimals, dec_point, thousands_sep) {
-    number = (number + '').replace(/[^0-9+\-Ee.]/g, '');
-    var n = !isFinite(+number) ? 0 : +number,
-        prec = !isFinite(+decimals) ? 0 : Math.abs(decimals),
-        sep = (typeof thousands_sep === 'undefined') ? ',' : thousands_sep,
-        dec = (typeof dec_point === 'undefined') ? '.' : dec_point,
-        s = '',
-        toFixedFix = function (n, prec) {
-            var k = Math.pow(10, prec);
-            return '' + Math.round(n * k) / k;
-        };
-    s = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.');
-    if (s[0].length > 3) {
-        s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
+    // Helper: number format
+    function number_format(number, decimals, dec_point, thousands_sep) {
+        number = (number + '').replace(/[^0-9+\-Ee.]/g, '');
+        var n = !isFinite(+number) ? 0 : +number,
+            prec = !isFinite(+decimals) ? 0 : Math.abs(decimals),
+            sep = (typeof thousands_sep === 'undefined') ? ',' : thousands_sep,
+            dec = (typeof dec_point === 'undefined') ? '.' : dec_point,
+            s = '',
+            toFixedFix = function(n, prec) {
+                var k = Math.pow(10, prec);
+                return '' + Math.round(n * k) / k;
+            };
+        s = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.');
+        if (s[0].length > 3) {
+            s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
+        }
+        if ((s[1] || '').length < prec) {
+            s[1] = s[1] || '';
+            s[1] += new Array(prec - s[1].length + 1).join('0');
+        }
+        return s.join(dec);
     }
-    if ((s[1] || '').length < prec) {
-        s[1] = s[1] || '';
-        s[1] += new Array(prec - s[1].length + 1).join('0');
-    }
-    return s.join(dec);
-}
 </script>
-@endpush
-@endsection

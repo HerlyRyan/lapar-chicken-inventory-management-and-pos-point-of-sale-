@@ -17,8 +17,22 @@ class SemiFinishedDistributionController extends Controller
      */
     public function index(Request $request)
     {
-        $query = SemiFinishedDistribution::with(['sentBy', 'targetBranch', 'semiFinishedProduct.unit', 'handledBy'])
-            ->orderBy('created_at', 'desc');
+        $query = SemiFinishedDistribution::with(['sentBy', 'targetBranch', 'semiFinishedProduct', 'handledBy']);
+
+        $columns = [
+            ['key' => 'distribution_code', 'label' => 'Kode Distribusi'],
+            ['key' => 'target_branch_id', 'label' => 'Cabang Tujuan'],
+            ['key' => 'semi_finished_product_id', 'label' => 'Produk'],
+            ['key' => 'status', 'label' => 'Status'],
+            ['key' => 'created_at', 'label' => 'Tanggal'],
+            ['key' => 'handled_by', 'label' => 'Diproses Oleh'],
+        ];
+
+        // Search by distribution code
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where('distribution_code', 'like', "%{$search}%")->orWhereHas('targetBranch', fn($b) => $b->where('name', 'like', "%{$search}%"))->orWhereHas('semiFinishedProduct', fn($b) => $b->where('name', 'like', "%{$search}%"));
+        }
 
         // Filter by status if provided
         if ($request->filled('status')) {
@@ -26,24 +40,56 @@ class SemiFinishedDistributionController extends Controller
         }
 
         // Filter by target branch
-        if ($request->filled('branch_id')) {
-            $query->where('target_branch_id', $request->branch_id);
+        if ($request->filled('target_branch_id')) {
+            $query->where('target_branch_id', $request->target_branch_id);
         }
 
-        // Search by distribution code
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where('distribution_code', 'like', "%{$search}%");
+        // === SORTING ===
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
+
+            // 🧩 Deteksi kolom relasi
+            switch ($sortBy) {
+                case 'semi_finished_product_id':
+                    $query->leftjoin('semi_finished_products', 'semi_finished_products.id', '=', 'semi_finished_distributions.semi_finished_product_id')
+                        ->orderBy('semi_finished_products.name', $sortDir)
+                        ->select('semi_finished_distributions.*');
+                    break;
+
+                default:
+                    $query->orderBy($sortBy, $sortDir);
+            }
         }
 
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $distributions */
         $distributions = $query->paginate(15);
 
-        // Get branches for filter dropdown
-        $branches = Branch::where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        $branches = Branch::where('is_active', true)->orderBy('name')->pluck('name', 'id')->toArray();
 
-        return view('semi-finished-distributions.index', compact('distributions', 'branches'));
+        $statuses = [
+            'sent' => 'Dikirim',
+            'accepted' => 'Diterima',
+            'rejected' => 'Ditolak',
+        ];
+
+        $selects = [
+            [
+                'name' => 'status',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+            ['name' => 'target_branch_id', 'label' => 'Semua Cabang', 'options' => $branches],
+        ];
+
+        // === RESPONSE ===
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $distributions->items(),
+                'links' => (string) $distributions->links('vendor.pagination.tailwind'),
+            ]);
+        }
+
+        return view('semi-finished-distributions.index', compact('distributions', 'branches', 'columns', 'selects'));
     }
 
     /**
@@ -68,20 +114,77 @@ class SemiFinishedDistributionController extends Controller
                 ->with('error', 'Silakan pilih cabang terlebih dahulu untuk melihat kotak masuk distribusi.');
         }
 
-        $query = SemiFinishedDistribution::with(['sentBy', 'targetBranch', 'semiFinishedProduct.unit'])
-            ->where('status', 'sent')
-            ->where('target_branch_id', $branchId)
-            ->orderBy('created_at', 'desc');
+        $query = SemiFinishedDistribution::with(['sentBy', 'targetBranch', 'semiFinishedProduct', 'handledBy'])
+            ->where('target_branch_id', $branchId);
 
-        // Optional search by distribution code
+        $columns = [
+            ['key' => 'distribution_code', 'label' => 'Kode Distribusi'],
+            ['key' => 'target_branch_id', 'label' => 'Cabang Tujuan'],
+            ['key' => 'semi_finished_product_id', 'label' => 'Produk'],
+            ['key' => 'status', 'label' => 'Status'],
+            ['key' => 'created_at', 'label' => 'Tanggal'],
+            ['key' => 'handled_by', 'label' => 'Diproses Oleh'],
+        ];
+
+        // Search by distribution code
         if ($request->filled('search')) {
-            $query->where('distribution_code', 'like', '%' . $request->search . '%');
+            $search = $request->search;
+            $query->where('distribution_code', 'like', "%{$search}%")->orWhereHas('targetBranch', fn($b) => $b->where('name', 'like', "%{$search}%"))->orWhereHas('semiFinishedProduct', fn($b) => $b->where('name', 'like', "%{$search}%"));
         }
 
-        $distributions = $query->paginate(15);
-        $branch = Branch::find($branchId);
+        // Filter by status if provided
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
 
-        return view('semi-finished-distributions.inbox', compact('distributions', 'branch', 'branchId'));
+        // Filter by target branch
+        if ($request->filled('target_branch_id')) {
+            $query->where('target_branch_id', $request->target_branch_id);
+        }
+
+        // === SORTING ===
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
+
+            // 🧩 Deteksi kolom relasi
+            switch ($sortBy) {
+                case 'semi_finished_product_id':
+                    $query->leftjoin('semi_finished_products', 'semi_finished_products.id', '=', 'semi_finished_distributions.semi_finished_product_id')
+                        ->orderBy('semi_finished_products.name', $sortDir)
+                        ->select('semi_finished_distributions.*');
+                    break;
+
+                default:
+                    $query->orderBy($sortBy, $sortDir);
+            }
+        }
+
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $distributions */
+        $distributions = $query->paginate(15);
+
+        $statuses = [
+            'sent' => 'Dikirim',
+            'accepted' => 'Diterima',
+            'rejected' => 'Ditolak',
+        ];
+
+        $selects = [
+            [
+                'name' => 'status',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+        ];
+
+        // === RESPONSE ===
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $distributions->items(),
+                'links' => (string) $distributions->links('vendor.pagination.tailwind'),
+            ]);
+        }
+
+        return view('semi-finished-distributions.inbox', compact('distributions', 'columns', 'selects'));
     }
 
     /**
@@ -282,7 +385,7 @@ class SemiFinishedDistributionController extends Controller
     public function show(SemiFinishedDistribution $distribution)
     {
         $distribution->load(['sentBy', 'targetBranch', 'semiFinishedProduct.unit', 'handledBy']);
-        
+
         return view('semi-finished-distributions.show', compact('distribution'));
     }
 

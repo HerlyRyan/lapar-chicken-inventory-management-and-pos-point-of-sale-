@@ -3,246 +3,254 @@
 @section('title', 'Edit Purchase Order')
 
 @section('content')
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 fw-bold mb-1" style="color: var(--primary-red);">
-                <i class="bi bi-pencil-square me-2"></i>Edit Purchase Order
-            </h1>
-            <p class="text-muted mb-0">{{ $purchaseOrder->order_number }} - Status: {{ ucfirst($purchaseOrder->status) }}</p>
-        </div>
-        <div class="btn-group">
-            <a href="{{ route('purchase-orders.index') }}" class="btn btn-outline-secondary shadow-sm">
-                <i class="bi bi-arrow-left me-1"></i> Kembali ke Daftar
-            </a>
-            <a href="{{ route('purchase-orders.show', $purchaseOrder) }}" class="btn btn-outline-primary shadow-sm">
-                <i class="bi bi-eye me-1"></i> Lihat Detail
-            </a>
-        </div>
-    </div>
+    <div class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 py-6">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            {{-- Header --}}
+            <x-form.header title="Purchase Order" edit="true" :name="$purchaseOrder->order_number" backRoute="{{ route('purchase-orders.index') }}" detailRoute="{{ route('purchase-orders.show', $purchaseOrder) }}" />
 
-    <!-- Current Order Info -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="alert alert-warning border-0 shadow-sm">
-                <div class="row align-items-center">
-                    <div class="col-md-6">
-                        <h6 class="alert-heading mb-1">
-                            <i class="bi bi-info-circle me-2"></i>
-                            Mengedit Purchase Order
-                        </h6>
-                        <p class="mb-0">
-                            <strong>{{ $purchaseOrder->order_number }}</strong> 
-                            - {{ $purchaseOrder->supplier->name }} 
-                            - Total: Rp {{ number_format($purchaseOrder->total_amount, 0, ',', '.') }}
-                        </p>
-                    </div>
-                    <div class="col-md-6 text-md-end">
-                        <small class="text-muted">
-                            Dibuat: {{ $purchaseOrder->created_at->format('d/m/Y H:i') }} oleh {{ $purchaseOrder->creator->name }}
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+            {{-- Card --}}
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+                <x-form.card-header title="Edit Purchase Order" type="edit" />
 
-    <!-- Form Section -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-body">
+                <div class="p-6 sm:p-8">
+                    @if ($errors->any())
+                        <div class="mb-4 p-4 rounded-lg bg-red-50 border border-red-100 text-red-700">
+                            <h6 class="font-semibold mb-2"><i class="bi bi-exclamation-triangle me-1"></i> Terjadi kesalahan:</h6>
+                            <ul class="list-disc pl-5">
+                                @foreach ($errors->all() as $error)
+                                    <li class="text-sm">{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    @if (session('success'))
+                        <div class="mb-4 p-3 rounded-lg bg-green-50 border border-green-100 text-green-700">
+                            <i class="bi bi-check-circle me-1"></i> {{ session('success') }}
+                        </div>
+                    @endif
+
+                    @if (session('error'))
+                        <div class="mb-4 p-3 rounded-lg bg-red-50 border border-red-100 text-red-700">
+                            <i class="bi bi-exclamation-triangle me-1"></i> {{ session('error') }}
+                        </div>
+                    @endif
+
                     <form id="purchase-order-form" action="{{ route('purchase-orders.update', $purchaseOrder) }}" method="POST">
                         @csrf
                         @method('PUT')
-                        
-                        <!-- Basic Info -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h5 class="border-start border-3 border-primary ps-2 mb-3">Informasi Dasar</h5>
-                            </div>
-                            
-                            <!-- Supplier Selection -->
-                            <div class="col-md-6 mb-3">
-                                <label for="supplier_id" class="form-label">Supplier <span class="text-danger">*</span></label>
-                                <select name="supplier_id" id="supplier_id" class="form-select @error('supplier_id') is-invalid @enderror" required>
-                                    <option value="">-- Pilih Supplier --</option>
-                                    @foreach($suppliers as $supplier)
-                                    <option value="{{ is_object($supplier) ? $supplier->id : $supplier['id'] }}"
-                                            data-phone="{{ is_object($supplier) ? $supplier->phone : ($supplier['phone'] ?? '') }}"
-                                            data-code="{{ is_object($supplier) ? ($supplier->code ?? '') : ($supplier['code'] ?? '') }}"
-                                            {{ (old('supplier_id') ?? $purchaseOrder->supplier_id) == (is_object($supplier) ? $supplier->id : $supplier['id']) ? 'selected' : '' }}>
-                                        {{ is_object($supplier) ? $supplier->name : $supplier['name'] }}
-                                        @if(is_object($supplier) ? ($supplier->code ?? false) : ($supplier['code'] ?? false))
-                                            ({{ is_object($supplier) ? $supplier->code : $supplier['code'] }})
-                                        @endif
-                                    </option>
-                                    @endforeach
-                                </select>
-                                @error('supplier_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            
-                            <!-- Requested Delivery Date -->
-                            <div class="col-md-6 mb-3">
-                                <label for="requested_delivery_date" class="form-label">Tanggal Pengiriman yang Diminta</label>
-                                <input type="date" name="requested_delivery_date" id="requested_delivery_date" 
-                                       class="form-control @error('requested_delivery_date') is-invalid @enderror"
-                                       value="{{ old('requested_delivery_date') ?? ($purchaseOrder->requested_delivery_date ? $purchaseOrder->requested_delivery_date->format('Y-m-d') : '') }}">
-                                @error('requested_delivery_date')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <!-- Preserve original order date for validation/update -->
-                            <input type="hidden" name="order_date" id="order_date" value="{{ old('order_date') ?? ($purchaseOrder->order_date ? $purchaseOrder->order_date->format('Y-m-d') : date('Y-m-d')) }}">
-                            
-                            <!-- Phone Number (from supplier) -->
-                            <div class="col-md-6 mb-3">
-                                <label for="supplier_phone" class="form-label">Nomor WhatsApp Supplier</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-success text-white"><i class="bi bi-whatsapp"></i></span>
-                                    <input type="text" id="supplier_phone" class="form-control" readonly>
+
+                        {{-- Informasi Dasar --}}
+                        <div class="mb-8">
+                            <div class="flex items-center mb-4">
+                                <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="bi bi-info-circle text-white text-sm"></i>
                                 </div>
-                                <small class="text-muted">Terisi otomatis dari data supplier</small>
+                                <h3 class="text-lg font-semibold text-gray-900">Informasi Dasar</h3>
                             </div>
-                            
-                            <!-- Notes -->
-                            <div class="col-12">
-                                <label for="notes" class="form-label">Catatan</label>
-                                <textarea name="notes" id="notes" rows="3" 
-                                          class="form-control @error('notes') is-invalid @enderror">{{ old('notes') ?? $purchaseOrder->notes }}</textarea>
-                                @error('notes')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                        
-                        <!-- Items Section -->
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <h5 class="border-start border-3 border-primary ps-2 mb-3">Item Pesanan</h5>
-                                <div class="alert alert-info" id="supplier-info">
-                                    <i class="bi bi-info-circle me-1"></i> Pilih supplier terlebih dahulu untuk melihat bahan mentah yang tersedia.
-                                    <br><small><strong>Catatan:</strong> Jika supplier diganti, semua item akan direset.</small>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="po_number" class="block text-sm font-medium text-gray-700 mb-2">Nomor Purchase Order</label>
+                                    <div id="po_number" class="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 text-gray-600">{{ $purchaseOrder->order_number }}</div>
+                                    <p class="text-sm text-gray-500 mt-1">Nomor dibuat saat PO pertama kali disimpan</p>
                                 </div>
-                            </div>
-                        </div>
-                        
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-hover" id="items-table">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th style="width: 5%">#</th>
-                                        <th style="width: 35%">Bahan Mentah</th>
-                                        <th style="width: 15%">Kuantitas</th>
-                                        <th style="width: 15%">Satuan</th>
-                                        <th style="width: 15%">Harga Satuan</th>
-                                        <th style="width: 10%">Total</th>
-                                        <th style="width: 5%">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="item-rows">
-                                    @if($purchaseOrder->items->count() > 0)
-                                        @foreach($purchaseOrder->items as $index => $item)
-                                        <tr class="item-row" data-material-id="{{ $item->raw_material_id }}">
-                                            <td class="row-number">{{ $index + 1 }}</td>
-                                            <td>
-                                                <select name="items[{{ $index }}][raw_material_id]" class="form-select raw-material-select" required>
-                                                    <option value="">-- Pilih Bahan Mentah --</option>
-                                                    <!-- Options will be loaded dynamically -->
-                                                    <option value="{{ $item->raw_material_id }}" selected>{{ $item->rawMaterial->name }}</option>
-                                                </select>
-                                                <input type="hidden" name="items[{{ $index }}][id]" value="{{ $item->id }}">
-                                                <input type="text" name="items[{{ $index }}][notes]" value="{{ $item->notes }}" 
-                                                       class="form-control form-control-sm mt-2 item-notes" placeholder="Catatan item (opsional)" maxlength="500">
-                                            </td>
-                                            <td>
-                                                <input type="number" name="items[{{ $index }}][quantity]" value="{{ $item->quantity }}" 
-                                                       class="form-control item-quantity" min="1" step="1" required>
-                                            </td>
-                                            <td class="unit-name">{{ $item->unit_name ?? '-' }}</td>
-                                            <td>
-                                                <input type="number" name="items[{{ $index }}][unit_price]" value="{{ $item->unit_price }}" 
-                                                       class="form-control item-price" min="0" required>
-                                            </td>
-                                            <td class="item-total">Rp {{ number_format($item->total_price, 0, ',', '.') }}</td>
-                                            <td>
-                                                <button type="button" class="btn btn-sm btn-danger remove-item">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
+
+                                <div>
+                                    <label for="supplier_id" class="block text-sm font-medium text-gray-700 mb-2">Supplier <span class="text-red-500">*</span></label>
+                                    <select name="supplier_id" id="supplier_id" required
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('supplier_id') border-red-300 ring-2 ring-red-200 @enderror">
+                                        <option value="">-- Pilih Supplier --</option>
+                                        @foreach($suppliers as $supplier)
+                                            <option value="{{ $supplier->id }}" {{ (old('supplier_id') ?? $purchaseOrder->supplier_id) == $supplier->id ? 'selected' : '' }}
+                                                data-phone="{{ $supplier->phone }}" data-code="{{ $supplier->code }}">
+                                                {{ $supplier->name }} @if($supplier->code) ({{ $supplier->code }}) @endif
+                                            </option>
                                         @endforeach
-                                    @else
-                                    <tr class="empty-row">
-                                        <td colspan="7" class="text-center py-3">Belum ada item. Klik tombol Tambah Item di bawah.</td>
-                                    </tr>
-                                    @endif
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <td colspan="5" class="text-end fw-bold">Total:</td>
-                                        <td colspan="2">
-                                            <span id="grand-total">Rp {{ number_format($purchaseOrder->total_amount, 0, ',', '.') }}</span>
-                                        </td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                        
-                        <div class="row mt-3">
-                            <div class="col-12 d-flex align-items-center gap-2">
-                                <button type="button" id="add-item" class="btn btn-sm btn-success">
-                                    <i class="bi bi-plus-circle me-1"></i> Tambah Item
-                                </button>
-                                <button type="button" id="validate-prices" class="btn btn-sm btn-outline-info">
-                                    <i class="bi bi-arrow-clockwise me-1"></i> Validasi Harga Terbaru
-                                </button>
+                                    </select>
+                                    @error('supplier_id')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                    <p class="text-sm text-gray-500 mt-1">Hanya supplier aktif yang ditampilkan</p>
+                                </div>
+
+                                <input type="hidden" name="order_date" id="order_date" value="{{ old('order_date') ?? ($purchaseOrder->order_date ? $purchaseOrder->order_date->format('Y-m-d') : date('Y-m-d')) }}">
+
+                                <div>
+                                    <label for="requested_delivery_date" class="block text-sm font-medium text-gray-700 mb-2">Tanggal Pengiriman yang Diminta</label>
+                                    <input type="date" name="requested_delivery_date" id="requested_delivery_date"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('requested_delivery_date') border-red-300 ring-2 ring-red-200 @enderror"
+                                        value="{{ old('requested_delivery_date') ?? ($purchaseOrder->requested_delivery_date ? $purchaseOrder->requested_delivery_date->format('Y-m-d') : '') }}">
+                                    @error('requested_delivery_date')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label for="supplier_phone" class="block text-sm font-medium text-gray-700 mb-2">Nomor WhatsApp Supplier</label>
+                                    <div class="flex rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 items-center">
+                                        <span class="inline-flex items-center text-sm text-white bg-green-500 rounded px-2 py-1 mr-3">
+                                            <i class="bi bi-whatsapp"></i>
+                                        </span>
+                                        <input type="text" id="supplier_phone" class="flex-1 bg-transparent outline-none" readonly value="{{ old('supplier_phone') ?? ($purchaseOrder->supplier->phone ?? '') }}">
+                                    </div>
+                                    <p class="text-sm text-gray-500 mt-1">Terisi otomatis dari data supplier</p>
+                                </div>
+
+                                <div class="lg:col-span-2">
+                                    <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">Catatan</label>
+                                    <textarea name="notes" id="notes" rows="3"
+                                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('notes') border-red-300 ring-2 ring-red-200 @enderror">{{ old('notes') ?? $purchaseOrder->notes }}</textarea>
+                                    @error('notes')
+                                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
                             </div>
                         </div>
-                        
-                        <!-- Template for new items (hidden) -->
+
+                        {{-- Item Pesanan --}}
+                        <div class="mb-6">
+                            <div class="flex items-center mb-4">
+                                <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="bi bi-table text-white text-sm"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900">Item Pesanan</h3>
+                            </div>
+
+                            <div class="rounded-xl border border-gray-200 overflow-hidden shadow-sm bg-white">
+                                <div class="p-4 bg-gradient-to-r from-indigo-200 to-purple-200">
+                                    <p class="text-sm text-gray-700 mb-0"><i class="bi bi-info-circle me-1"></i> Pilih supplier terlebih dahulu untuk melihat bahan mentah yang tersedia. Jika supplier diganti, semua item akan direset.</p>
+                                </div>
+
+                                <div class="p-4 overflow-x-auto">
+                                    <table class="w-full table-auto border-collapse min-w-[720px]">
+                                        <thead>
+                                            <tr class="text-sm text-gray-700 bg-gray-50">
+                                                <th class="p-3 text-center">#</th>
+                                                <th class="p-3">Bahan Mentah</th>
+                                                <th class="p-3 text-center">Kuantitas</th>
+                                                <th class="p-3 text-center">Satuan</th>
+                                                <th class="p-3 text-center">Harga Satuan</th>
+                                                <th class="p-3 text-center">Total</th>
+                                                <th class="p-3 text-center">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="item-rows" class="min-h-[120px]">
+                                            @if($purchaseOrder->items->count() > 0)
+                                                @foreach($purchaseOrder->items as $index => $item)
+                                                    <tr class="item-row align-top" data-material-id="{{ $item->raw_material_id }}">
+                                                        <td class="p-3 text-center font-semibold row-number">{{ $index + 1 }}</td>
+                                                        <td class="p-3">
+                                                            <select name="items[{{ $index }}][raw_material_id]" class="form-select raw-material-select w-full px-3 py-2 border rounded" required>
+                                                                <option value="">-- Pilih Bahan Mentah --</option>
+                                                                <option value="{{ $item->raw_material_id }}" selected>{{ $item->rawMaterial->name }}</option>
+                                                            </select>
+                                                            <input type="hidden" name="items[{{ $index }}][id]" value="{{ $item->id }}">
+                                                            <input type="text" name="items[{{ $index }}][notes]" value="{{ $item->notes }}" class="w-full mt-2 px-3 py-2 border rounded text-sm" placeholder="Catatan item (opsional)" maxlength="500">
+                                                        </td>
+                                                        <td class="p-3 text-center">
+                                                            <input type="number" name="items[{{ $index }}][quantity]" value="{{ $item->quantity }}" class="w-full sm:w-20 mx-auto px-2 py-2 border rounded text-center item-quantity" min="1" step="1" required>
+                                                        </td>
+                                                        <td class="p-3 text-center unit-name">{{ $item->unit_name ?? '-' }}</td>
+                                                        <td class="p-3">
+                                                            <div class="flex items-center justify-end gap-2">
+                                                                <span class="text-sm bg-indigo-600 text-white px-2 py-1 rounded">Rp</span>
+                                                                <input type="number" name="items[{{ $index }}][unit_price]" value="{{ $item->unit_price }}" class="w-full sm:w-32 px-2 py-2 border rounded text-end item-price" min="0" required>
+                                                            </div>
+                                                        </td>
+                                                        <td class="p-3 text-center item-total font-bold text-green-600 whitespace-nowrap">Rp {{ number_format($item->total_price, 0, ',', '.') }}</td>
+                                                        <td class="p-3 text-center">
+                                                            <button type="button" class="btn-remove inline-flex items-center justify-center w-8 h-8 rounded bg-red-50 border border-red-100 text-red-600" title="Hapus item">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            @else
+                                                <tr class="empty-row">
+                                                    <td colspan="7" class="p-8 text-center text-gray-500">
+                                                        <div class="flex flex-col items-center">
+                                                            <i class="bi bi-cart-x text-3xl mb-3 opacity-50"></i>
+                                                            <h6 class="font-medium">Belum ada item pesanan</h6>
+                                                            <p class="text-sm">Klik tombol "Tambah Bahan Mentah" untuk menambah item</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @endif
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td colspan="5" class="text-right p-3 font-semibold text-gray-700">TOTAL KESELURUHAN:</td>
+                                                <td colspan="2" class="p-3 text-center">
+                                                    <span id="grand-total" class="text-primary text-lg font-bold">Rp {{ number_format($purchaseOrder->total_amount, 0, ',', '.') }}</span>
+                                                </td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+
+                                <div class="p-4 bg-gray-50 flex flex-col gap-2 items-center justify-between">
+                                    <div class="flex gap-2">
+                                        <button type="button" id="add-item" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-xl shadow-sm hover:bg-green-700">
+                                            <i class="bi bi-plus-circle me-2"></i>Tambah Bahan Mentah
+                                        </button>
+                                        <button type="button" id="validate-prices" class="inline-flex items-center px-4 py-2 border border-indigo-200 rounded-xl text-indigo-700 bg-white hover:bg-indigo-50">
+                                            <i class="bi bi-arrow-clockwise me-2"></i>Validasi Harga Terbaru
+                                        </button>
+                                    </div>
+                                    <div class="text-sm text-gray-500"><i class="bi bi-info-circle me-1"></i>Item akan otomatis dihitung setelah memilih bahan dan mengisi kuantitas</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Item Template --}}
                         <template id="item-template">
-                            <tr class="item-row">
-                                <td class="row-number"></td>
-                                <td>
-                                    <select name="items[__index__][raw_material_id]" class="form-select raw-material-select" required>
+                            <tr class="item-row align-top">
+                                <td class="p-3 text-center font-semibold row-number">1</td>
+                                <td class="p-3">
+                                    <select name="items[__index__][raw_material_id]" class="form-select raw-material-select w-full px-3 py-2 border rounded" required>
                                         <option value="">-- Pilih Bahan Mentah --</option>
                                     </select>
-                                    <input type="text" name="items[__index__][notes]" class="form-control form-control-sm mt-2 item-notes" placeholder="Catatan item (opsional)" maxlength="500">
+                                    <input type="text" name="items[__index__][notes]" class="w-full mt-2 px-3 py-2 border rounded text-sm" placeholder="Catatan item (opsional)" maxlength="500">
                                 </td>
-                                <td>
-                                    <input type="number" name="items[__index__][quantity]" class="form-control item-quantity" min="1" step="1" required>
+                                <td class="p-3 text-center">
+                                    <input type="number" name="items[__index__][quantity]" class="w-full sm:w-20 mx-auto px-2 py-2 border rounded text-center item-quantity" min="1" step="1" required placeholder="1">
                                 </td>
-                                <td class="unit-name">-</td>
-                                <td>
-                                    <input type="number" name="items[__index__][unit_price]" class="form-control item-price" min="0" required>
+                                <td class="p-3 text-center unit-name">-</td>
+                                <td class="p-3">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <span class="text-sm bg-indigo-600 text-white px-2 py-1 rounded">Rp</span>
+                                        <input type="number" name="items[__index__][unit_price]" class="w-full sm:w-32 px-2 py-2 border rounded text-end item-price" min="0" required placeholder="0" step="1">
+                                    </div>
                                 </td>
-                                <td class="item-total">Rp 0</td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-danger remove-item">
+                                <td class="p-3 text-center item-total font-bold text-green-600 whitespace-nowrap">Rp 0</td>
+                                <td class="p-3 text-center">
+                                    <button type="button" class="btn-remove inline-flex items-center justify-center w-8 h-8 rounded bg-red-50 border border-red-100 text-red-600" title="Hapus item">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
                             </tr>
                         </template>
-                        
-                        <hr class="my-4">
-                        
-                        <!-- Form Actions -->
-                        <div class="row">
-                            <div class="col-12 text-end">
-                                <a href="{{ route('purchase-orders.show', $purchaseOrder) }}" class="btn btn-secondary me-2">
-                                    <i class="bi bi-x-circle me-1"></i> Batal
+
+                        {{-- Actions --}}
+                        <div class="border-t border-gray-200 pt-6">
+                            <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
+                                <a href="{{ route('purchase-orders.show', $purchaseOrder) }}" class="inline-flex items-center justify-center px-6 py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-shadow shadow-sm">
+                                    Kembali
                                 </a>
-                                <button type="submit" class="btn btn-outline-primary me-2" name="submit_action" value="save_draft">
-                                    <i class="bi bi-save me-1"></i> Simpan sebagai Draft
+
+                                <button type="submit" name="submit_action" value="save_draft"
+                                    class="inline-flex items-center justify-center px-6 py-3 bg-white border border-indigo-200 rounded-xl text-sm font-medium text-indigo-700 hover:bg-indigo-50 shadow-sm">
+                                    <i class="bi bi-save me-2"></i> Simpan sebagai Draft
                                 </button>
-                                <button type="submit" class="btn btn-success" id="order-button" name="submit_action" value="order_now">
-                                    <i class="bi bi-whatsapp me-1"></i> Kirim Pesanan via WhatsApp
+
+                                <button type="submit" id="order-button" name="submit_action" value="order_now"
+                                    class="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl text-sm font-medium shadow-lg hover:shadow-xl">
+                                    <i class="bi bi-whatsapp me-2"></i> Kirim Pesanan via WhatsApp
                                 </button>
+                            </div>
+                            <div class="mt-3 text-center">
+                                <small class="text-gray-500"><i class="bi bi-info-circle me-1"></i><strong>Draft:</strong> Simpan tanpa kirim • <strong>WhatsApp:</strong> Langsung kirim ke supplier</small>
                             </div>
                         </div>
                     </form>
@@ -250,18 +258,13 @@
             </div>
         </div>
     </div>
-</div>
 @endsection
 
-@push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css">
-@endpush
-
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
-<!-- Pass data to JavaScript -->
 <script>
+    // provide raw materials to JS file
     window.rawMaterials = @json($rawMaterials ?? []);
+    // also provide existing supplier id to let JS pre-load material options if needed
+    window.currentSupplierId = {{ $purchaseOrder->supplier_id ?? 'null' }};
 </script>
+
 <script src="{{ asset('js/purchase-orders.js') }}"></script>
-@endpush

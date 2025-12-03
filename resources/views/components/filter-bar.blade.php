@@ -1,9 +1,12 @@
 @props([
     'searchPlaceholder' => 'Cari data...',
     'selects' => [],
+    'date' => false,
+    'export_csv' => false,
 ])
 
 <div class="px-4 sm:px-6 py-4 sm:py-6 bg-gray-50 border-b border-gray-200" x-data>
+    {{-- Filter & Search --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-{{ count($selects) + 2 }} gap-3 sm:gap-4">
         {{-- Search Input --}}
         <div class="sm:col-span-2 lg:col-span-2">
@@ -33,17 +36,56 @@
             </div>
         @endforeach
 
-        {{-- Reset Button --}}
-        <div class="sm:col-span-2 lg:col-span-1 flex gap-2">
-            <button type="button" @click="$store.table.reset()"
-                class="inline-flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg sm:rounded-xl transition-colors duration-200 w-full">
-                <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" fill="none" stroke="currentColor"
-                    viewBox="0 0 24 24">
+        {{-- Date Range --}}
+        @if ($date)
+            <div class="lg:col-span-2 xl:col-span-1">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Mulai</label>
+                <input type="date" name="start_date" x-model="$store.table.start_date"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+                    value="{{ request('start_date') }}">
+            </div>
+
+            <div class="lg:col-span-2 xl:col-span-1">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Akhir</label>
+                <input type="date" name="end_date" x-model="$store.table.end_date"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+                    value="{{ request('end_date') }}">
+            </div>
+        @endif
+    </div>
+
+    {{-- Tombol-tombol di bawah --}}
+    <div class="mt-6 flex flex-wrap gap-3 justify-start">
+        {{-- Export CSV --}}
+        @if ($export_csv)
+            <a href="{{ route(
+                'purchase-receipts.export',
+                array_filter([
+                    'status' => request('status'),
+                    'start_date' => request('start_date'),
+                    'end_date' => request('end_date'),
+                    'q' => request('q'),
+                    'sort' => request('sort'),
+                    'direction' => request('direction'),
+                ]),
+            ) }}"
+                class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <span class="hidden sm:inline">Reset</span>
-            </button>
-        </div>
+                Export CSV
+            </a>
+        @endif
+
+        {{-- Reset Button --}}
+        <button type="button" @click="$store.table.reset()"
+            class="inline-flex items-center justify-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors duration-200">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Reset
+        </button>
     </div>
 </div>

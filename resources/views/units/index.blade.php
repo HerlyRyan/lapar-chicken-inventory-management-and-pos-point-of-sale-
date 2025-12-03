@@ -56,13 +56,14 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <div x-data="{
+                                            viewUrl: '/units/' + unit.id,
                                             editUrl: '/units/' + unit.id + '/edit',
                                             deleteUrl: '/units/' + unit.id,
                                             toggleUrl: '/units/' + unit.id + '/toggle-status',
                                             itemName: 'satuan ' + unit.unit_name,
                                             isActive: unit.is_active
                                         }">
-                                            <x-index.action-buttons :view="false" :edit="true" :delete="true"
+                                            <x-index.action-buttons :view="true" :edit="true" :delete="true"
                                                 :toggle="true" />
                                         </div>
                                     </td>

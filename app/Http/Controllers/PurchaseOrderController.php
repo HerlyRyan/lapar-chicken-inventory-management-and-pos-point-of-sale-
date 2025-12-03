@@ -29,51 +29,99 @@ class PurchaseOrderController extends Controller
         // Base query with relationships
         $query = PurchaseOrder::with(['supplier', 'items.rawMaterial', 'creator']);
 
-        // Filters
-        if ($request->filled('status')) {
-            $query->where('status', $request->get('status'));
-        }
+        $columns = [
+            ['key' => 'order_number', 'label' => 'Nomor Order'],
+            ['key' => 'supplier', 'label' => 'Supplier'],
+            ['key' => 'order_date', 'label' => 'Tanggal'],
+            ['key' => 'total_amount', 'label' => 'Total'],
+            ['key' => 'status', 'label' => 'Status'],
+            ['key' => 'created_by', 'label' => 'Dibuat Oleh'],
+        ];
 
-        if ($request->filled('supplier_id')) {
-            $query->where('supplier_id', (int) $request->get('supplier_id'));
-        }
-
-        if ($request->filled('q')) {
-            $term = trim($request->get('q'));
-            $query->where(function ($q) use ($term) {
-                $q->where('order_number', 'like', "%{$term}%")
-                  ->orWhere('order_code', 'like', "%{$term}%");
+        // === SEARCH ===
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhereHas('category', fn($q2) => $q2->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('unit', fn($q2) => $q2->where('unit_name', 'like', "%{$search}%"))
+                    ->orWhereHas('supplier', fn($q2) => $q2->where('name', 'like', "%{$search}%"));
             });
         }
 
-        $startDate = $request->get('start_date');
-        $endDate   = $request->get('end_date');
-
-        if (!empty($startDate)) {
-            $query->whereDate('order_date', '>=', $startDate);
-        }
-        if (!empty($endDate)) {
-            $query->whereDate('order_date', '<=', $endDate);
+        // === FILTER STATUS ===
+        if ($status = $request->get('is_active')) {
+            $query->where('is_active', $status);
         }
 
-        // Sorting
-        $sort = $request->get('sort', 'created_at');
-        $direction = strtolower($request->get('direction', 'desc')) === 'asc' ? 'asc' : 'desc';
-        $allowedSorts = ['order_number', 'order_code', 'order_date', 'requested_delivery_date', 'total_amount', 'status', 'created_at'];
-        if (!in_array($sort, $allowedSorts, true)) {
-            $sort = 'created_at';
+        // === SORTING ===
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
+
+            // 🧩 Deteksi kolom relasi
+            switch ($sortBy) {
+                case 'supplier':
+                    $query->leftjoin('suppliers', 'suppliers.id', '=', 'purchase_orders.supplier_id')
+                        ->orderBy('suppliers.name', $sortDir)
+                        ->select('purchase_orders.*');
+                    break;
+
+                default:
+                    $query->orderBy($sortBy, $sortDir);
+            }
         }
 
-        $purchaseOrders = $query->orderBy($sort, $direction)
-                                ->paginate(15)
-                                ->appends($request->query());
+        // filter tanggal
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('order_date', [$request->start_date, $request->end_date]);
+        } elseif ($request->filled('start_date')) {
+            $query->whereDate('order_date', '>=', $request->start_date);
+        } elseif ($request->filled('end_date')) {
+            $query->whereDate('order_date', '<=', $request->end_date);
+        }
+
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $purchaseOrders */
+        $purchaseOrders = $query->paginate(10);
 
         // Suppliers for filter dropdown
         $suppliers = Supplier::where('is_active', true)
-                            ->orderBy('name')
-                            ->get();
+            ->orderBy('name')->pluck('name', 'id')->toArray();
 
-        return view('purchase-orders.index', compact('purchaseOrders', 'suppliers'));
+        $statuses = [
+            'draft' => 'Draft',
+            'ordered' => 'Ordered',
+            'received' => 'Received',
+            'partially_received' => 'Partially Received',
+            'rejected' => 'Rejected',
+        ];
+
+        $selects = [
+            [
+                'name' => 'status',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+            [
+                'name' => 'supplier_id',
+                'label' => 'Semua Supplier',
+                'options' => $suppliers,
+            ],
+        ];
+
+        // === RESPONSE ===
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $purchaseOrders->items(),
+                'links' => (string) $purchaseOrders->links('vendor.pagination.tailwind'),
+            ]);
+        }
+
+        return view('purchase-orders.index', [
+            'purchaseOrders' => $purchaseOrders->items(),
+            'selects' => $selects,
+            'columns' => $columns,
+            'pagination' => $purchaseOrders,
+        ]);
     }
 
     /**
@@ -83,18 +131,18 @@ class PurchaseOrderController extends Controller
     {
         // Only show active suppliers as per requirements
         $suppliers = Supplier::where('is_active', true)
-                           ->orderBy('name')
-                           ->get();
-        
+            ->orderBy('name')
+            ->get();
+
         // Get all raw materials with unit info for initial load
         $rawMaterials = RawMaterial::with(['unit', 'supplier'])
-                                 ->where('is_active', true)
-                                 ->orderBy('name')
-                                 ->get();
-        
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
         return view('purchase-orders.create', compact('suppliers', 'rawMaterials'));
     }
-    
+
     // The materialsBySupplier method is implemented further down in this class
 
     /**
@@ -142,7 +190,7 @@ class PurchaseOrderController extends Controller
             // Determine if this is a draft or order based on the submit_action
             $status = 'draft';
             $isOrder = ($request->submit_action === 'order_now');
-            
+
             if ($isOrder) {
                 $status = 'ordered';
                 $orderedAt = now();
@@ -196,11 +244,11 @@ class PurchaseOrderController extends Controller
             if ($isOrder) {
                 // Get supplier for WhatsApp
                 $supplier = Supplier::find($request->supplier_id);
-                
+
                 if ($supplier && $supplier->phone) {
                     // Set flag that we attempted to send WhatsApp
                     $purchaseOrder->update(['whatsapp_sent' => true]);
-                    
+
                     // Prepare and send WhatsApp message
                     $this->sendOrderWhatsApp($purchaseOrder, $supplier);
                 }
@@ -208,18 +256,17 @@ class PurchaseOrderController extends Controller
 
             DB::commit();
 
-            $successMessage = $isOrder ? 
-                'Purchase order berhasil dibuat dan dikirim ke supplier' : 
+            $successMessage = $isOrder ?
+                'Purchase order berhasil dibuat dan dikirim ke supplier' :
                 'Purchase order berhasil disimpan sebagai draft';
 
             return redirect()->route('purchase-orders.index')
-                           ->with('success', $successMessage);
-
+                ->with('success', $successMessage);
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()
-                           ->withInput()
-                           ->with('error', 'Gagal membuat purchase order: ' . $e->getMessage());
+                ->withInput()
+                ->with('error', 'Gagal membuat purchase order: ' . $e->getMessage());
         }
     }
 
@@ -240,17 +287,17 @@ class PurchaseOrderController extends Controller
         // Only allow editing draft orders
         if ($purchaseOrder->status !== PurchaseOrder::STATUS_DRAFT) {
             return redirect()->route('purchase-orders.index')
-                           ->with('error', 'Hanya pesanan dengan status draft yang dapat diedit');
+                ->with('error', 'Hanya pesanan dengan status draft yang dapat diedit');
         }
 
         $suppliers = Supplier::where('is_active', true)
-                           ->orderBy('name')
-                           ->get();
+            ->orderBy('name')
+            ->get();
 
         $rawMaterials = RawMaterial::with(['unit', 'supplier'])
-                                 ->where('is_active', true)
-                                 ->orderBy('name')
-                                 ->get();
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
 
         $purchaseOrder->load(['items.rawMaterial']);
 
@@ -265,13 +312,13 @@ class PurchaseOrderController extends Controller
         // Only allow updating draft orders
         if ($purchaseOrder->status !== PurchaseOrder::STATUS_DRAFT) {
             return redirect()->route('purchase-orders.index')
-                           ->with('error', 'Hanya pesanan dengan status draft yang dapat diupdate');
+                ->with('error', 'Hanya pesanan dengan status draft yang dapat diupdate');
         }
 
         // Use same validation as store
         $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
-            'order_date' => 'required|date|before_or_equal:today', 
+            'order_date' => 'required|date|before_or_equal:today',
             'requested_delivery_date' => 'nullable|date|after_or_equal:order_date',
             'notes' => 'nullable|string|max:1000',
             'items' => 'required|array|min:1',
@@ -365,13 +412,12 @@ class PurchaseOrderController extends Controller
                 : 'Purchase order berhasil diupdate';
 
             return redirect()->route('purchase-orders.index')
-                           ->with('success', $message);
-
+                ->with('success', $message);
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()
-                           ->withInput()
-                           ->with('error', 'Gagal mengupdate purchase order: ' . $e->getMessage());
+                ->withInput()
+                ->with('error', 'Gagal mengupdate purchase order: ' . $e->getMessage());
         }
     }
 
@@ -411,7 +457,7 @@ class PurchaseOrderController extends Controller
     {
         // Support both route param and query param for supplier_id
         $supplierId = $request->route('supplier_id') ?? $request->get('supplier_id');
-        
+
         if (!$supplierId) {
             return response()->json([
                 'success' => false,
@@ -424,25 +470,25 @@ class PurchaseOrderController extends Controller
 
         try {
             $materials = RawMaterial::with(['unit', 'supplier'])
-                                   ->where('supplier_id', $supplierId)
-                                   ->where('is_active', true)
-                                   ->orderBy('name')
-                                   ->get()
-                                   ->map(function ($material) {
-                                       return [
-                                           'id' => $material->id,
-                                           'name' => $material->name,
-                                           'code' => $material->code,
-                                           'unit' => [
-                                               'id' => optional($material->unit)->id,
-                                               'name' => optional($material->unit)->unit_name ?? '',
-                                               'unit_name' => optional($material->unit)->unit_name ?? '',
-                                               'abbreviation' => optional($material->unit)->abbreviation ?? null,
-                                           ],
-                                           'unit_price' => $material->unit_price ?? 0,
-                                           'supplier_id' => $material->supplier_id,
-                                       ];
-                                   });
+                ->where('supplier_id', $supplierId)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get()
+                ->map(function ($material) {
+                    return [
+                        'id' => $material->id,
+                        'name' => $material->name,
+                        'code' => $material->code,
+                        'unit' => [
+                            'id' => optional($material->unit)->id,
+                            'name' => optional($material->unit)->unit_name ?? '',
+                            'unit_name' => optional($material->unit)->unit_name ?? '',
+                            'abbreviation' => optional($material->unit)->abbreviation ?? null,
+                        ],
+                        'unit_price' => $material->unit_price ?? 0,
+                        'supplier_id' => $material->supplier_id,
+                    ];
+                });
 
             return response()->json([
                 'success' => true,
@@ -470,35 +516,35 @@ class PurchaseOrderController extends Controller
     {
         try {
             $supplierId = $request->get('supplier_id');
-            
+
             $query = RawMaterial::with(['unit', 'supplier'])
-                               ->where('is_active', true);
-            
+                ->where('is_active', true);
+
             if ($supplierId) {
                 $query->where('supplier_id', $supplierId);
             }
-            
+
             $materials = $query->orderBy('name')
-                              ->get()
-                              ->map(function ($material) {
-                                  return [
-                                      'id' => $material->id,
-                                      'name' => $material->name,
-                                      'code' => $material->code,
-                                      'unit' => [
-                                          'id' => optional($material->unit)->id,
-                                          'name' => optional($material->unit)->unit_name ?? '',
-                                          'unit_name' => optional($material->unit)->unit_name ?? '',
-                                          'abbreviation' => optional($material->unit)->abbreviation ?? null,
-                                      ],
-                                      'unit_price' => $material->unit_price ?? 0,
-                                      'supplier_id' => $material->supplier_id,
-                                      'supplier' => $material->supplier ? [
-                                          'id' => $material->supplier->id,
-                                          'name' => $material->supplier->name,
-                                      ] : null,
-                                  ];
-                              });
+                ->get()
+                ->map(function ($material) {
+                    return [
+                        'id' => $material->id,
+                        'name' => $material->name,
+                        'code' => $material->code,
+                        'unit' => [
+                            'id' => optional($material->unit)->id,
+                            'name' => optional($material->unit)->unit_name ?? '',
+                            'unit_name' => optional($material->unit)->unit_name ?? '',
+                            'abbreviation' => optional($material->unit)->abbreviation ?? null,
+                        ],
+                        'unit_price' => $material->unit_price ?? 0,
+                        'supplier_id' => $material->supplier_id,
+                        'supplier' => $material->supplier ? [
+                            'id' => $material->supplier->id,
+                            'name' => $material->supplier->name,
+                        ] : null,
+                    ];
+                });
 
             return response()->json([
                 'success' => true,
@@ -555,14 +601,14 @@ class PurchaseOrderController extends Controller
             }
 
             return redirect()->route('purchase-orders.show', $purchaseOrder)
-                           ->with('success', 'Status purchase order berhasil diubah menjadi ordered.');
+                ->with('success', 'Status purchase order berhasil diubah menjadi ordered.');
         } catch (\Exception $e) {
             Log::error('markAsOrdered error: ' . $e->getMessage());
             if ($request->ajax() || $request->expectsJson()) {
                 return response()->json(['success' => false, 'message' => 'Gagal mengubah status purchase order: ' . $e->getMessage()], 500);
             }
             return redirect()->route('purchase-orders.show', $purchaseOrder)
-                           ->with('error', 'Gagal mengubah status purchase order: ' . $e->getMessage());
+                ->with('error', 'Gagal mengubah status purchase order: ' . $e->getMessage());
         }
     }
 
@@ -572,10 +618,10 @@ class PurchaseOrderController extends Controller
     public function print(PurchaseOrder $purchaseOrder)
     {
         $purchaseOrder->load(['supplier', 'items.rawMaterial.unit', 'creator']);
-        
+
         return view('purchase-orders.print', compact('purchaseOrder'));
     }
-    
+
     /**
      * Send purchase order to supplier via WhatsApp
      * 
@@ -590,10 +636,10 @@ class PurchaseOrderController extends Controller
             if (empty($supplier->phone) || !preg_match('/^62\d{8,13}$/', $supplier->phone)) {
                 throw new \Exception('Nomor telepon supplier tidak valid');
             }
-            
+
             // Load necessary relations
             $purchaseOrder->load(['items.rawMaterial', 'creator']);
-            
+
             // Prepare WhatsApp message
             $orderDateStr = $purchaseOrder->order_date ? $purchaseOrder->order_date->format('d/m/Y') : now()->format('d/m/Y');
             $createdAtStr = ($purchaseOrder->created_at ? $purchaseOrder->created_at->format('d/m/Y H:i') : now()->format('d/m/Y H:i'));
@@ -608,7 +654,7 @@ class PurchaseOrderController extends Controller
             }
             $message .= "Supplier: {$supplier->name}\n\n";
             $message .= "*DETAIL PESANAN:*\n";
-            
+
             $no = 1;
             foreach ($purchaseOrder->items as $item) {
                 $message .= "{$no}. {$item->rawMaterial->name}\n";
@@ -620,24 +666,24 @@ class PurchaseOrderController extends Controller
                 $message .= "\n";
                 $no++;
             }
-            
+
             $message .= "*TOTAL: Rp " . number_format((float)$purchaseOrder->total_amount, 0, ',', '.') . "*\n\n";
-            
+
             if (!empty($purchaseOrder->notes)) {
                 $message .= "*Catatan:* {$purchaseOrder->notes}\n\n";
             }
-            
+
             $message .= "Terima kasih.\n";
             $message .= "- " . ($purchaseOrder->creator ? $purchaseOrder->creator->name : 'Admin');
-            
+
             // Send WhatsApp using Fonnte API
             $url = config('services.fonnte.api_url');
             $token = config('services.fonnte.token');
-            
+
             if (empty($token)) {
                 throw new \Exception('Fonnte API token tidak ditemukan');
             }
-            
+
             $response = Http::withHeaders([
                 'Authorization' => $token
             ])->asForm()->post($url, [
@@ -646,7 +692,7 @@ class PurchaseOrderController extends Controller
                 'delay' => 1,
                 'countryCode' => '62', // Indonesia
             ]);
-            
+
             if ($response->successful()) {
                 return true;
             } else {
@@ -654,7 +700,6 @@ class PurchaseOrderController extends Controller
                 Log::error('Fonnte API error: ' . $response->body());
                 return false;
             }
-            
         } catch (\Exception $e) {
             Log::error('WhatsApp send error: ' . $e->getMessage());
             return false;
@@ -674,9 +719,9 @@ class PurchaseOrderController extends Controller
                 'material_ids' => 'required|array',
                 'material_ids.*' => 'required|exists:raw_materials,id',
             ]);
-            
+
             $materialIds = $validated['material_ids'];
-            
+
             // Get latest prices for the selected materials
             $materials = RawMaterial::with('unit')
                 ->whereIn('id', $materialIds)
@@ -690,7 +735,7 @@ class PurchaseOrderController extends Controller
                         'unit_price' => $material->unit_price ?? 0,
                     ];
                 });
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Harga bahan mentah berhasil divalidasi',
