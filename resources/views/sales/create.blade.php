@@ -69,7 +69,7 @@
                                             <div
                                                 class="bg-white border border-gray-100 rounded-xl shadow-lg p-4 transition-all hover:shadow-xl">
                                                 <div class="font-semibold text-gray-900" x-text="item.name"></div>
-                                                <div class="text-sm text-gray-500 mb-3" x-text="'Stok: ' + item.stock">
+                                                <div class="text-sm text-gray-500 mb-3" x-text="'Stok: ' + Number(item.stock)">
                                                 </div>
                                                 <div class="text-lg font-bold text-orange-600 mb-4"
                                                     x-text="'Rp ' + item.price.toLocaleString('id-ID')"></div>
@@ -363,6 +363,7 @@
                     const res = await fetch(`/branches/${this.branchId}/items`);
                     if (!res.ok) throw new Error('Failed to fetch items');
                     const data = await res.json();
+                    // console.log(data);
 
                     // Reset products/packages and map them to include an Alpine quantity state
                     this.rawProducts = (data.products || []).map(p => ({

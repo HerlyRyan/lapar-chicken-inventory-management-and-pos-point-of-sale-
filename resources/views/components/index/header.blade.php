@@ -19,15 +19,18 @@
                 <p class="text-gray-600 text-sm lg:text-base">Kelola Data {{ $title }} Sistem</p>
             </div>
             <div class="flex-shrink-0">
-                <a href={{ $addRoute }}
-                    class="w-full sm:w-auto inline-flex items-center justify-center px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-semibold rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 text-sm sm:text-base">
-                    <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    <span class="hidden sm:inline">Tambah Data</span>
-                    <span class="sm:hidden">Tambah</span>
-                </a>
+                @if ($addRoute !== '#')
+                    <a href={{ $addRoute }}
+                        class="w-full sm:w-auto inline-flex items-center justify-center px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-semibold rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 text-sm sm:text-base">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <span class="hidden sm:inline">Tambah Data</span>
+                        <span class="sm:hidden">Tambah</span>
+                    </a>
+                @endif
                 {{ $slot }}
             </div>
         </div>

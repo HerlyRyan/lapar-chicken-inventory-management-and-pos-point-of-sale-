@@ -166,7 +166,7 @@ class FinishedProductsStockController extends Controller
 
         $oldStock = (float) $branchStock->quantity;
         $newStock = $oldStock;
-        
+
         $type = $request->input('adjustment_type');
         $qty = (float) $request->input('quantity');
         $notes = $request->input('reason') . ($request->filled('notes') ? (' - ' . $request->input('notes')) : '');
@@ -209,18 +209,27 @@ class FinishedProductsStockController extends Controller
 
     public function items(Branch $branch)
     {
-        $products = FinishedBranchStock::with('finishedProduct')
+        // 1. Ambil data stok cabang (FinishedBranchStock)
+        $branchStocks = FinishedBranchStock::with('finishedProduct')
             ->where('branch_id', $branch->id)
-            ->get(['id', 'finished_product_id', 'quantity']);
+            ->get();
 
-        // ubah format agar frontend dapat langsung pakai
-        $data = $products->map(fn($item) => [
-            'id' => $item->id,
-            'name' => $item->finishedProduct->name ?? '(Tanpa nama)',
+        // 2. Ubah format agar frontend dapat langsung pakai.
+        // PENTING: Gunakan kolom 'quantity' dari FinishedBranchStock sebagai 'stock' di frontend.
+        $products = $branchStocks->map(fn($item) => [
+            'id' => $item->finished_product_id,   // ← gunakan product_id
+            'stock_id' => $item->id,              // ← optional kalau perlu tracking stock
+            'name' => $item->finishedProduct->name,
             'price' => $item->finishedProduct->price,
-            'stock' => $item->finishedProduct->stock,
+            'stock' => $item->quantity,
         ]);
 
-        return response()->json(['products' => $data]);
+        // Anda perlu juga mengambil data package di sini jika ada
+        $packages = []; // Logika untuk mengambil packages (contoh: PackageBranchStock)
+
+        return response()->json([
+            'products' => $products,
+            'packages' => $packages,
+        ]);
     }
 }

@@ -27,27 +27,29 @@ class FinishedProductController extends Controller
         // Get user's branch and check permissions
         $currentBranch = auth()->check() ? auth()->user()->branch : null;
         $canSwitchBranch = auth()->check() && auth()->user()->is_superadmin;
-        
+
         // PROTECTION: Prevent finished products access from production centers
         // Only allow if user is superadmin or if they're not at a production center
         if ($currentBranch && $currentBranch->type === 'production' && !$canSwitchBranch) {
             $message = 'Akses ke produk siap jual tidak diizinkan dari Pusat Produksi. ' .
-                      'Pusat Produksi hanya mengelola bahan mentah dan bahan setengah jadi.';
-            
+                'Pusat Produksi hanya mengelola bahan mentah dan bahan setengah jadi.';
+
             return redirect()->route('dashboard')
-                           ->with('error', $message);
+                ->with('error', $message);
         }
-        
+
         // Determine branch for filtering
         $selectedBranch = null;
-        if (request('branch_id')) {
-            $selectedBranch = Branch::where('is_active', true)->find(request('branch_id'));
+        if (session('branch_id')) {
+            $selectedBranch = Branch::where('is_active', true)->find(session('branch_id'));
         }
-        
+
+        // dd($selectedBranch);
+
         // Determine which branch to use for stock filtering
         $branchForStock = $selectedBranch ?? $currentBranch;
         $showBranchSelector = $canSwitchBranch || !$currentBranch;
-        
+
         // Build the query for finished products
         $query = FinishedProduct::with(['category', 'unit']);
 
@@ -57,24 +59,24 @@ class FinishedProductController extends Controller
             ['key' => 'name', 'label' => 'Nama Produk'],
             ['key' => 'category', 'label' => 'Kategori'],
             ['key' => 'unit', 'label' => 'Satuan'],
-            ['key' => 'current_stock', 'label' => 'Stok Di Cabang'],
+            ['key' => 'stock', 'label' => 'Stok Di Cabang'],
             ['key' => 'minimum_stock', 'label' => 'Stok Minimum'],
             ['key' => 'price', 'label' => 'Harga Jual'],
             ['key' => 'is_active', 'label' => 'Status'],
         ];
-        
+
         // Load finished branch stocks for the specific branch if selected
         if ($branchForStock) {
-            $query = $query->with(['finishedBranchStocks' => function($q) use ($branchForStock) {
+            $query = $query->with(['finishedBranchStocks' => function ($q) use ($branchForStock) {
                 $q->where('branch_id', $branchForStock->id)->with('branch');
             }]);
         } else {
             // Load all finished branch stocks if no specific branch
-            $query = $query->with(['finishedBranchStocks' => function($q) {
+            $query = $query->with(['finishedBranchStocks' => function ($q) {
                 $q->with('branch');
             }]);
         }
-        
+
         // === SEARCH ===
         if ($search = $request->get('search')) {
             $query->where(function ($q) use ($search) {
@@ -147,18 +149,18 @@ class FinishedProductController extends Controller
                 'links' => (string) $finishedProducts->links('vendor.pagination.tailwind'),
             ]);
         }
-        
+
         // Initialize branch stock for products that don't have it and calculate display stock
         foreach ($finishedProducts as $product) {
             if ($branchForStock) {
                 // Initialize stock for specific branch if it doesn't exist
                 if ($product->finishedBranchStocks->isEmpty()) {
                     $product->initializeStockForBranch($branchForStock->id);
-                    $product->load(['finishedBranchStocks' => function($q) use ($branchForStock) {
+                    $product->load(['finishedBranchStocks' => function ($q) use ($branchForStock) {
                         $q->where('branch_id', $branchForStock->id);
                     }]);
                 }
-                
+
                 // Calculate display stock for specific branch
                 $branchStock = $product->finishedBranchStocks->first();
                 $product->display_stock_quantity = $branchStock ? $branchStock->quantity : 0;
@@ -184,68 +186,68 @@ class FinishedProductController extends Controller
         // Get user's branch and check permissions
         $currentBranch = auth()->check() ? auth()->user()->branch : null;
         $canSwitchBranch = auth()->check() && auth()->user()->is_superadmin;
-        
+
         // Determine selected branch from request
         $selectedBranch = null;
         if (request('branch_id')) {
             $selectedBranch = Branch::where('is_active', true)->find(request('branch_id'));
         }
-        
+
         // Use selected branch or current branch for validation
         $branchToCheck = $selectedBranch ?? $currentBranch;
-        
+
         // PROTECTION: Prevent finished product creation at production centers
         if ($branchToCheck && $branchToCheck->type === 'production') {
             $message = 'Produk siap jual tidak dapat dibuat di Pusat Produksi. ' .
-                      'Pusat Produksi hanya mengolah bahan mentah menjadi bahan setengah jadi. ' .
-                      'Silakan pilih cabang toko untuk membuat produk siap jual.';
-            
+                'Pusat Produksi hanya mengolah bahan mentah menjadi bahan setengah jadi. ' .
+                'Silakan pilih cabang toko untuk membuat produk siap jual.';
+
             // Redirect to retail branches if possible
             $retailBranches = Branch::where('is_active', true)->where('type', 'branch')->first();
             $redirectParams = $retailBranches ? ['branch_id' => $retailBranches->id] : [];
-            
+
             return redirect()->route('finished-products.index', $redirectParams)
-                           ->with('error', $message);
+                ->with('error', $message);
         }
-        
+
         $units = Unit::where('is_active', true)->orderBy('unit_name')->get();
         // Get categories specifically for finished products
         $categories = Category::forFinishedProducts()
-                             ->where('is_active', true)
-                             ->orderBy('name')
-                             ->get();
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
 
         if ($units->count() == 0) {
             $message = 'Sebelum menambah produk siap jual, Anda wajib mengisi data satuan terlebih dahulu. ' .
-                      '<a href="' . route('units.index') . '" class="alert-link">Kelola satuan</a>.';
+                '<a href="' . route('units.index') . '" class="alert-link">Kelola satuan</a>.';
             // Get branch_id from request or session
             $branchId = request('branch_id') ?: session('selected_branch_id');
             return redirect()->route('finished-products.index', $branchId ? ['branch_id' => $branchId] : [])->with('warning', $message);
         }
-        
+
         // Get user's branch and check permissions
         $currentBranch = auth()->check() ? auth()->user()->branch : null;
         $canSwitchBranch = auth()->check() && auth()->user()->is_superadmin;
-        
+
         // Get all branches for selection
         $branches = Branch::where('is_active', true)->orderBy('name')->get();
-        
+
         // Determine selected branch from request
         $selectedBranch = null;
         if (request('branch_id')) {
             $selectedBranch = Branch::where('is_active', true)->find(request('branch_id'));
         }
-        
+
         // Get retail branches only (exclude production centers)
         $retailBranches = Branch::where('is_active', true)
-                               ->where('type', 'branch')
-                               ->orderBy('name')
-                               ->get();
-        
+            ->where('type', 'branch')
+            ->orderBy('name')
+            ->get();
+
         return view('finished-products.create', compact(
-            'units', 
-            'categories', 
-            'branches', 
+            'units',
+            'categories',
+            'branches',
             'retailBranches',
             'currentBranch',
             'selectedBranch',
@@ -258,27 +260,27 @@ class FinishedProductController extends Controller
         // PROTECTION: Prevent finished product creation at production centers
         $currentBranch = auth()->check() ? auth()->user()->branch : null;
         $selectedBranchId = $request->input('header_branch_id') ?: $request->input('selected_branch_id');
-        
+
         if ($selectedBranchId) {
             $selectedBranch = Branch::find($selectedBranchId);
             if ($selectedBranch && $selectedBranch->type === 'production') {
                 return redirect()->back()
-                               ->withInput()
-                               ->with('error', 'Produk siap jual tidak dapat dibuat di Pusat Produksi. Pusat Produksi hanya mengolah bahan mentah menjadi bahan setengah jadi.');
+                    ->withInput()
+                    ->with('error', 'Produk siap jual tidak dapat dibuat di Pusat Produksi. Pusat Produksi hanya mengolah bahan mentah menjadi bahan setengah jadi.');
             }
         } elseif ($currentBranch && $currentBranch->type === 'production') {
             return redirect()->back()
-                           ->withInput()
-                           ->with('error', 'Produk siap jual tidak dapat dibuat di Pusat Produksi. Silakan pilih cabang toko.');
+                ->withInput()
+                ->with('error', 'Produk siap jual tidak dapat dibuat di Pusat Produksi. Silakan pilih cabang toko.');
         }
-        
+
         // Debug: Write to custom debug file
         $debugInfo = "=== STORE METHOD DEBUG ===\n";
         $debugInfo .= "Timestamp: " . date('Y-m-d H:i:s') . "\n";
         $debugInfo .= "Has photo file: " . ($request->hasFile('photo') ? 'YES' : 'NO') . "\n";
         $debugInfo .= "Request data: " . json_encode($request->all()) . "\n";
         file_put_contents(storage_path('upload_debug.log'), $debugInfo, FILE_APPEND);
-        
+
         // Debug: Log the request data
         Log::info('Store method called', [
             'all_data' => $request->all(),
@@ -289,7 +291,7 @@ class FinishedProductController extends Controller
                 'mime' => $request->file('photo')->getMimeType()
             ] : null
         ]);
-        
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'code' => $request->filled('code') ? 'string|max:50|unique:finished_products,code' : '',
@@ -327,7 +329,7 @@ class FinishedProductController extends Controller
         if (empty($validated['price']) || $validated['price'] === null) {
             $validated['price'] = 0;
         }
-        
+
         // Generate unique code if not provided
         if (!$request->filled('code')) {
             $validated['code'] = CodeGeneratorHelper::generateProductCode('FP', $validated['name'], FinishedProduct::class);
@@ -349,10 +351,10 @@ class FinishedProductController extends Controller
                     'size' => $request->file('photo')->getSize(),
                     'mime_type' => $request->file('photo')->getMimeType()
                 ]);
-                
+
                 // Store using standardized ImageHelper
                 $validated['photo'] = ImageHelper::storeProductImage($request->file('photo'), 'finished');
-                
+
                 // Log success
                 Log::info('Photo upload success', [
                     'path' => $validated['photo'],
@@ -375,14 +377,14 @@ class FinishedProductController extends Controller
         }
 
         $finishedProduct = FinishedProduct::create($validated);
-        
+
         $debugFinal = "PRODUCT CREATED\n";
         $debugFinal .= "Product ID: " . $finishedProduct->id . "\n";
         $debugFinal .= "Photo field in DB: " . ($finishedProduct->photo ?? 'NULL') . "\n";
         $debugFinal .= "Validated photo: " . ($validated['photo'] ?? 'NOT SET') . "\n";
         $debugFinal .= "===================\n\n";
         file_put_contents(storage_path('upload_debug.log'), $debugFinal, FILE_APPEND);
-        
+
         Log::info('Product created', [
             'product_id' => $finishedProduct->id,
             'photo_field' => $finishedProduct->photo,
@@ -394,7 +396,7 @@ class FinishedProductController extends Controller
         $minStock = $validated['min_stock'] ?? 0;
         $stockMode = $validated['stock_mode'];
         $selectedBranchId = $validated['selected_branch_id'] ?? null;
-        
+
         if ($stockMode === 'selected' && $selectedBranchId) {
             // Check if selected branch is production center
             $selectedBranch = Branch::find($selectedBranchId);
@@ -416,13 +418,13 @@ class FinishedProductController extends Controller
         } else {
             // Initialize stock for all retail branches (exclude production centers)
             $retailBranches = Branch::where('is_active', true)
-                                   ->where('type', 'branch')
-                                   ->get();
-            
+                ->where('type', 'branch')
+                ->get();
+
             foreach ($retailBranches as $branch) {
                 $finishedProduct->initializeStockForBranch($branch->id, $stockQuantity, $minStock);
             }
-            
+
             Log::info('Stock initialized for all retail branches', [
                 'retail_branches_count' => $retailBranches->count(),
                 'stock_quantity' => $stockQuantity,
@@ -433,7 +435,7 @@ class FinishedProductController extends Controller
         // Get branch_id from request or session
         // Fix for 'Undefined array key header_branch_id' error
         $branchId = $request->input('header_branch_id', session('selected_branch_id'));
-        
+
         return redirect()->route('finished-products.index', $branchId ? ['branch_id' => $branchId] : [])
             ->with('success', __('messages.product_created'));
     }
@@ -443,26 +445,26 @@ class FinishedProductController extends Controller
         // Get user's branch and check permissions
         $currentBranch = auth()->check() ? auth()->user()->branch : null;
         $canSwitchBranch = auth()->check() && auth()->user()->is_superadmin;
-        
+
         // Determine branch for filtering
         $selectedBranch = null;
         if (request('branch_id')) {
             $selectedBranch = Branch::where('is_active', true)->find(request('branch_id'));
         }
-        
+
         // Determine which branch to use for stock filtering
         $branchForStock = $selectedBranch ?? $currentBranch;
-        
+
         // Get all branches for header selector
         $branches = Branch::where('is_active', true)->orderBy('name')->get();
-        
+
         // Load product with relationships
         $finishedProduct->load(['category', 'unit', 'finishedBranchStocks.branch']);
-        
+
         // Get branch-specific stock
         $currentBranchStock = null;
         $displayStockQuantity = 0;
-        
+
         if ($branchForStock) {
             // Get stock for specific branch
             $currentBranchStock = $finishedProduct->finishedBranchStocks->where('branch_id', $branchForStock->id)->first();
@@ -471,9 +473,9 @@ class FinishedProductController extends Controller
             // Accumulate stock from all branches
             $displayStockQuantity = $finishedProduct->finishedBranchStocks->sum('quantity');
         }
-        
+
         return view('finished-products.show', compact(
-            'finishedProduct', 
+            'finishedProduct',
             'currentBranchStock',
             'displayStockQuantity',
             'branches',
@@ -489,26 +491,26 @@ class FinishedProductController extends Controller
         // Get user's branch and check permissions
         $currentBranch = auth()->check() ? auth()->user()->branch : null;
         $canSwitchBranch = auth()->check() && auth()->user()->is_superadmin;
-        
+
         // Determine branch for filtering
         $selectedBranch = null;
         if (request('branch_id')) {
             $selectedBranch = Branch::where('is_active', true)->find(request('branch_id'));
         }
-        
+
         // Determine which branch to use for stock filtering
         $branchForStock = $selectedBranch ?? $currentBranch;
-        
+
         // Get all branches for header selector
         $branches = Branch::where('is_active', true)->orderBy('name')->get();
-        
+
         // Load product with relationships
         $finishedProduct->load(['category', 'unit', 'finishedBranchStocks.branch']);
-        
+
         // Get branch-specific stock
         $currentBranchStock = null;
         $displayStockQuantity = 0;
-        
+
         if ($branchForStock) {
             // Get stock for specific branch
             $currentBranchStock = $finishedProduct->finishedBranchStocks->where('branch_id', $branchForStock->id)->first();
@@ -517,13 +519,13 @@ class FinishedProductController extends Controller
             // Accumulate stock from all branches
             $displayStockQuantity = $finishedProduct->finishedBranchStocks->sum('quantity');
         }
-        
+
         $units = Unit::orderBy('unit_name')->get();
         $categories = Category::orderBy('name')->get();
-        
+
         return view('finished-products.edit', compact(
-            'finishedProduct', 
-            'units', 
+            'finishedProduct',
+            'units',
             'categories',
             'currentBranchStock',
             'displayStockQuantity',
@@ -567,7 +569,7 @@ class FinishedProductController extends Controller
         } else {
             $validated['production_cost'] = $validated['production_cost'] ?? 0;
         }
-        
+
         if (empty($validated['price']) || $validated['price'] === null) {
             $validated['price'] = 0;
         }
@@ -590,11 +592,11 @@ class FinishedProductController extends Controller
 
         // Update branch-specific stock if stock_quantity was provided and we have a specific branch
         $branchId = $request->input('branch_id') ?: $request->input('header_branch_id') ?: session('selected_branch_id');
-        
+
         if ($branchId && isset($stockQuantity)) {
             // Get or create branch stock record
             $branchStock = $finishedProduct->finishedBranchStocks()->where('branch_id', $branchId)->first();
-            
+
             if (!$branchStock) {
                 // Initialize stock for this branch if it doesn't exist
                 $finishedProduct->initializeStockForBranch($branchId, $stockQuantity);
@@ -625,17 +627,17 @@ class FinishedProductController extends Controller
         if ($finishedProduct->photo && Storage::disk('public')->exists($finishedProduct->photo)) {
             Storage::disk('public')->delete($finishedProduct->photo);
         }
-        
+
         // Delete legacy image if exists
         if ($finishedProduct->image && file_exists(public_path($finishedProduct->image))) {
             unlink(public_path($finishedProduct->image));
         }
-        
+
         $finishedProduct->delete();
 
         // Get branch_id from session
         $branchId = session('selected_branch_id');
-        
+
         return redirect()->route('finished-products.index', $branchId ? ['branch_id' => $branchId] : [])
             ->with('success', __('messages.product_deleted'));
     }
@@ -655,7 +657,7 @@ class FinishedProductController extends Controller
 
         try {
             $finishedProduct = FinishedProduct::findOrFail($request->finished_product_id);
-            
+
             // Update stock using the model method
             $finishedProduct->updateStockForBranch(
                 $request->branch_id,
@@ -667,7 +669,7 @@ class FinishedProductController extends Controller
 
             $typeText = [
                 'in' => 'Stok Masuk',
-                'out' => 'Stok Keluar', 
+                'out' => 'Stok Keluar',
                 'return' => 'Stok Retur'
             ][$request->type];
 
@@ -675,7 +677,6 @@ class FinishedProductController extends Controller
                 'success' => true,
                 'message' => "{$typeText} berhasil dicatat untuk {$finishedProduct->name}"
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -717,6 +718,6 @@ class FinishedProductController extends Controller
         $finishedProduct->update(['is_active' => !$finishedProduct->is_active]);
         $status = $finishedProduct->is_active ? 'diaktifkan' : 'dinonaktifkan';
         return redirect()->route('finished-products.index')
-                        ->with('success', "Produk jadi berhasil {$status}.");
+            ->with('success', "Produk jadi berhasil {$status}.");
     }
 }

@@ -393,7 +393,7 @@ class SaleController extends Controller
             'items.*.unit_price' => 'required|numeric|min:0',
             // Client subtotal will be ignored; keep nullable for compatibility
             'items.*.subtotal' => 'nullable|integer|min:0',
-        ]);
+        ]);        
         
         DB::beginTransaction();
         
@@ -449,17 +449,17 @@ class SaleController extends Controller
 
             // Build required finished product quantities for this sale (DRY helper)
             $requirements = $this->computeRequirementsFromItems($items);
-
+            
             // Validate and deduct branch stock atomically
             $productIds = array_keys($requirements);
+            // dd($productIds);
             if (!empty($productIds)) {
                 // Lock relevant stock rows for update
                 $stocks = FinishedBranchStock::where('branch_id', $request->branch_id)
-                    ->whereIn('finished_product_id', $productIds)
-                    ->lockForUpdate()
+                    ->whereIn('finished_product_id', $productIds)                    
                     ->get()
                     ->keyBy('finished_product_id');
-
+                    
                 $productNames = FinishedProduct::whereIn('id', $productIds)->get()->keyBy('id');
 
                 // Validate availability

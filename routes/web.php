@@ -35,6 +35,8 @@ use App\Http\Controllers\SemiFinishedDistributionController;
 use App\Http\Controllers\FinishedProductsStockController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Dev\DevController;
+use App\Http\Controllers\Report\BranchReportController;
+use App\Http\Controllers\Report\SupplierReportController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\StockOpnameController;
 use App\Models\FinishedBranchStock;
@@ -50,9 +52,19 @@ use App\Models\FinishedBranchStock;
 |
 */
 
-Route::get('/', function () {
-    return redirect()->route('dashboard');
-});
+Route::get('/dashboard', function (Request $request) {
+    // Clear selected branch
+    if ($request->clear_dashboard_branch == 1) {
+        session(['branch_id' => 0]);
+    }
+
+    // Set selected branch
+    if ($request->has('branch_id')) {
+        session(['branch_id' => $request->branch_id]);
+    }
+
+    return view('dashboard.index');
+})->name('dashboard');
 
 // Semi-Finished Usage Approvals (Approvals Inbox)
 Route::prefix('semi-finished-usage-approvals')->name('semi-finished-usage-approvals.')->group(function () {
@@ -60,13 +72,6 @@ Route::prefix('semi-finished-usage-approvals')->name('semi-finished-usage-approv
     // Redirect to unified detail page if needed
     Route::get('{semi_finished_usage_approval}', [SemiFinishedUsageApprovalController::class, 'show'])->name('show');
 });
-
-// Routes are automatically authenticated through AutoLogin middleware
-// No need for explicit auth middleware during development
-
-// Dashboard (reset to minimal placeholder while rebuilding)
-Route::view('/dashboard', 'dashboard.index')->name('dashboard');
-Route::redirect('/dashboard/index', '/dashboard')->name('dashboard.index');
 
 // ===== DATA MASTER ROUTES =====
 
@@ -395,4 +400,12 @@ Route::get('/branches/{branch}/items', [FinishedProductsStockController::class, 
 // General fallback route for 404s (must be the last route)
 Route::fallback(function () {
     abort(404);
+});
+
+// Report Controller
+Route::prefix('reports/')->name('reports.')->group(function () {
+    Route::get('branches', [BranchReportController::class, 'index'])->name('branches.index');
+    Route::get('branches/print', [BranchReportController::class, 'print'])->name('branches.print');
+
+    Route::get('suppliers', [SupplierReportController::class, 'index'])->name('suppliers.index');
 });

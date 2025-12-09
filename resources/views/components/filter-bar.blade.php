@@ -3,12 +3,42 @@
     'selects' => [],
     'date' => false,
     'export_csv' => false,
+    'printRouteName' => 'reports.branches.print',
+    'print' => false,
 ])
 
-<div class="px-4 sm:px-6 py-4 sm:py-6 bg-gray-50 border-b border-gray-200" x-data>
+<div class="px-4 sm:px-6 py-4 sm:py-6 bg-gray-50 border-b border-gray-200" x-data="{
+    // Fungsi untuk mendapatkan URL cetak dinamis
+    getPrintUrl() {
+        // 1. Kumpulkan semua filter aktif dari store
+        const filters = {
+            search: $store.table.search,
+            // Filter dinamis lainnya
+            ...$store.table.filters,
+        };
+
+        // 2. Tambahkan filter tanggal jika ada
+        @if ($date) filters.start_date = $store.table.start_date;
+            filters.end_date = $store.table.end_date; @endif
+
+        // 3. Hapus filter yang bernilai null, kosong, atau undefined
+        const cleanFilters = Object.fromEntries(
+            Object.entries(filters).filter(([_, v]) => v !== null && v !== '' && v !== undefined)
+        );
+
+        // 4. Ubah objek filter menjadi query string
+        const queryString = new URLSearchParams(cleanFilters).toString();
+
+        // 5. Bangun URL final menggunakan route Laravel
+        // Kita menggunakan PHP Blade untuk mendapatkan base URL route        
+        const baseUrl = '{{ route($printRouteName) }}';
+
+        return `${baseUrl}${queryString ? '?' + queryString : ''}`;
+    }
+}">
     {{-- Filter & Search --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-{{ count($selects) + 2 }} gap-3 sm:gap-4">
-        {{-- Search Input --}}
+        {{-- Search Input (Tetap sama) --}}
         <div class="sm:col-span-2 lg:col-span-2">
             <div class="relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -23,7 +53,7 @@
             </div>
         </div>
 
-        {{-- Dynamic Selects --}}
+        {{-- Dynamic Selects (Tetap sama) --}}
         @foreach ($selects as $select)
             <div class="sm:col-span-1">
                 <select x-model="$store.table.filters['{{ $select['name'] }}']"
@@ -36,7 +66,7 @@
             </div>
         @endforeach
 
-        {{-- Date Range --}}
+        {{-- Date Range (Tetap sama) --}}
         @if ($date)
             <div class="lg:col-span-2 xl:col-span-1">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Mulai</label>
@@ -56,19 +86,23 @@
 
     {{-- Tombol-tombol di bawah --}}
     <div class="mt-6 flex flex-wrap gap-3 justify-start">
-        {{-- Export CSV --}}
+
+        {{-- TOMBOL CETAK BARU MENGGUNAKAN Alpine.js --}}
+        @if ($print)
+            <a :href="getPrintUrl()" target="_blank"
+                class="inline-flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg transition-colors duration-200">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2z" />
+                </svg>
+                Cetak Laporan
+            </a>
+        @endif
+
+        {{-- Export CSV (Opsional) --}}
         @if ($export_csv)
-            <a href="{{ route(
-                'purchase-receipts.export',
-                array_filter([
-                    'status' => request('status'),
-                    'start_date' => request('start_date'),
-                    'end_date' => request('end_date'),
-                    'q' => request('q'),
-                    'sort' => request('sort'),
-                    'direction' => request('direction'),
-                ]),
-            ) }}"
+            {{-- Tombol Export CSV masih perlu di-update seperti tombol cetak jika ingin menggunakan filter Alpine --}}
+            <a href="{{ route('purchase-receipts.export', array_filter(['status' => request('status'), 'start_date' => request('start_date'), 'end_date' => request('end_date'), 'q' => request('q'), 'sort' => request('sort'), 'direction' => request('direction')])) }}"
                 class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
