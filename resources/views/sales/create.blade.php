@@ -487,13 +487,7 @@
                     .final_amount) {
                     alert('Jumlah bayar tidak mencukupi!');
                     return;
-                }
-
-                // Final phone format before submission
-                const phoneInput = document.getElementById('phone');
-                if (phoneInput && phoneInput.value) {
-                    phoneInput.value = '62' + phoneInput.value.replace(/^0+/, '');
-                }
+                }                
 
                 // The form is ready, submit it
                 document.getElementById('saleForm').submit();
