@@ -16,12 +16,12 @@
 
                 {{-- Filter Section --}}
                 <x-filter-bar searchPlaceholder="Cari nama, kode, atau alamat supplier..." :selects="$selects" print="true"
-                    printRouteName="reports.branches.print" />
+                    printRouteName="reports.suppliers.print" />
 
                 {{-- Desktop Table --}}
                 <div class="hidden md:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
-                        <x-index.table-head :columns="$columns" />
+                        <x-index.table-head :columns="$columns" print="true" />
                         <tbody class="bg-white divide-y divide-gray-200">
                             <template x-for="(supplier, index) in sortedRows" :key="supplier.id">
                                 <tr class="hover:bg-gray-50 transition-colors duration-150">
@@ -72,20 +72,7 @@
                                                 Tidak Aktif
                                             </span>
                                         </template>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        <div x-data="{
-                                            viewUrl: '/suppliers/' + supplier.id,
-                                            editUrl: '/suppliers/' + supplier.id + '/edit',
-                                            deleteUrl: '/suppliers/' + supplier.id,
-                                            toggleUrl: '/suppliers/' + supplier.id + '/toggle-status',
-                                            itemName: 'supplier ' + supplier.name,
-                                            isActive: supplier.is_active
-                                        }">
-                                            <x-index.action-buttons :view="true" :edit="true" :delete="true"
-                                                :toggle="true" />
-                                        </div>
-                                    </td>
+                                    </td>                                    
                                 </tr>
                             </template>
                             <template x-if="sortedRows.length === 0">
@@ -155,22 +142,7 @@
                                         </span>
                                     </template>
                                 </div>
-                            </div>
-
-                            {{-- Actions --}}
-                            <div class="mt-4 pt-3 border-t border-gray-200">
-                                <div x-data="{
-                                    viewUrl: '/suppliers/' + supplier.id,
-                                    editUrl: '/suppliers/' + supplier.id + '/edit',
-                                    deleteUrl: '/suppliers/' + supplier.id,
-                                    toggleUrl: '/suppliers/' + supplier.id + '/toggle-status',
-                                    itemName: 'supplier ' + supplier.name,
-                                    isActive: supplier.is_active
-                                }">
-                                    <x-index.action-buttons :view="true" :edit="true" :delete="true"
-                                        :toggle="true" />
-                                </div>
-                            </div>
+                            </div>                                                        
                         </div>
                     </template>
                 </div>

@@ -402,10 +402,10 @@
                         @if (auth()->user()->hasRole('Super Admin') ||
                                 auth()->user()->hasRole('Manager') ||
                                 auth()->user()->hasRole('Kepala Toko'))
-                            <a href="{{ route('destruction-reports.index') }}"
+                            {{-- <a href="{{ route('destruction-reports.index') }}"
                                 class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('destruction-reports.*') ? 'bg-orange-50 text-orange-600' : '' }}">
                                 Laporan Pemusnahan
-                            </a>
+                            </a> --}}
                         @endif
                     @endif
 
@@ -422,16 +422,14 @@
         @endif
 
         {{-- ReportDropdown --}}
-        <div x-data="{ open: {{ request()->routeIs('reports.branches.*', 'reports.suppliers.*') ? 'true' : 'false' }} }" class="rounded-xl">
+        <div x-data="{ open: {{ request()->routeIs('reports.*') ? 'true' : 'false' }} }" class="rounded-xl">
             <button @click="open = !open"
-                class="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition-all duration-200 group {{ request()->routeIs('reports.branches.*', 'reports.suppliers.*')
+                class="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition-all duration-200 group {{ request()->routeIs('reports.*')
                     ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500'
                     : 'text-gray-700' }}">
                 <div class="flex items-center gap-3">
                     <div
-                        class="w-8 h-8 flex items-center justify-center rounded-lg {{ request()->routeIs('reports.branches.*', 'reports.suppliers.*')
-                            ? 'bg-orange-100'
-                            : 'bg-gray-100 group-hover:bg-orange-100' }} transition-colors duration-200">
+                        class="w-8 h-8 flex items-center justify-center rounded-lg {{ request()->routeIs('reports.*') ? 'bg-orange-100' : 'bg-gray-100 group-hover:bg-orange-100' }} transition-colors duration-200">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                             <path
                                 d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM13 3.5L18.5 9H13V3.5zM8 12h2v5H8v-5zm4-3h2v8h-2V9zm4 2h2v6h-2v-6z" />
@@ -457,6 +455,38 @@
                 <a href="{{ route('reports.suppliers.index') }}"
                     class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('reports.suppliers.index') ? 'bg-orange-50 text-orange-600' : '' }}">
                     Supplier
+                </a>
+                <a href="{{ route('reports.raw-materials.index') }}"
+                    class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('reports.raw-materials.index') ? 'bg-orange-50 text-orange-600' : '' }}">
+                    Bahan Mentah
+                </a>
+                <a href="{{ route('reports.semi-finished.index') }}"
+                    class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('reports.semi-finished.index') ? 'bg-orange-50 text-orange-600' : '' }}">
+                    Bahan Setengah Jadi
+                </a>
+                <a href="{{ route('reports.finished.index') }}"
+                    class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('reports.finished.index') ? 'bg-orange-50 text-orange-600' : '' }}">
+                    Produk Siap Jual
+                </a>
+                <a href="{{ route('reports.sale-packages.index') }}"
+                    class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('reports.sale-packages.index') ? 'bg-orange-50 text-orange-600' : '' }}">
+                    Paket Penjualan
+                </a>
+                <a href="{{ route('reports.sales.index') }}"
+                    class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('reports.sales.index') ? 'bg-orange-50 text-orange-600' : '' }}">
+                    Transaksi Penjualan
+                </a>
+                <a href="{{ route('reports.stock-transfers.index') }}"
+                    class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('reports.stock-transfers.index') ? 'bg-orange-50 text-orange-600' : '' }}">
+                    Stok Transfer
+                </a>
+                <a href="{{ route('reports.best-selling.index') }}"
+                    class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('reports.best-selling.index') ? 'bg-orange-50 text-orange-600' : '' }}">
+                    Produk Terlaris
+                </a>
+                <a href="{{ route('reports.semi-finished-usage.index') }}"
+                    class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('reports.semi-finished-usage.index') ? 'bg-orange-50 text-orange-600' : '' }}">
+                    Penggunaan Bahan Setengah Jadi
                 </a>
             </div>
         </div>

@@ -1,4 +1,4 @@
-@props(['columns' => []])
+@props(['columns' => [], 'print' => false])
 
 <thead class="bg-gray-50">
     <tr>
@@ -32,9 +32,11 @@
             </th>
         @endforeach
 
-        <th
-            class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100">
-            Aksi
-        </th>
+        @if (!$print)
+            <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100">
+                Aksi
+            </th>
+        @endif
     </tr>
 </thead>

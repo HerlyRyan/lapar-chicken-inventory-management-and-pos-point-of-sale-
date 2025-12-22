@@ -75,4 +75,38 @@ class SupplierReportController extends Controller
             'pagination' => $suppliers, // tetap simpan pagination untuk tampilkan links
         ]);
     }
+
+    public function print(Request $request)
+    {
+
+        // Base query
+        $query = Supplier::query();
+
+        // Search global
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhere('address', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter status
+        if ($request->has('is_active') && in_array($request->is_active, ['0', '1'], true)) {
+            $query->where('is_active', $request->is_active);
+        }
+
+        // Sorting
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        $suppliers = $query->get();
+
+        return view('reports.suppliers.print', [
+            'suppliers' => $suppliers,
+        ]);
+    }
 }

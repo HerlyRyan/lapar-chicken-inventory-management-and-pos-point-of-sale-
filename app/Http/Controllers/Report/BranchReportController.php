@@ -114,8 +114,7 @@ class BranchReportController extends Controller
             $sortDir = $request->get('sort_dir', 'asc');
             $query->orderBy($sortBy, $sortDir);
         }
-
-        /** @var \Illuminate\Pagination\LengthAwarePaginator $branch */
+        
         $branch = $query->get();
 
         return view('reports.branches.print', [

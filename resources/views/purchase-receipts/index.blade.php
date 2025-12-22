@@ -133,7 +133,7 @@
                                                         </svg>
                                                         Buat Penerimaan
                                                     </a>
-                                                    <button type="button"
+                                                    {{-- <button type="button"
                                                         class="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
                                                         data-po-id="{{ $po->id }}"
                                                         data-po-number="{{ $po->order_number }}"
@@ -147,7 +147,7 @@
                                                             </path>
                                                         </svg>
                                                         Terima
-                                                    </button>
+                                                    </button> --}}
                                                 </div>
                                             </td>
                                         </tr>
@@ -484,38 +484,4 @@
             </div>
         </div>
     </div>
-
-    {{-- Delete Form --}}
-    <form id="delete-form" method="POST" style="display: none;">
-        @csrf
-        @method('DELETE')
-    </form>
 @endsection
-
-@push('scripts')
-    <script>
-        // Quick receive modal functions
-        function openQuickReceive(button) {
-            const poId = button.dataset.poId;
-            const poNumber = button.dataset.poNumber;
-            const supplierName = button.dataset.supplier;
-
-            document.getElementById('qr-purchase-order-id').value = poId;
-            document.getElementById('qr-po-number').textContent = poNumber;
-            document.getElementById('qr-supplier-name').textContent = supplierName;
-            document.getElementById('qr-receipt-date').value = new Date().toISOString().split('T')[0];
-
-            // Load items via AJAX if needed
-            loadPurchaseOrderItems(poId);
-
-            // Show modal
-            document.querySelector('[x-data*="open: false"]').__x.$data.open = true;
-        }
-
-        function loadPurchaseOrderItems(poId) {
-            // Implementation for loading PO items
-            // This would typically make an AJAX call to get the items
-        }
-    </script>
-    <script src="{{ asset('js/purchase-receipts.js') }}"></script>
-@endpush

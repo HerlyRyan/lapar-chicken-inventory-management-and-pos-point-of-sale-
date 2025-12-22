@@ -36,6 +36,14 @@ use App\Http\Controllers\FinishedProductsStockController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Dev\DevController;
 use App\Http\Controllers\Report\BranchReportController;
+use App\Http\Controllers\Report\FinishedReportController;
+use App\Http\Controllers\Report\ProductBestSellingReportController;
+use App\Http\Controllers\Report\RawMaterialReportController;
+use App\Http\Controllers\Report\SalePackagesReportController;
+use App\Http\Controllers\Report\SalesReportController;
+use App\Http\Controllers\Report\SemiFinishedReportController;
+use App\Http\Controllers\Report\SemiFinishedUsageReportController;
+use App\Http\Controllers\Report\StockTransferReportController;
 use App\Http\Controllers\Report\SupplierReportController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\StockOpnameController;
@@ -408,4 +416,29 @@ Route::prefix('reports/')->name('reports.')->group(function () {
     Route::get('branches/print', [BranchReportController::class, 'print'])->name('branches.print');
 
     Route::get('suppliers', [SupplierReportController::class, 'index'])->name('suppliers.index');
+    Route::get('suppliers/print', [SupplierReportController::class, 'print'])->name('suppliers.print');
+
+    Route::get('raw-materials', [RawMaterialReportController::class, 'index'])->name('raw-materials.index');
+    Route::get('raw-materials/print', [RawMaterialReportController::class, 'print'])->name('raw-materials.print');
+
+    Route::get('semi-finished', [SemiFinishedReportController::class, 'index'])->name('semi-finished.index');
+    Route::get('semi-finished/print', [SemiFinishedReportController::class, 'print'])->name('semi-finished.print');
+
+    Route::get('finished', [FinishedReportController::class, 'index'])->name('finished.index');
+    Route::get('finished/print', [FinishedReportController::class, 'print'])->name('finished.print');
+
+    Route::get('sale-packages', [SalePackagesReportController::class, 'index'])->name('sale-packages.index');
+    Route::get('sale-packages/print', [SalePackagesReportController::class, 'print'])->name('sale-packages.print');
+
+    Route::get('sales', [SalesReportController::class, 'index'])->name('sales.index');
+    Route::get('sales/print', [SalesReportController::class, 'print'])->name('sales.print');
+
+    Route::get('stock-transfers', [StockTransferReportController::class, 'index'])->name('stock-transfers.index');
+    Route::get('stock-transfers/print', [StockTransferReportController::class, 'print'])->name('stock-transfers.print');
+
+    Route::get('best-selling', [ProductBestSellingReportController::class, 'index'])->name('best-selling.index');
+    Route::get('best-selling/print', [ProductBestSellingReportController::class, 'print'])->name('best-selling.print');
+
+    Route::get('semi-finished-usage', [SemiFinishedUsageReportController::class, 'index'])->name('semi-finished-usage.index');
+    Route::get('semi-finished-usage/print', [SemiFinishedUsageReportController::class, 'print'])->name('semi-finished-usage.print');
 });

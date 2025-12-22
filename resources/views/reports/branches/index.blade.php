@@ -25,7 +25,7 @@
                 {{-- Desktop Table --}}
                 <div class="hidden md:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
-                        <x-index.table-head :columns="$columns" />
+                        <x-index.table-head :columns="$columns" print="true" />
                         <tbody class="bg-white divide-y divide-gray-200">
                             <template x-for="(branch, index) in sortedRows" :key="branch.id">
                                 <tr class="hover:bg-gray-50 transition-colors duration-150">
@@ -94,20 +94,7 @@
                                                 Nonaktif
                                             </span>
                                         </template>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-center">
-                                        <div x-data="{
-                                            viewUrl: '/branches/' + branch.id,
-                                            editUrl: '/branches/' + branch.id + '/edit',
-                                            deleteUrl: '/branches/' + branch.id,
-                                            toggleUrl: '/branches/' + branch.id + '/toggle-status',
-                                            itemName: 'cabang ' + branch.name,
-                                            isActive: branch.is_active
-                                        }">
-                                            <x-index.action-buttons :view="true" :edit="true" :delete="true"
-                                                :toggle="true" />
-                                        </div>
-                                    </td>
+                                    </td>                                    
                                 </tr>
                             </template>
                             <template x-if="sortedRows.length === 0">
@@ -208,20 +195,7 @@
                                                             <div class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
                                                             Nonaktif
                                                         </span>
-                                                    </template>
-
-                                                    {{-- Actions --}}
-                                                    <div x-data="{
-                                                        viewUrl: '/branches/' + branch.id,
-                                                        editUrl: '/branches/' + branch.id + '/edit',
-                                                        deleteUrl: '/branches/' + branch.id,
-                                                        toggleUrl: '/branches/' + branch.id + '/toggle-status',
-                                                        itemName: 'cabang ' + branch.name,
-                                                        isActive: branch.is_active
-                                                    }">
-                                                        <x-index.action-buttons :view="true" :edit="true"
-                                                            :delete="true" :toggle="true" size="sm" />
-                                                    </div>
+                                                    </template>                                                    
                                                 </div>
                                             </div>
                                         </div>
