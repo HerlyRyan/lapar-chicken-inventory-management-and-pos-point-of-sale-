@@ -17,7 +17,7 @@
 
                 {{-- Filter Section --}}
                 <x-filter-bar searchPlaceholder="Cari berdasarkan notes, response notes...." :selects="$selects ?? []" print="true"
-                    printRouteName="reports.stock-transfers.print" />
+                    printRouteName="reports.stock-transfers.print" date="true" />
 
                 {{-- Desktop Table --}}
                 <div class="hidden md:block overflow-x-auto">
@@ -60,6 +60,9 @@
                                                 Ditolak
                                             </span>
                                         </template>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                                        x-text="transfer.notes">
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
                                         x-text="new Date(transfer.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })">

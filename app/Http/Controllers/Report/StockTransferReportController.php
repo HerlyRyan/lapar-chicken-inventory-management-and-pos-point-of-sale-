@@ -21,6 +21,7 @@ class StockTransferReportController extends Controller
             ['key' => 'to_branch_id', 'label' => 'Ke Cabang'],
             ['key' => 'quantity', 'label' => 'Jumlah'],
             ['key' => 'status', 'label' => 'Status'],
+            ['key' => 'notes', 'label' => 'Catatan'],
             ['key' => 'created_at', 'label' => 'Tanggal Pengiriman'],
             ['key' => 'handled_at', 'label' => 'Tanggal Penanganan'],
         ];

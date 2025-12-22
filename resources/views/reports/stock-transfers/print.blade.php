@@ -8,7 +8,7 @@
         <x-report.header :title="$reportTitle ?? 'LAPORAN STOK TRANSFER'" address="Jl. Utama Lapar Chicken No. 123, Jakarta" />
 
         <div class="text-xs text-gray-700 mb-4 flex justify-between print:text-[10px]">
-            <p><b>Tanggal:</b> {{ now()->format('d F Y') }}</p>
+            <p><b>Tanggal Cetak:</b> {{ now()->format('d F Y') }}</p>
             <p><b>Dicetak Oleh:</b> {{ Auth::user()->name ?? 'Administrator' }}</p>
         </div>
 
