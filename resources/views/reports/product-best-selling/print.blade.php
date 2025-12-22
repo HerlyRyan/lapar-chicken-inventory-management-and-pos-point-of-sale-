@@ -17,7 +17,10 @@
                 <thead class="bg-gray-100 print:bg-gray-200">
                     <tr>
                         <th class="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">No.</th>
+                        <th class="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Cabang</th>
                         <th class="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Nama Produk
+                        </th>
+                        <th class="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Kategori
                         </th>
                         <th class="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total
                             Terjual</th>
@@ -29,7 +32,9 @@
                     @forelse ($bestSelling as $index => $item)
                         <tr class="hover:bg-gray-50">
                             <td class="px-3 py-2 whitespace-nowrap text-center">{{ $index + 1 }}</td>
+                            <td class="px-3 py-2 text-gray-700">{{ $item->branch_name }}</td>
                             <td class="px-3 py-2 text-gray-700">{{ $item->item_name }}</td>
+                            <td class="px-3 py-2 text-gray-700">{{ $item->category_name }}</td>
                             <td class="px-3 py-2 whitespace-nowrap text-gray-700">{{ number_format($item->quantity) }}</td>
                             <td class="px-3 py-2 whitespace-nowrap text-gray-700">Rp
                                 {{ number_format($item->subtotal, 0, ',', '.') }}</td>
