@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DestructionReportController;
 
 use App\Http\Controllers\FinishedProductController;
@@ -73,6 +74,11 @@ Route::get('/dashboard', function (Request $request) {
 
     return view('dashboard.index');
 })->name('dashboard');
+
+Route::prefix('dashboard/sales')->group(function () {
+    Route::get('/yearly', [DashboardController::class, 'yearly']);
+    Route::get('/monthly', [DashboardController::class, 'monthly']);
+});
 
 // Semi-Finished Usage Approvals (Approvals Inbox)
 Route::prefix('semi-finished-usage-approvals')->name('semi-finished-usage-approvals.')->group(function () {
