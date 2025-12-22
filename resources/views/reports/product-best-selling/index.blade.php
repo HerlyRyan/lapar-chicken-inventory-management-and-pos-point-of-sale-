@@ -52,24 +52,37 @@
                 <div class="md:hidden divide-y divide-gray-200">
                     <template x-for="(item, index) in sortedRows" :key="item.item_id">
                         <div class="p-4 hover:bg-gray-50 transition-colors duration-150">
-                            <div class="flex items-start justify-between mb-3">
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm text-gray-500 truncate mt-1" x-text="item.item_name"></p>
-                                </div>
-                            </div>
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">No:</span>
+                                    <span class="text-sm text-gray-900" x-text="index + 1"></span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Cabang:</span>
+                                    <span class="text-sm text-gray-900" x-text="item.branch_name"></span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Produk:</span>
+                                    <span class="text-sm text-gray-900" x-text="item.item_name"></span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500">Kategori:</span>
+                                    <span class="text-sm text-gray-900" x-text="item.category_name"></span>
+                                </div>
+                                <div class="flex items-center justify-between">
                                     <span class="text-sm text-gray-500">Jumlah:</span>
-                                    <span class="text-sm text-gray-900" x-text="item.quantity"></span>
+                                    <span class="text-sm text-gray-900" x-text="Number(item.quantity)"></span>
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <span class="text-sm text-gray-500">Total Pendapatan:</span>
-                                    <span class="text-sm text-gray-900" x-text="item.subtotal"></span>
+                                    <span class="text-sm text-gray-900"
+                                        x-text="new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(Number(item.subtotal))"></span>
                                 </div>
                             </div>
                         </div>
                     </template>
                 </div>
+
 
                 <template x-if="sortedRows.length !== 0">
                     <div class="pagination-wrapper">
