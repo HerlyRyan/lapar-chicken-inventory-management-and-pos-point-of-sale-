@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Report;
 
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Models\SemiFinishedProduct;
 use App\Models\SemiFinishedUsageRequest;
 use Illuminate\Http\Request;
 
@@ -35,19 +36,25 @@ class SemiFinishedUsageReportController extends Controller
         branches.id as branch_id,
         branches.name as branch_name,
         semi_finished_products.name as product_name,
-        SUM(items.quantity) as total_quantity
+        SUM(items.quantity) as total_quantity,
+        items.semi_finished_product_id as product_id
         ')
             ->groupBy(
                 'usage_date',
                 'branches.id',
                 'branches.name',
-                'semi_finished_products.name'
+                'semi_finished_products.name',
+                'items.semi_finished_product_id',
             );
-
 
         // === FILTER CABANG ===
         if ($request->filled('branch_id')) {
             $query->where('semi_finished_usage_requests.requesting_branch_id', $request->branch_id);
+        }
+
+        // === FILTER SEMI FINISHED PRODUCT ===
+        if ($request->filled('product_id')) {
+            $query->where('items.semi_finished_product_id', $request->product_id);
         }
 
         // === FILTER TANGGAL ===
@@ -74,15 +81,17 @@ class SemiFinishedUsageReportController extends Controller
         $columns = [
             ['key' => 'usage_date', 'label' => 'Tanggal'],
             ['key' => 'branch_id', 'label' => 'Cabang'],
-            ['key' => 'product_name', 'label' => 'Produk Semi Finished'],
+            ['key' => 'product_id', 'label' => 'Bahan Setengah Jadi'],
             ['key' => 'total_quantity', 'label' => 'Total Digunakan'],
         ];
 
         // === FILTER SELECT ===
-        $branches = Branch::orderBy('name')->pluck('name', 'id')->toArray();
+        $branches = Branch::where('type', '=', 'branch')->orderBy('name')->pluck('name', 'id')->toArray();
+        $semiFinishedProduct = SemiFinishedProduct::orderBy('name')->pluck('name', 'id')->toArray();
 
         $selects = [
             ['name' => 'branch_id', 'label' => 'Cabang', 'options' => $branches],
+            ['name' => 'product_id', 'label' => 'Bahan Setengah Jadi', 'options' => $semiFinishedProduct],
         ];
 
         // === RESPONSE AJAX ===
@@ -126,18 +135,25 @@ class SemiFinishedUsageReportController extends Controller
         branches.id as branch_id,
         branches.name as branch_name,
         semi_finished_products.name as product_name,
-        SUM(items.quantity) as total_quantity
+        SUM(items.quantity) as total_quantity,
+        items.semi_finished_product_id as product_id
         ')
             ->groupBy(
                 'usage_date',
                 'branches.id',
                 'branches.name',
-                'semi_finished_products.name'
+                'semi_finished_products.name',
+                'items.semi_finished_product_id',
             );
 
         // FILTER CABANG
         if ($request->filled('branch_id')) {
             $query->where('semi_finished_usage_requests.requesting_branch_id', $request->branch_id);
+        }
+
+        // === FILTER SEMI FINISHED PRODUCT ===
+        if ($request->filled('product_id')) {
+            $query->where('items.semi_finished_product_id', $request->product_id);
         }
 
         // FILTER TANGGAL

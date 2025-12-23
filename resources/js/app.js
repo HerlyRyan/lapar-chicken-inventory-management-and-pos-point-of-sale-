@@ -3,8 +3,9 @@ import Alpine from "alpinejs";
 window.Alpine = Alpine;
 
 // === UNIVERSAL TABLE COMPONENT ===
-Alpine.data("sortableTable", (initialData) => ({
-  rows: initialData || [],
+Alpine.data("sortableTable", (initialRows = [], initialTotalRevenue = null) => ({
+  rows: initialRows,
+  totalRevenue: initialTotalRevenue,
   sortColumn: "",
   sortDirection: "asc",
   isLoading: false,
@@ -30,6 +31,7 @@ Alpine.data("sortableTable", (initialData) => ({
 
       const result = await response.json();
       this.rows = result.data || [];
+      this.totalRevenue = result.totalRevenue || 0;
 
       const pagination = document.querySelector(".pagination-wrapper");
       if (pagination) pagination.innerHTML = result.links || "";

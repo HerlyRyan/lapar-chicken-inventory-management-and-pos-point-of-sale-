@@ -4,23 +4,23 @@
     use Illuminate\Support\Facades\Storage;
 @endphp
 
-@section('title', 'Laporan Penggunaan Semi Finished')
+@section('title', 'Laporan Penggunaan Bahan Setengah Jadi')
 
 @section('content')
     <div class="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30">
         {{-- Page Header --}}
-        <x-index.header title="Laporan Penggunaan Semi Finished" />
+        <x-index.header title="Laporan Penggunaan Bahan Setengah Jadi" />
 
         {{-- Main Content --}}
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
             <div x-data="sortableTable(@js($usages))" @sort-column.window="sortBy($event.detail)"
                 class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
                 {{-- Card Header --}}
-                <x-index.card-header title="Laporan Penggunaan Semi Finished" />
+                <x-index.card-header title="Laporan Penggunaan Bahan Setengah Jadi" />
 
                 {{-- Filter Section --}}
                 <x-filter-bar searchPlaceholder="Cari tanggal, cabang, produk..." :selects="$selects" print="true"
-                    printRouteName="reports.semi-finished-usage.print" />
+                    printRouteName="reports.semi-finished-usage.print" date="true" />
 
                 {{-- Desktop Table --}}
                 <div class="hidden md:block overflow-x-auto">
@@ -40,7 +40,7 @@
                                 </tr>
                             </template>
                             <template x-if="sortedRows.length === 0">
-                                <x-index.none-data column_name="penggunaan semi finished" />
+                                <x-index.none-data column_name="Penggunaan Bahan Setengah Jadi" />
                             </template>
                         </tbody>
                     </table>
@@ -78,7 +78,7 @@
                         </div>
                     </template>
                     <template x-if="sortedRows.length === 0">
-                        <x-index.none-data column_name="penggunaan semi finished" mobile="true" />
+                        <x-index.none-data column_name="penggunaan Bahan Setengah" mobile="true" />
                     </template>
                 </div>
 

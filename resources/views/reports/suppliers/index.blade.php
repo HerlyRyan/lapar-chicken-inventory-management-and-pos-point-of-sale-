@@ -18,6 +18,48 @@
                 <x-filter-bar searchPlaceholder="Cari nama, kode, atau alamat supplier..." :selects="$selects" print="true"
                     printRouteName="reports.suppliers.print" />
 
+                {{-- Stats Section --}}
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 px-6 py-6">
+
+                    {{-- Card Aktif --}}
+                    <div
+                        class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 shadow-md flex items-center justify-between border border-orange-400">
+                        <div>
+                            <p class="text-xs text-orange-100 font-semibold uppercase tracking-wider">Supplier Aktif</p>
+                            <p class="text-3xl font-extrabold text-white mt-1">
+                                {{ $active }}
+                            </p>
+                        </div>
+                        <div class="bg-white/20 p-3 rounded-xl text-white backdrop-blur-sm">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    {{-- Card Non-Aktif --}}
+                    <div
+                        class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex items-center justify-between group hover:border-orange-300 transition-all">
+                        <div>
+                            <p
+                                class="text-xs text-gray-500 font-semibold uppercase tracking-wider group-hover:text-orange-500 transition-colors">
+                                Non-Aktif</p>
+                            <p class="text-3xl font-extrabold text-gray-900 mt-1">
+                                {{ $inactive }}
+                            </p>
+                        </div>
+                        <div
+                            class="bg-gray-100 p-3 rounded-xl text-gray-400 group-hover:bg-orange-100 group-hover:text-orange-500 transition-all">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+
+                </div>
+
                 {{-- Desktop Table --}}
                 <div class="hidden md:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
@@ -30,6 +72,12 @@
                                         x-text="supplier.code"></td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900" x-text="supplier.name"></div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <template x-for="(material, index) in supplier.raw_materials"
+                                            :key="material.id">
+                                            <li x-text="material.name"></li>
+                                        </template>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-900">
                                         <div class="max-w-xs truncate" :title="supplier.address" x-text="supplier.address">
@@ -72,7 +120,7 @@
                                                 Tidak Aktif
                                             </span>
                                         </template>
-                                    </td>                                    
+                                    </td>
                                 </tr>
                             </template>
                             <template x-if="sortedRows.length === 0">
@@ -142,7 +190,7 @@
                                         </span>
                                     </template>
                                 </div>
-                            </div>                                                        
+                            </div>
                         </div>
                     </template>
                 </div>

@@ -12,15 +12,7 @@ class Supplier extends Model
     protected $fillable = [
         'name', 'code', 'address', 'phone', 'email', 'contact_person', 'is_active',
     ];
-
-    /**
-     * Get all raw materials supplied by this supplier.
-     */
-    public function materials()
-    {
-        return $this->hasMany(\App\Models\RawMaterial::class, 'supplier_id');
-    }
-
+    
     /**
      * Get all raw materials supplied by this supplier (alias for materials).
      */

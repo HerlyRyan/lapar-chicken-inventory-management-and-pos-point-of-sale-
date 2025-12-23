@@ -1,17 +1,17 @@
 @extends('layouts.report-layout')
 
-@section('title', 'Laporan Penggunaan Semi Finished')
+@section('title', 'Laporan Penggunaan Bahan Setengah Jadi')
 
 @section('content')
     <div class="max-w-7xl mx-auto p-6 sm:p-8 bg-white shadow-xl rounded-xl print:shadow-none print:rounded-none">
 
         {{-- Komponen Report Header --}}
-        <x-report.header :title="'LAPORAN PENGGUNAAN SEMI FINISHED'" address="Jl. Utama Lapar Chicken No. 123, Jakarta" />
+        <x-report.header :title="'LAPORAN PENGGUNAAN BAHAN SETENGAH JADI'" address="Jl. Utama Lapar Chicken No. 123, Jakarta" />
 
         {{-- Metadata Laporan --}}
         <div class="text-xs text-gray-700 mb-4 flex justify-between print:text-[10px]">
             <p>
-                <b>Tanggal:</b> {{ now()->format('d F Y') }}
+                <b>Tanggal Cetak:</b> {{ now()->format('d F Y') }}
             </p>
             <p>
                 <b>Dicetak Oleh:</b> {{ Auth::user()->name ?? 'Administrator' }}
@@ -50,7 +50,7 @@
                     @empty
                         <tr>
                             <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
-                                Tidak ada data penggunaan semi finished untuk ditampilkan.
+                                Tidak ada data penggunaan bahan setengah jadi untuk ditampilkan.
                             </td>
                         </tr>
                     @endforelse

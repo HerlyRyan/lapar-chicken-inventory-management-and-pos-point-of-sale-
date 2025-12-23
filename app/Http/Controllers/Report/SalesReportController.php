@@ -12,6 +12,8 @@ class SalesReportController extends Controller
     public function index(Request $request)
     {
         $query = Sale::with(['branch', 'user', 'items']);
+        $cardQuery = Sale::query()
+            ->where('status', 'completed');
 
         $columns = [
             ['key' => 'sale_number', 'label' => 'No. Transaksi'],
@@ -36,6 +38,7 @@ class SalesReportController extends Controller
         // Filter by branch
         if ($request->filled('branch_id') && !empty($request->branch_id)) {
             $query->where('branch_id', $request->branch_id);
+            $cardQuery->where('branch_id', $request->branch_id);
         }
 
         // Filter by status
@@ -46,15 +49,18 @@ class SalesReportController extends Controller
         // Filter by payment method
         if ($request->filled('payment_method') && $request->payment_method != 'all') {
             $query->where('payment_method', $request->payment_method);
+            $cardQuery->where('payment_method', $request->payment_method);
         }
 
         // Filter by date range
         if ($request->filled('start_date') && !empty($request->start_date)) {
             $query->whereDate('created_at', '>=', $request->start_date);
+            $cardQuery->whereDate('created_at', '>=', $request->start_date);
         }
 
         if ($request->filled('end_date') && !empty($request->end_date)) {
             $query->whereDate('created_at', '<=', $request->end_date);
+            $cardQuery->whereDate('created_at', '<=', $request->end_date);
         }
 
         // === SORTING ===
@@ -78,7 +84,7 @@ class SalesReportController extends Controller
         $sales = $query->paginate(10);
 
         // Get all branches for filter dropdown
-        $branches = Branch::where('is_active', true)->orderBy('name')->pluck('name', 'id')->toArray();
+        $branches = Branch::where('is_active', true)->where('type', '=', 'branch')->orderBy('name')->pluck('name', 'id')->toArray();
 
         $statuses = [
             'pending' => 'Pending',
@@ -106,15 +112,19 @@ class SalesReportController extends Controller
 
         ];
 
+        $totalRevenue = $cardQuery->sum('final_amount');
+
         // === RESPONSE ===
         if ($request->ajax()) {
             return response()->json([
                 'data' => $sales->items(),
                 'links' => (string) $sales->links('vendor.pagination.tailwind'),
+                'totalRevenue' => $totalRevenue,
             ]);
         }
 
-        return view('reports.sales.index', compact('sales', 'branches', 'columns', 'selects'));
+
+        return view('reports.sales.index', compact('sales', 'branches', 'columns', 'selects', 'totalRevenue'));
     }
     public function print(Request $request)
     {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Report;
 
 use App\Http\Controllers\Controller;
+use App\Models\RawMaterial;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
 
@@ -12,12 +13,23 @@ class SupplierReportController extends Controller
     {
 
         // Base query
-        $query = Supplier::query();
+        $query = Supplier::query()
+            ->with('rawMaterials')
+            ->withCount('rawMaterials')
+            ->addSelect([
+                'raw_materials_names' => RawMaterial::selectRaw(
+                    "GROUP_CONCAT(name ORDER BY name SEPARATOR ', ')"
+                )
+                    ->whereColumn('raw_materials.supplier_id', 'suppliers.id')
+                    ->limit(1)
+            ]);
+
 
         // for column selection
         $columns = [
             ['key' => 'code', 'label' => 'Kode'],
             ['key' => 'name', 'label' => 'Nama'],
+            ['key' => 'raw_materials', 'label' => 'Bahan Mentah'],
             ['key' => 'address', 'label' => 'Alamat'],
             ['key' => 'phone', 'label' => 'No Telepon'],
             ['key' => 'is_active', 'label' => 'Status'],
@@ -41,11 +53,18 @@ class SupplierReportController extends Controller
         // Sorting
         if ($sortBy = $request->get('sort_by')) {
             $sortDir = $request->get('sort_dir', 'asc');
-            $query->orderBy($sortBy, $sortDir);
+
+            if ($sortBy === 'raw_materials') {
+                $query->orderBy('raw_materials_names', $sortDir);
+            } else {
+                $query->orderBy($sortBy, $sortDir);
+            }
         }
 
         /** @var \Illuminate\Pagination\LengthAwarePaginator $suppliers */
         $suppliers = $query->paginate(10);
+        $active = Supplier::where('is_active', true)->count();
+        $inactive = Supplier::where('is_active', false)->count();
 
         $statuses = [
             1 => 'Aktif',
@@ -73,6 +92,8 @@ class SupplierReportController extends Controller
             'selects' => $selects,
             'columns' => $columns,
             'pagination' => $suppliers, // tetap simpan pagination untuk tampilkan links
+            'active' => $active,
+            'inactive' => $inactive,
         ]);
     }
 
@@ -80,7 +101,16 @@ class SupplierReportController extends Controller
     {
 
         // Base query
-        $query = Supplier::query();
+        $query = Supplier::query()
+            ->with('rawMaterials')
+            ->withCount('rawMaterials')
+            ->addSelect([
+                'raw_materials_names' => RawMaterial::selectRaw(
+                    "GROUP_CONCAT(name ORDER BY name SEPARATOR ', ')"
+                )
+                    ->whereColumn('raw_materials.supplier_id', 'suppliers.id')
+                    ->limit(1)
+            ]);
 
         // Search global
         if ($search = $request->get('search')) {
@@ -93,14 +123,19 @@ class SupplierReportController extends Controller
         }
 
         // Filter status
-        if ($request->has('is_active') && in_array($request->is_active, ['0', '1'], true)) {
-            $query->where('is_active', $request->is_active);
+        if ($status = $request->get('is_active')) {
+            $query->where('is_active', $status);
         }
 
         // Sorting
         if ($sortBy = $request->get('sort_by')) {
             $sortDir = $request->get('sort_dir', 'asc');
-            $query->orderBy($sortBy, $sortDir);
+
+            if ($sortBy === 'raw_materials') {
+                $query->orderBy('raw_materials_names', $sortDir);
+            } else {
+                $query->orderBy($sortBy, $sortDir);
+            }
         }
 
         $suppliers = $query->get();

@@ -8,7 +8,10 @@
         <x-index.header title="Penjualan" />
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-            <div x-data="sortableTable(@js($sales->items()))" @sort-column.window="sortBy($event.detail)"
+            <div x-data="sortableTable(
+                @js($sales->items()),
+                @js($totalRevenue ?? null)
+            )" @sort-column.window="sortBy($event.detail)"
                 class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
 
                 {{-- Card Header --}}
@@ -17,6 +20,26 @@
                 {{-- Filter Bar (reuse component, fallback to inline selects) --}}
                 <x-filter-bar searchPlaceholder="Cari nomor transaksi atau pelanggan..." :selects="$selects ?? []" date="true"
                     print="true" printRouteName="reports.sales.print" />
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 px-6 py-4">
+                    <div class="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl shadow-md p-5">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm opacity-90">Total Pendapatan</p>
+                                <p class="text-2xl font-bold mt-1">
+                                    <span x-text="new Intl.NumberFormat('id-ID').format(totalRevenue)"></span>
+                                </p>
+                            </div>
+                            <div class="bg-white/20 p-3 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2
+                                                           3 .895 3 2-1.343 2-3 2m0-8V4m0 12v4" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="hidden md:block overflow-x-auto px-6 pb-6">
                     <table class="min-w-full divide-y divide-gray-200">
