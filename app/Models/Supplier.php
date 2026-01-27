@@ -16,7 +16,7 @@ class Supplier extends Model
     /**
      * Get all raw materials supplied by this supplier (alias for materials).
      */
-    public function rawMaterials()
+    public function materials()
     {
         return $this->hasMany(\App\Models\RawMaterial::class, 'supplier_id');
     }

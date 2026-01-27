@@ -20,6 +20,15 @@ class ProductionProcessController extends Controller
         $query = ProductionRequest::with(['requestedBy', 'approvedBy', 'productionStartedBy', 'items.rawMaterial.unit'])
             ->whereIn('status', ['approved', 'in_progress', 'completed'])
             ->orderBy('approved_at', 'asc');
+        
+        $columns = [
+            ['key' => 'request_code', 'label' => 'Kode Pengajuan'],
+            ['key' => 'purpose', 'label' => 'Peruntukan'],
+            ['key' => 'requested_by', 'label' => 'Pemohon'],
+            ['key' => 'total_raw_material_cost', 'label' => 'Total Biaya'],
+            ['key' => 'status', 'label' => 'Status'],
+            ['key' => 'created_at', 'label' => 'Tanggal'],
+        ];
 
         // Filter by status if provided
         if ($request->filled('status')) {
@@ -37,7 +46,24 @@ class ProductionProcessController extends Controller
 
         $productionRequests = $query->paginate(15);
 
-        return view('production-processes.index', compact('productionRequests'));
+        $statuses = [
+            'pending' => 'Ditunda',
+            'approved' => 'Diterima',
+            'rejected' => 'Ditolak',
+            'in_progress' => 'Dalam Proses',
+            'completed' => 'Selesai',
+            'cancelled' => 'Dibatalkan',
+        ];
+
+        $selects = [
+            [
+                'name' => 'status',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+        ];
+
+        return view('production-processes.index', compact('productionRequests', 'selects', 'columns'));
     }
 
     /**

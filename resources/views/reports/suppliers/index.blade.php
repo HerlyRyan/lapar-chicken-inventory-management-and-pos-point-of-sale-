@@ -74,7 +74,7 @@
                                         <div class="text-sm font-medium text-gray-900" x-text="supplier.name"></div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <template x-for="(material, index) in supplier.raw_materials"
+                                        <template x-for="(material, index) in supplier.materials"
                                             :key="material.id">
                                             <li x-text="material.name"></li>
                                         </template>

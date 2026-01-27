@@ -18,7 +18,7 @@
 <div class="card border-0 shadow-lg">
     <div class="card-header text-white py-3" style="background: linear-gradient(135deg, #dc2626 0%, #ea580c 50%, #eab308 100%);">
         <h5 class="mb-0 fw-bold">
-            <i class="bi bi-list-ul me-2"></i>Daftar Distribusi Produk
+            <i class="bi bi-list-ul me-2"></i>Daftar Produk
         </h5>
     </div>
     <div class="card-body">

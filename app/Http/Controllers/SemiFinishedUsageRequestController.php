@@ -326,11 +326,8 @@ class SemiFinishedUsageRequestController extends Controller
             ->orderBy('name')
             ->get();
 
-        $viewName = View::exists('semi-finished-usage-requests.edit')
-            ? 'semi-finished-usage-requests.edit'
-            : 'material-usage-requests.edit';
         // Keep view variable name for backward compatibility
-        return view($viewName, [
+        return view('material-usage-requests.edit', [
             'materialUsageRequest' => $semiFinishedUsageRequest,
             'semiFinishedProducts' => $semiFinishedProducts,
             'units' => $units,

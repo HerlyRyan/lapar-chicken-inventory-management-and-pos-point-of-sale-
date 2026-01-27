@@ -14,8 +14,8 @@ class SupplierReportController extends Controller
 
         // Base query
         $query = Supplier::query()
-            ->with('rawMaterials')
-            ->withCount('rawMaterials')
+            ->with('materials')
+            ->withCount('materials')
             ->addSelect([
                 'raw_materials_names' => RawMaterial::selectRaw(
                     "GROUP_CONCAT(name ORDER BY name SEPARATOR ', ')"
@@ -29,7 +29,7 @@ class SupplierReportController extends Controller
         $columns = [
             ['key' => 'code', 'label' => 'Kode'],
             ['key' => 'name', 'label' => 'Nama'],
-            ['key' => 'raw_materials', 'label' => 'Bahan Mentah'],
+            ['key' => 'materials', 'label' => 'Bahan Mentah'],
             ['key' => 'address', 'label' => 'Alamat'],
             ['key' => 'phone', 'label' => 'No Telepon'],
             ['key' => 'is_active', 'label' => 'Status'],
@@ -54,7 +54,7 @@ class SupplierReportController extends Controller
         if ($sortBy = $request->get('sort_by')) {
             $sortDir = $request->get('sort_dir', 'asc');
 
-            if ($sortBy === 'raw_materials') {
+            if ($sortBy === 'materials') {
                 $query->orderBy('raw_materials_names', $sortDir);
             } else {
                 $query->orderBy($sortBy, $sortDir);
@@ -102,8 +102,8 @@ class SupplierReportController extends Controller
 
         // Base query
         $query = Supplier::query()
-            ->with('rawMaterials')
-            ->withCount('rawMaterials')
+            ->with('materials')
+            ->withCount('materials')
             ->addSelect([
                 'raw_materials_names' => RawMaterial::selectRaw(
                     "GROUP_CONCAT(name ORDER BY name SEPARATOR ', ')"
@@ -131,7 +131,7 @@ class SupplierReportController extends Controller
         if ($sortBy = $request->get('sort_by')) {
             $sortDir = $request->get('sort_dir', 'asc');
 
-            if ($sortBy === 'raw_materials') {
+            if ($sortBy === 'materials') {
                 $query->orderBy('raw_materials_names', $sortDir);
             } else {
                 $query->orderBy($sortBy, $sortDir);

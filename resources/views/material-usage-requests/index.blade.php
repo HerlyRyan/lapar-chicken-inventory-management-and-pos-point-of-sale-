@@ -14,7 +14,7 @@
             <div x-data="sortableTable(@js($requests->items()))" @sort-column.window="sortBy($event.detail)"
                 class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
                 {{-- Card Header --}}
-                <x-index.card-header title="Daftar Permintaan" />
+                <x-index.card-header title="Permintaan" />
 
                 {{-- Filter Section --}}
                 <x-filter-bar searchPlaceholder="Cari nomor permintaan..." :selects="$selects ?? []" />

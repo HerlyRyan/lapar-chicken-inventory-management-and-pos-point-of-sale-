@@ -13,7 +13,7 @@
             <div x-data="sortableTable(@js($units))" @sort-column.window="sortBy($event.detail)"
                 class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
                 {{-- Card Header --}}
-                <x-index.card-header title="Daftar Satuan" />
+                <x-index.card-header title="Satuan" />
 
                 {{-- Filter Section --}}
                 <x-filter-bar searchPlaceholder="Cari nama, singkatan atau deskripsi satuan..." :selects="$selects" />

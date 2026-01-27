@@ -13,7 +13,7 @@
             <div x-data="sortableTable(@js($rawMaterials))" @sort-column.window="sortBy($event.detail)"
                 class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
                 {{-- Card Header --}}
-                <x-index.card-header title="Daftar Bahan Baku" />
+                <x-index.card-header title="Bahan Baku" />
 
                 {{-- Filter Section --}}
                 <x-filter-bar searchPlaceholder="Cari nama, kode, atau deskripsi bahan baku..." :selects="$selects" />

@@ -222,6 +222,7 @@ class FinishedProductsStockController extends Controller
             'name' => $item->finishedProduct->name,
             'price' => $item->finishedProduct->price,
             'stock' => $item->quantity,
+            'category' => $item->finishedProduct->category->code
         ]);
 
         // Anda perlu juga mengambil data package di sini jika ada

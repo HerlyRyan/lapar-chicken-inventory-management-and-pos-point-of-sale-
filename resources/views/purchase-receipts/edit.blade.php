@@ -7,7 +7,7 @@
     <div class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 py-6">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             {{-- Header --}}
-            <x-form.header title="Edit Penerimaan Barang" edit="true" :name="$purchaseReceipt->receipt_number" detailRoute="{{ route('purchase-receipts.show', $purchaseReceipt) }}" backRoute="{{ route('purchase-receipts.index') }}"/>
+            <x-form.header title="Penerimaan Barang" edit="true" :name="$purchaseReceipt->receipt_number" detailRoute="{{ route('purchase-receipts.show', $purchaseReceipt) }}" backRoute="{{ route('purchase-receipts.index') }}"/>
 
             {{-- Card --}}
             <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden mt-4">

@@ -6,7 +6,7 @@
     <div class="max-w-7xl mx-auto p-6 sm:p-8 bg-white shadow-xl rounded-xl print:shadow-none print:rounded-none">
 
         {{-- Komponen Report Header --}}
-        <x-report.header :title="$reportTitle ?? 'LAPORAN PAKET PENJUALAN'" address="Jl. Utama Lapar Chicken No. 123, Jakarta" />
+        <x-report.header :title="$reportTitle ?? 'LAPORAN PAKET PENJUALAN'" />
 
         {{-- Metadata Laporan --}}
         <div class="text-xs text-gray-700 mb-4 flex justify-between print:text-[10px]">

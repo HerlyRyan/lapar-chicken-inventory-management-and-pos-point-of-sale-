@@ -7,8 +7,7 @@
     <div class="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30">
         {{-- Page Header --}}
         <x-index.header title="Kotak Masuk Distribusi Cabang"
-            subtitle="Menampilkan distribusi berstatus Dikirim ke cabang Anda"
-            addRoute="{{ route('semi-finished-distributions.index') }}" addText="Semua Distribusi" />
+            subtitle="Menampilkan distribusi berstatus Dikirim ke cabang Anda" />
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
             <div x-data="sortableTable(@js($distributions->items()))" @sort-column.window="sortBy($event.detail)"
@@ -111,8 +110,6 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <div x-data="{
                                             viewUrl: '/semi-finished-distributions/' + dist.id,
-                                            editUrl: '/semi-finished-distributions/' + dist.id + '/edit',
-                                            deleteUrl: '/semi-finished-distributions/' + dist.id,
                                             itemName: 'distribusi ' + dist.distribution_code,
                                             isPending: dist.status === 'pending',
                                             isSent: dist.status === 'sent'
@@ -159,8 +156,7 @@
                                                 </template>
 
                                                 {{-- Default action buttons --}}
-                                                <x-index.action-buttons :view="true" :edit="true"
-                                                    :delete="true" />
+                                                <x-index.action-buttons :view="true" />
                                             </div>
                                         </div>
                                     </td>
@@ -290,8 +286,10 @@
                                                             bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700
                                                             text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
                                                         title="Terima">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2" d="M5 13l4 4L19 7" />
                                                         </svg>
                                                     </button>
 
@@ -301,8 +299,10 @@
                                                             bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
                                                             text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
                                                         title="Tolak">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                                         </svg>
                                                     </button>
 

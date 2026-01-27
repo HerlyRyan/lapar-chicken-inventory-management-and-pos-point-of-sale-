@@ -13,7 +13,7 @@
             <div x-data="sortableTable(@js($salesPackages))" @sort-column.window="sortBy($event.detail)"
                 class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
                 {{-- Card Header --}}
-                <x-index.card-header title="Daftar Paket Penjualan" />
+                <x-index.card-header title="Paket Penjualan" />
 
                 {{-- Filter Section --}}
                 <x-filter-bar searchPlaceholder="Cari nama, kode, atau deskripsi paket..." :selects="$selects" />

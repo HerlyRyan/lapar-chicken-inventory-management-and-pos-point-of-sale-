@@ -276,7 +276,7 @@ use Illuminate\Support\Facades\Storage;
                         <div class="text-sm text-gray-500 space-y-2">
                             <div class="flex justify-between">
                                 <span>Dibuat oleh:</span>
-                                <span class="font-medium text-gray-800">{{ $purchaseOrder->creator->name }}</span>
+                                <span class="font-medium text-gray-800">{{ $purchaseOrder->creator?->name }}</span>
                             </div>
                             <div class="flex justify-between">
                                 <span>Role:</span>

@@ -23,7 +23,7 @@
             <div x-data="sortableTable(@js($semiFinishedProducts))" @sort-column.window="sortBy($event.detail)"
                 class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
                 {{-- Card Header --}}
-                <x-index.card-header title="Daftar Bahan Setengah Jadi" />
+                <x-index.card-header title="Bahan Setengah Jadi" />
 
                 <div class="p-4 sm:p-6">
                     {{-- Branch Info --}}

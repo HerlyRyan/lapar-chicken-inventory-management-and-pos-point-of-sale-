@@ -25,39 +25,39 @@ class SaleController extends Controller
     {
         try {
             $branchId = $request->branch_id;
-            
+
             Log::debug('getProducts called with branch_id: ' . $branchId);
-            
+
             if (!$branchId || $branchId == '-- Pilih Cabang --') {
                 return response()->json(['error' => 'Pilih cabang terlebih dahulu'], 400);
             }
-            
+
             // First check if branch exists
             $branch = Branch::find($branchId);
             if (!$branch) {
                 Log::error('Branch with ID ' . $branchId . ' does not exist');
                 return response()->json(['error' => 'Cabang tidak ditemukan'], 400);
             }
-            
+
             // Fetch all active finished products first
             Log::debug('Querying finished products...');
-            
+
             // Get all active products regardless of stock
             $products = FinishedProduct::with(['category'])
                 ->where('is_active', true)
                 ->get();
-            
+
             Log::debug('Found ' . $products->count() . ' active finished products');
-            
+
             // Then fetch all stocks for this branch in one query to improve performance
             $branchStocks = FinishedBranchStock::where('branch_id', $branchId)
                 ->get()
                 ->keyBy('finished_product_id');
-            
+
             Log::debug('Found ' . $branchStocks->count() . ' stock records for branch ID ' . $branchId);
-            
+
             $result = [];
-            
+
             foreach ($products as $product) {
                 try {
                     // Skip products without category
@@ -65,11 +65,11 @@ class SaleController extends Controller
                         Log::warning('Product #' . $product->id . ' (' . $product->name . ') has no category');
                         continue;
                     }
-                    
+
                     // Get stock for this product from the pre-fetched stocks
                     $stockRecord = $branchStocks->get($product->id);
                     $stock = (int) round($stockRecord ? $stockRecord->quantity : 0);
-                    
+
                     $result[] = [
                         'id' => $product->id,
                         'name' => $product->name,
@@ -88,17 +88,16 @@ class SaleController extends Controller
                     // Continue to next product
                 }
             }
-            
+
             Log::debug('Successfully processed ' . count($result) . ' products for display');
             return response()->json($result);
-            
         } catch (\Exception $e) {
             Log::error('Error fetching products: ' . $e->getMessage());
             Log::error($e->getTraceAsString());
             return response()->json(['error' => 'Terjadi kesalahan saat memuat data produk'], 500);
         }
     }
-    
+
     /**
      * Get packages with calculated available stock for a specific branch
      */
@@ -106,30 +105,30 @@ class SaleController extends Controller
     {
         try {
             $branchId = $request->branch_id;
-            
+
             Log::debug('getPackages called with branch_id: ' . $branchId);
-            
+
             if (!$branchId || $branchId == '-- Pilih Cabang --') {
                 return response()->json(['error' => 'Pilih cabang terlebih dahulu'], 400);
             }
-            
+
             // First check if branch exists
             $branchExists = Branch::where('id', $branchId)->exists();
             if (!$branchExists) {
                 Log::error('Branch with ID ' . $branchId . ' does not exist');
                 return response()->json(['error' => 'Cabang tidak ditemukan'], 400);
             }
-            
+
             Log::debug('Querying sales packages...');
-            
+
             // Get all active packages with their components and categories
             $packages = SalesPackage::with(['packageItems.finishedProduct', 'category'])
                 ->where('is_active', true)
                 ->whereNotNull('category_id')
                 ->get();
-            
+
             Log::debug('Found ' . $packages->count() . ' active sales packages');
-            
+
             // Get all finished product IDs from package items
             $finishedProductIds = [];
             foreach ($packages as $package) {
@@ -141,17 +140,17 @@ class SaleController extends Controller
                     }
                 }
             }
-            
+
             // Fetch all relevant stock records in one query for performance
             $branchStocks = FinishedBranchStock::where('branch_id', $branchId)
                 ->whereIn('finished_product_id', $finishedProductIds)
                 ->get()
                 ->keyBy('finished_product_id');
-            
+
             Log::debug('Found ' . $branchStocks->count() . ' stock records for branch ID ' . $branchId);
-            
+
             $result = [];
-            
+
             foreach ($packages as $package) {
                 try {
                     // Skip packages without category_id (relationship may be null due to data/state)
@@ -159,18 +158,18 @@ class SaleController extends Controller
                         Log::warning('Package #' . $package->id . ' (' . $package->name . ') has no category_id');
                         continue;
                     }
-                    
+
                     // Skip empty packages
                     if ($package->packageItems->isEmpty()) {
                         Log::warning('Package #' . $package->id . ' (' . $package->name . ') has no items');
                         continue;
                     }
-                    
+
                     // Calculate available stock based on component products
                     $minAvailableStock = null;
                     $components = [];
                     $hasInvalidComponent = false;
-                    
+
                     foreach ($package->packageItems as $item) {
                         try {
                             // Skip items without product
@@ -179,18 +178,18 @@ class SaleController extends Controller
                                 $hasInvalidComponent = true;
                                 continue;
                             }
-                            
+
                             // Get stock from pre-fetched stocks
                             $stockRecord = $branchStocks->get($item->finished_product_id);
                             $stockQuantity = $stockRecord ? $stockRecord->quantity : 0;
-                            
+
                             // Calculate how many packages can be made with this component
                             $availableStock = $stockQuantity > 0 ? floor($stockQuantity / $item->quantity) : 0;
-                            
+
                             if ($minAvailableStock === null || $availableStock < $minAvailableStock) {
                                 $minAvailableStock = $availableStock;
                             }
-                            
+
                             $components[] = [
                                 'id' => $item->finishedProduct->id,
                                 'name' => $item->finishedProduct->name,
@@ -202,16 +201,16 @@ class SaleController extends Controller
                             $hasInvalidComponent = true;
                         }
                     }
-                    
+
                     // Skip packages with invalid components
                     if ($hasInvalidComponent) {
                         Log::warning('Package #' . $package->id . ' (' . $package->name . ') has invalid components');
                         continue;
                     }
-                    
+
                     // Do not skip packages with no stock; frontend will display with disabled action
                     $minAvailableStock = (int) max(0, (int) ($minAvailableStock ?? 0));
-                    
+
                     $result[] = [
                         'id' => $package->id,
                         'name' => $package->name,
@@ -233,22 +232,26 @@ class SaleController extends Controller
                     Log::error('Error processing package #' . $package->id . ': ' . $packageEx->getMessage());
                 }
             }
-            
+
             Log::debug('Successfully processed ' . count($result) . ' packages for display');
             return response()->json($result);
-            
         } catch (\Exception $e) {
             Log::error('Error fetching packages: ' . $e->getMessage());
             Log::error($e->getTraceAsString());
             return response()->json(['error' => 'Terjadi kesalahan saat memuat data paket'], 500);
         }
     }
-    
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
+        // Filter by branch for admin users
+        $user = Auth::user();
+        $isSuperAdmin = $user->hasRole('super-admin');
+        $isAdmin = $user->hasRole('admin');
+
         $query = Sale::with(['branch', 'user', 'items']);
 
         $columns = [
@@ -260,37 +263,48 @@ class SaleController extends Controller
             ['key' => 'payment_method', 'label' => 'Pembayaran'],
             ['key' => 'status', 'label' => 'Status'],
         ];
-        
+
+        if (!$isSuperAdmin && !$isAdmin) {
+            // Regular branch users can only see their branch's requests
+            $branchId = app()->bound('current_branch_id') ? app('current_branch_id') : ($user->branch_id ?? null);
+            if ($branchId) {
+                $query->where('branch_id', $branchId);
+            }
+        } else if ($request->has('branch_id') && $request->branch_id != 'all') {
+            // Admin filtering by branch
+            $query->where('branch_id', $request->branch_id);
+        }
+
         // Search functionality
         if ($request->has('search') && !empty($request->search)) {
             $searchTerm = '%' . $request->search . '%';
-            $query->where(function($q) use ($searchTerm) {
+            $query->where(function ($q) use ($searchTerm) {
                 $q->where('sale_number', 'like', $searchTerm)
-                  ->orWhere('customer_name', 'like', $searchTerm)
-                  ->orWhere('customer_phone', 'like', $searchTerm);
+                    ->orWhere('customer_name', 'like', $searchTerm)
+                    ->orWhere('customer_phone', 'like', $searchTerm);
             });
         }
-        
+
         // Filter by branch
         if ($request->filled('branch_id') && !empty($request->branch_id)) {
             $query->where('branch_id', $request->branch_id);
         }
-        
+
         // Filter by status
         if ($request->filled('status') && $request->status != 'all') {
             $query->where('status', $request->status);
         }
-        
+
         // Filter by payment method
         if ($request->filled('payment_method') && $request->payment_method != 'all') {
             $query->where('payment_method', $request->payment_method);
         }
-        
+
         // Filter by date range
         if ($request->filled('start_date') && !empty($request->start_date)) {
             $query->whereDate('created_at', '>=', $request->start_date);
         }
-        
+
         if ($request->filled('end_date') && !empty($request->end_date)) {
             $query->whereDate('created_at', '<=', $request->end_date);
         }
@@ -351,7 +365,7 @@ class SaleController extends Controller
                 'links' => (string) $sales->links('vendor.pagination.tailwind'),
             ]);
         }
-        
+
         return view('sales.index', compact('sales', 'branches', 'columns', 'selects'));
     }
 
@@ -360,11 +374,24 @@ class SaleController extends Controller
      */
     public function create()
     {
-        // Get active retail branches only (exclude production centers)
         $branches = Branch::active()->retail()->get();
-        
-        return view('sales.create', compact('branches'));
+
+        $categories = Category::where('is_active', 1)
+            ->whereHas('finishedProducts') // 🔥 hanya yang dipakai
+            ->get()
+            ->map(fn($cat) => [
+                'key'   => $cat->code, // atau Str::slug($cat->name)
+                'label' => $cat->name,
+                'icon'  => match ($cat->name) {
+                    'Ala Carte' => 'bi-egg-fried',
+                    'Drink'     => 'bi-cup-straw',
+                    default     => 'bi-tags',
+                },
+            ]);
+
+        return view('sales.create', compact('branches', 'categories'));
     }
+
 
     /**
      * Store a newly created resource in storage.
@@ -393,10 +420,10 @@ class SaleController extends Controller
             'items.*.unit_price' => 'required|numeric|min:0',
             // Client subtotal will be ignored; keep nullable for compatibility
             'items.*.subtotal' => 'nullable|integer|min:0',
-        ]);        
-        
+        ]);
+
         DB::beginTransaction();
-        
+
         try {
             // Generate sale number
             $saleNumber = 'TRX-' . date('Ymd') . '-' . str_pad(Sale::whereDate('created_at', today())->count() + 1, 4, '0', STR_PAD_LEFT);
@@ -432,8 +459,12 @@ class SaleController extends Controller
                 $computedDiscount = 0;
             }
 
-            if ($computedDiscount < 0) { $computedDiscount = 0; }
-            if ($computedDiscount > $computedSubtotal) { $computedDiscount = $computedSubtotal; }
+            if ($computedDiscount < 0) {
+                $computedDiscount = 0;
+            }
+            if ($computedDiscount > $computedSubtotal) {
+                $computedDiscount = $computedSubtotal;
+            }
 
             $computedFinal = (int) max(0, $computedSubtotal - $computedDiscount);
 
@@ -449,17 +480,17 @@ class SaleController extends Controller
 
             // Build required finished product quantities for this sale (DRY helper)
             $requirements = $this->computeRequirementsFromItems($items);
-            
+
             // Validate and deduct branch stock atomically
             $productIds = array_keys($requirements);
             // dd($productIds);
             if (!empty($productIds)) {
                 // Lock relevant stock rows for update
                 $stocks = FinishedBranchStock::where('branch_id', $request->branch_id)
-                    ->whereIn('finished_product_id', $productIds)                    
+                    ->whereIn('finished_product_id', $productIds)
                     ->get()
                     ->keyBy('finished_product_id');
-                    
+
                 $productNames = FinishedProduct::whereIn('id', $productIds)->get()->keyBy('id');
 
                 // Validate availability
@@ -516,7 +547,7 @@ class SaleController extends Controller
             }
 
             DB::commit();
-            
+
             // Return JSON if requested via AJAX/Fetch API
             if ($request->expectsJson() || $request->wantsJson() || $request->isJson()) {
                 return response()->json([
@@ -524,10 +555,9 @@ class SaleController extends Controller
                     'message' => 'Penjualan berhasil disimpan.'
                 ], 200);
             }
-            
+
             return redirect()->route('sales.show', $sale)
                 ->with('success', 'Penjualan berhasil disimpan.');
-                
         } catch (\Exception $e) {
             DB::rollback();
             // If this was an AJAX/JSON request, return JSON error so POS can display it

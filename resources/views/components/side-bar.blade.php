@@ -255,10 +255,10 @@
                     class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('production-requests.*') ? 'bg-orange-50 text-orange-600' : '' }}">
                     Pengajuan
                 </a>
-                <a href="{{ route('production-approvals.index') }}"
+                {{-- <a href="{{ route('production-approvals.index') }}"
                     class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('production-approvals.*') ? 'bg-orange-50 text-orange-600' : '' }}">
                     Persetujuan
-                </a>
+                </a> --}}
                 <a href="{{ route('production-processes.index') }}"
                     class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('production-processes.*') ? 'bg-orange-50 text-orange-600' : '' }}">
                     Proses
@@ -366,20 +366,20 @@
                     @if (auth()->user()->hasRole('Super Admin') ||
                             auth()->user()->hasRole('Manager') ||
                             auth()->user()->hasRole('Kepala Toko'))
-                        <a href="{{ route('semi-finished-usage-approvals.index') }}"
+                        {{-- <a href="{{ route('semi-finished-usage-approvals.index') }}"
                             class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('semi-finished-usage-approvals.*') ? 'bg-orange-50 text-orange-600' : '' }}">
                             Setujui Penggunaan Bahan
-                        </a>
+                        </a> --}}
                     @endif
 
                     @if (auth()->user()->hasRole('Super Admin') ||
                             auth()->user()->hasRole('Manager') ||
                             auth()->user()->hasRole('Kepala Toko') ||
                             auth()->user()->hasRole('Kru Toko'))
-                        <a href="{{ route('semi-finished-usage-processes.index', ['branch_id' => $selectedBranch?->id]) }}"
+                        {{-- <a href="{{ route('semi-finished-usage-processes.index', ['branch_id' => $selectedBranch?->id]) }}"
                             class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('semi-finished-usage-processes.*') ? 'bg-orange-50 text-orange-600' : '' }}">
                             Proses Bahan Setengah Jadi
-                        </a>
+                        </a> --}}
                     @endif
 
                     @php

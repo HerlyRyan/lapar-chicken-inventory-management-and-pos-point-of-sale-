@@ -19,12 +19,14 @@ class StockTransferController extends Controller
             'item_type' => 'required|in:finished,semi-finished',
             'item_id' => 'required|integer',
             'from_branch_id' => [
-                'required','integer',
-                Rule::exists('branches','id')->where(fn($q) => $q->where('type','branch')),
+                'required',
+                'integer',
+                Rule::exists('branches', 'id')->where(fn($q) => $q->where('type', 'branch')),
             ],
             'to_branch_id' => [
-                'required','integer',
-                Rule::exists('branches','id')->where(fn($q) => $q->where('type','branch')),
+                'required',
+                'integer',
+                Rule::exists('branches', 'id')->where(fn($q) => $q->where('type', 'branch')),
                 'different:from_branch_id'
             ],
             'quantity' => 'required|numeric|min:0.01',
@@ -55,7 +57,6 @@ class StockTransferController extends Controller
                 'success' => true,
                 'message' => "Transfer berhasil dari {$fromBranch->name} ke {$toBranch->name}"
             ]);
-
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json([
@@ -71,36 +72,120 @@ class StockTransferController extends Controller
      */
     public function index(Request $request)
     {
-        $currentBranchId = app()->bound('current_branch_id') ? app('current_branch_id') : (session('current_branch_id') ?? (Auth::user()->branch_id ?? null));
-        $currentBranch = $currentBranchId ? Branch::find($currentBranchId) : null;
-        $branches = Branch::retail()->get();
-        
-        // Build query with filters
-        $query = StockTransfer::with(['fromBranch', 'toBranch', 'finishedProduct.unit', 'semiFinishedProduct.unit', 'sentByUser', 'handledByUser'])
-            ->when($currentBranchId, function($q) use ($currentBranchId) {
-                $q->where('from_branch_id', $currentBranchId);
-            });
+        $query = StockTransfer::with(['fromBranch', 'toBranch', 'sentByUser', 'handledByUser', 'finishedProduct', 'semiFinishedProduct']);
 
-        // Apply filters
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
+        $columns = [
+            ['key' => 'item_type', 'label' => 'Tipe Item'],
+            ['key' => 'item_id', 'label' => 'Item'],
+            ['key' => 'from_branch_id', 'label' => 'Dari Cabang'],
+            ['key' => 'to_branch_id', 'label' => 'Ke Cabang'],
+            ['key' => 'quantity', 'label' => 'Jumlah'],
+            ['key' => 'status', 'label' => 'Status'],
+            ['key' => 'notes', 'label' => 'Catatan'],
+            ['key' => 'created_at', 'label' => 'Tanggal Pengiriman'],
+            ['key' => 'handled_at', 'label' => 'Tanggal Penanganan'],
+        ];
+
+        // Search functionality
+        if ($request->has('search') && !empty($request->search)) {
+            $searchTerm = '%' . $request->search . '%';
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('notes', 'like', $searchTerm)
+                    ->orWhere('response_notes', 'like', $searchTerm);
+            });
         }
-        
-        if ($request->filled('to_branch_id')) {
+
+        // Filter by from_branch
+        if ($request->filled('from_branch_id') && !empty($request->from_branch_id)) {
+            $query->where('from_branch_id', $request->from_branch_id);
+        }
+
+        // Filter by to_branch
+        if ($request->filled('to_branch_id') && !empty($request->to_branch_id)) {
             $query->where('to_branch_id', $request->to_branch_id);
         }
-        
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
+
+        // Filter by item_type
+        if ($request->filled('item_type') && $request->item_type != 'all') {
+            $query->where('item_type', $request->item_type);
         }
-        
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
+
+        // Filter by status
+        if ($request->filled('status') && $request->status != 'all') {
+            $query->where('status', $request->status);
         }
-        
-        $transfers = $query->orderByDesc('created_at')->paginate(15);
-        
-        return view('stock-transfer.index', compact('branches', 'currentBranchId', 'currentBranch', 'transfers'));
+
+        // Filter by date range
+        if ($request->filled('start_date') && !empty($request->start_date)) {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
+
+        if ($request->filled('end_date') && !empty($request->end_date)) {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
+
+        // === SORTING ===
+        if ($sortBy = $request->get('sort_by')) {
+            $sortDir = $request->get('sort_dir', 'asc');
+
+            switch ($sortBy) {
+                case 'from_branch_id':
+                    $query->leftJoin('branches as fb', 'fb.id', '=', 'stock_transfers.from_branch_id')
+                        ->orderBy('fb.name', $sortDir)
+                        ->select('stock_transfers.*');
+                    break;
+
+                case 'to_branch_id':
+                    $query->leftJoin('branches as tb', 'tb.id', '=', 'stock_transfers.to_branch_id')
+                        ->orderBy('tb.name', $sortDir)
+                        ->select('stock_transfers.*');
+                    break;
+
+                default:
+                    $query->orderBy($sortBy, $sortDir);
+            }
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $transfers */
+        $transfers = $query->paginate(10);
+
+        // Get all branches for filter dropdown
+        $branches = Branch::where('is_active', true)->orderBy('name')->pluck('name', 'id')->toArray();
+
+        $itemTypes = [
+            'finished' => 'Finished Product',
+            'semi-finished' => 'Semi-Finished Product',
+        ];
+
+        $statuses = [
+            'sent' => 'Dikirim',
+            'accepted' => 'Diterima',
+            'rejected' => 'Ditolak',
+        ];
+
+        $selects = [
+            ['name' => 'from_branch_id', 'label' => 'Dari Cabang', 'options' => $branches],
+            ['name' => 'to_branch_id', 'label' => 'Ke Cabang', 'options' => $branches],
+            ['name' => 'item_type', 'label' => 'Semua Tipe Item', 'options' => $itemTypes],
+            ['name' => 'status', 'label' => 'Semua Status', 'options' => $statuses],
+        ];
+
+        // === RESPONSE ===
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $transfers->items(),
+                'links' => (string) $transfers->links('vendor.pagination.tailwind'),
+            ]);
+        }
+
+        return view('stock-transfer.index', [
+            'transfers' => $transfers->items(),
+            'selects' => $selects,
+            'columns' => $columns,
+            'pagination' => $transfers,
+        ]);
     }
 
     /**
@@ -118,11 +203,11 @@ class StockTransferController extends Controller
         }
 
         $branches = Branch::retail()
-            ->when($currentBranchId, function($q) use ($currentBranchId) {
+            ->when($currentBranchId, function ($q) use ($currentBranchId) {
                 return $q->where('id', '!=', $currentBranchId);
             })
             ->get();
-        
+
         return view('stock-transfer.create', compact('branches', 'currentBranchId', 'currentBranch'));
     }
 
@@ -139,8 +224,9 @@ class StockTransferController extends Controller
                 'items.*.item_type' => 'required|in:finished,semi-finished',
                 'items.*.item_id' => 'required|integer',
                 'items.*.to_branch_id' => [
-                    'required','integer',
-                    Rule::exists('branches','id')->where(fn($q) => $q->where('type','branch')),
+                    'required',
+                    'integer',
+                    Rule::exists('branches', 'id')->where(fn($q) => $q->where('type', 'branch')),
                 ],
                 'items.*.quantity' => 'required|integer|min:1',
                 'items.*.notes' => 'nullable|string|max:255',
@@ -150,8 +236,9 @@ class StockTransferController extends Controller
                 'item_type' => 'required|in:finished,semi-finished',
                 'item_id' => 'required|integer',
                 'to_branch_id' => [
-                    'required','integer',
-                    Rule::exists('branches','id')->where(fn($q) => $q->where('type','branch')),
+                    'required',
+                    'integer',
+                    Rule::exists('branches', 'id')->where(fn($q) => $q->where('type', 'branch')),
                 ],
                 'quantity' => 'required|integer|min:1',
                 'notes' => 'nullable|string|max:255'
@@ -312,15 +399,15 @@ class StockTransferController extends Controller
     public function edit(StockTransfer $stockTransfer)
     {
         $currentBranchId = app()->bound('current_branch_id') ? app('current_branch_id') : (session('current_branch_id') ?? (Auth::user()->branch_id ?? null));
-        
+
         // Check if user can edit this transfer
         if ($stockTransfer->from_branch_id !== $currentBranchId) {
             return redirect()->route('stock-transfer.index')
                 ->with('error', 'Anda tidak dapat mengedit transfer dari cabang lain.');
         }
-        
+
         $branches = Branch::retail()->where('id', '!=', $currentBranchId)->get();
-        
+
         return view('stock-transfer.edit', compact('stockTransfer', 'branches'));
     }
 
@@ -335,18 +422,19 @@ class StockTransferController extends Controller
                 'message' => 'Hanya transfer dengan status pending yang dapat diedit.'
             ], 422);
         }
-        
+
         $request->validate([
             'item_type' => 'required|in:finished,semi-finished',
             'item_id' => 'required|integer',
             'to_branch_id' => [
-                'required','integer',
-                Rule::exists('branches','id')->where(fn($q) => $q->where('type','branch')),
+                'required',
+                'integer',
+                Rule::exists('branches', 'id')->where(fn($q) => $q->where('type', 'branch')),
             ],
             'quantity' => 'required|integer|min:1',
             'notes' => 'nullable|string|max:255'
         ]);
-        
+
         DB::beginTransaction();
         try {
             $stockTransfer->update([
@@ -356,10 +444,10 @@ class StockTransferController extends Controller
                 'quantity' => $request->quantity,
                 'notes' => $request->notes,
             ]);
-            
+
             // Re-send the transfer
             $stockTransferService->sendTransfer($stockTransfer);
-            
+
             DB::commit();
             return response()->json([
                 'success' => true,
@@ -385,11 +473,11 @@ class StockTransferController extends Controller
                 'message' => 'Hanya transfer dengan status pending yang dapat dibatalkan.'
             ], 422);
         }
-        
+
         DB::beginTransaction();
         try {
             $stockTransferService->cancelTransfer($stockTransfer);
-            
+
             DB::commit();
             return response()->json([
                 'success' => true,
@@ -410,7 +498,7 @@ class StockTransferController extends Controller
     public function detail(StockTransfer $stockTransfer)
     {
         $stockTransfer->load(['fromBranch', 'toBranch', 'finishedProduct.unit', 'semiFinishedProduct.unit', 'sentByUser', 'handledByUser']);
-        
+
         return view('stock-transfer.partials.detail', compact('stockTransfer'));
     }
 

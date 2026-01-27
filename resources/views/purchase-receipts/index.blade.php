@@ -164,7 +164,7 @@
                 class="bg-white rounded-lg sm:rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
 
                 {{-- Card Header --}}
-                <x-index.card-header title="Daftar Penerimaan Barang" />
+                <x-index.card-header title="Penerimaan Barang" />
 
                 @include('purchase-receipts.partials.alerts')
 

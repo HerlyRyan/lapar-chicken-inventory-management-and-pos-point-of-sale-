@@ -1,4 +1,4 @@
-@props(['title', 'address'])
+@props(['title'])
 
 <div
     class="flex justify-between items-start border-b-2 border-gray-300 pb-4 mb-6 print:border-b-1 print:border-gray-500">
@@ -17,7 +17,7 @@
             Lapar Chicken
         </h1>
         <p class="text-sm text-gray-600 mt-1 print:text-xs print:mt-0 print:text-gray-700">
-            {{ $address }}
+            Jl. H. Mistar Cokrokusumo, Loktabat Sel., Kec. Banjarbaru Selatan, Kota Banjar Baru, Kalimantan Selatan
         </p>
         <h2 class="mt-3 text-xl font-semibold text-red-600 print:text-lg print:mt-1">
             {{ $title }}

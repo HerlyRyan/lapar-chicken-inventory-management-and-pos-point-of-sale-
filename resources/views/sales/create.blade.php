@@ -4,6 +4,29 @@
 @section('title', 'Tambah Penjualan')
 
 @section('content')
+    <style>
+        /* Agar scrollbar terlihat modern dan tidak mengganggu UI */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #fffaf0;
+            /* Orange very light */
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #fed7aa;
+            /* Orange 200 */
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #fb923c;
+            /* Orange 400 */
+        }
+    </style>
+
     <div class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 py-6">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8" x-data="saleForm()">
             {{-- Header Section --}}
@@ -43,49 +66,109 @@
                             <div class="lg:col-span-2">
                                 <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
                                     <i class="bi bi-box-seam-fill text-orange-500 mr-2"></i> Pilih Produk & Paket
-                                    <span x-show="isLoading" class="ml-3 text-sm text-gray-500">Memuat...</span>
+                                    <span x-show="isLoading"
+                                        class="ml-3 text-sm text-gray-400 animate-pulse">Memuat...</span>
                                 </h3>
 
                                 {{-- Search and Tabs --}}
-                                <div class="flex flex-col sm:flex-row gap-4 mb-4">
-                                    <input type="text" x-model="searchTerm" placeholder="Cari item..."
-                                        class="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-orange-500 focus:border-orange-500">
+                                <div class="flex flex-col gap-4 mb-6">
+                                    <div class="flex flex-col md:flex-row gap-4">
+                                        <div class="relative flex-1">
+                                            <i
+                                                class="bi bi-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                                            <input type="text" x-model="searchTerm" placeholder="Cari item..."
+                                                class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all">
+                                        </div>
 
-                                    <div class="flex space-x-2 p-1 bg-gray-100 rounded-xl">
-                                        <button type="button" @click="activeTab = 'products'"
-                                            :class="{ 'bg-white shadow-md text-orange-600': activeTab === 'products', 'text-gray-600': activeTab !== 'products' }"
-                                            class="px-4 py-2 rounded-lg font-medium transition-colors">Produk</button>
-                                        <button type="button" @click="activeTab = 'packages'"
-                                            :class="{ 'bg-white shadow-md text-orange-600': activeTab === 'packages', 'text-gray-600': activeTab !== 'packages' }"
-                                            class="px-4 py-2 rounded-lg font-medium transition-colors">Paket</button>
+                                        <div class="flex p-1 bg-orange-50 rounded-xl border border-orange-100">
+                                            <button type="button" @click="activeTab = 'products'"
+                                                :class="activeTab === 'products' ? 'bg-white shadow-sm text-orange-600' :
+                                                    'text-orange-400'"
+                                                class="flex-1 md:flex-none px-6 py-2 rounded-lg font-bold transition-all duration-200">
+                                                Produk
+                                            </button>
+                                            <button type="button" @click="activeTab = 'packages'"
+                                                :class="activeTab === 'packages' ? 'bg-white shadow-sm text-orange-600' :
+                                                    'text-orange-400'"
+                                                class="flex-1 md:flex-none px-6 py-2 rounded-lg font-bold transition-all duration-200">
+                                                Paket
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {{-- Filter Kategori --}}
+                                    <div class="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide"
+                                        x-show="activeTab === 'products'">
+                                        <button type="button" @click="filterCategory = 'all'"
+                                            :class="filterCategory === 'all' ?
+                                                'bg-orange-500 text-white shadow-orange-200 shadow-lg' :
+                                                'bg-white text-gray-600 border border-gray-200 hover:border-orange-300'"
+                                            class="whitespace-nowrap px-5 py-2 rounded-full text-sm font-semibold transition-all">
+                                            Semua
+                                        </button>
+
+                                        <template x-for="category in categories" :key="category.key">
+                                            <button type="button" @click="filterCategory = category.key"
+                                                :class="filterCategory === category.key ?
+                                                    'bg-orange-500 text-white shadow-orange-200 shadow-lg' :
+                                                    'bg-white text-gray-600 border border-gray-200 hover:border-orange-300'"
+                                                class="whitespace-nowrap px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center">
+                                                <i class="bi mr-2" :class="category.icon"></i>
+                                                <span x-text="category.label"></span>
+                                            </button>
+                                        </template>
                                     </div>
                                 </div>
 
-                                {{-- Item Cards --}}
+                                {{-- Item Cards Grid --}}
                                 <div
-                                    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 h-[600px] overflow-y-auto pr-2">
+                                    class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 h-[650px] overflow-y-auto pr-2 content-start custom-scrollbar">
+
                                     <template x-if="activeTab === 'products'">
                                         <template x-for="item in filteredProducts" :key="item.id">
                                             <div
-                                                class="bg-white border border-gray-100 rounded-xl shadow-lg p-4 transition-all hover:shadow-xl">
-                                                <div class="font-semibold text-gray-900" x-text="item.name"></div>
-                                                <div class="text-sm text-gray-500 mb-3" x-text="'Stok: ' + Number(item.stock)">
-                                                </div>
-                                                <div class="text-lg font-bold text-orange-600 mb-4"
-                                                    x-text="'Rp ' + item.price.toLocaleString('id-ID')"></div>
+                                                class="group relative bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-orange-200 transition-all flex flex-col h-64">
 
-                                                <div class="flex items-center space-x-2">
-                                                    <input type="number" min="1" x-model.number="item.quantity"
-                                                        class="w-16 px-2 py-1 border border-gray-300 rounded-lg text-center focus:ring-orange-500" />
-                                                    <button type="button" @click="addToCart(item, 'product')"
-                                                        :disabled="item.quantity < 1 || (item.item_type === 'product' && item
-                                                            .quantity > item.stock)"
-                                                        class="flex-1 bg-green-600 text-white rounded-lg px-3 py-1 text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                                                        <i class="bi bi-cart-plus mr-1"></i> Tambah
-                                                    </button>
+                                                <div class="flex justify-between items-start mb-3">
+                                                    <span
+                                                        class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-orange-50 text-orange-600 border border-orange-100">Produk</span>
+                                                    <div :class="item.stock < 10 ? 'text-red-500' : 'text-green-500'"
+                                                        class="flex items-center gap-1 text-[11px] font-bold">
+                                                        <i class="bi bi-box-seam"></i>
+                                                        <span x-text="item.stock"></span>
+                                                    </div>
                                                 </div>
-                                                <p x-show="item.item_type === 'product' && item.quantity > item.stock"
-                                                    class="text-xs text-red-500 mt-1">Stok tidak cukup!</p>
+
+                                                <div class="flex-1">
+                                                    <h4 class="font-bold text-gray-800 text-sm md:text-base leading-tight line-clamp-2 group-hover:text-orange-600 transition-colors"
+                                                        x-text="item.name"></h4>
+                                                    <p class="text-[11px] text-gray-400 mt-1 uppercase tracking-wider"
+                                                        x-text="item.category?.name || 'Item'"></p>
+                                                </div>
+
+                                                <div class="mt-4 pt-4 border-t border-gray-50">
+                                                    <div class="text-lg font-black text-orange-600 mb-3"
+                                                        x-text="'Rp ' + item.price.toLocaleString('id-ID')"></div>
+
+                                                    <div class="flex items-center gap-2">
+                                                        <div
+                                                            class="flex items-center bg-gray-50 rounded-lg border border-gray-100 h-9">
+                                                            <button type="button"
+                                                                @click="item.quantity > 1 ? item.quantity-- : null"
+                                                                class="px-2 text-gray-400 hover:text-orange-600">-</button>
+                                                            <input type="number" x-model.number="item.quantity"
+                                                                class="w-8 bg-transparent border-0 text-center text-xs font-bold focus:ring-0 p-0">
+                                                            <button type="button" @click="item.quantity++"
+                                                                class="px-2 text-gray-400 hover:text-orange-600">+</button>
+                                                        </div>
+
+                                                        <button type="button" @click="addToCart(item, 'product')"
+                                                            :disabled="item.stock <= 0 || item.quantity > item.stock"
+                                                            class="flex-1 bg-orange-500 text-white rounded-lg h-9 text-xs font-bold hover:bg-orange-600 disabled:opacity-30 transition-colors shadow-sm shadow-orange-100">
+                                                            <i class="bi bi-cart-plus mr-1"></i> TAMBAH
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </template>
                                     </template>
@@ -93,198 +176,255 @@
                                     <template x-if="activeTab === 'packages'">
                                         <template x-for="item in filteredPackages" :key="item.id">
                                             <div
-                                                class="bg-white border border-gray-100 rounded-xl shadow-lg p-4 transition-all hover:shadow-xl">
-                                                <div class="font-semibold text-gray-900" x-text="item.name"></div>
-                                                <div class="text-sm text-gray-500 mb-3">Paket</div>
-                                                <div class="text-lg font-bold text-orange-600 mb-4"
-                                                    x-text="'Rp ' + item.price.toLocaleString('id-ID')"></div>
+                                                class="group relative bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-orange-200 transition-all flex flex-col h-64 border-l-4 border-l-orange-500">
+                                                <div class="flex justify-between items-start mb-3">
+                                                    <span
+                                                        class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-orange-600 text-white">Paket
+                                                        Hemat</span>
+                                                </div>
 
-                                                <div class="flex items-center space-x-2">
-                                                    <input type="number" min="1" x-model.number="item.quantity"
-                                                        class="w-16 px-2 py-1 border border-gray-300 rounded-lg text-center focus:ring-orange-500" />
-                                                    <button type="button" @click="addToCart(item, 'package')"
-                                                        :disabled="item.quantity < 1"
-                                                        class="flex-1 bg-green-600 text-white rounded-lg px-3 py-1 text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                                                        <i class="bi bi-cart-plus mr-1"></i> Tambah
-                                                    </button>
+                                                <div class="flex-1">
+                                                    <h4 class="font-bold text-gray-800 text-sm md:text-base leading-tight line-clamp-2"
+                                                        x-text="item.name"></h4>
+                                                    <p class="text-[11px] text-gray-400 mt-1">PROMO BUNDLE</p>
+                                                </div>
+
+                                                <div class="mt-4 pt-4 border-t border-gray-50">
+                                                    <div class="text-lg font-black text-orange-600 mb-3"
+                                                        x-text="'Rp ' + item.price.toLocaleString('id-ID')"></div>
+                                                    <div class="flex items-center gap-2">
+                                                        <input type="number" x-model.number="item.quantity"
+                                                            class="w-12 h-9 bg-gray-50 border border-gray-100 rounded-lg text-center text-xs font-bold focus:ring-orange-500">
+                                                        <button type="button" @click="addToCart(item, 'package')"
+                                                            :disabled="item.quantity < 1"
+                                                            class="flex-1 bg-orange-500 text-white rounded-lg h-9 text-xs font-bold hover:bg-orange-600 transition-colors shadow-sm shadow-orange-100 uppercase">
+                                                            Ambil Paket
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </template>
                                     </template>
-                                    <template
-                                        x-if="filteredProducts.length === 0 && activeTab === 'products' && !isLoading">
-                                        <p class="text-gray-500 col-span-full">Tidak ada produk ditemukan.</p>
-                                    </template>
-                                    <template
-                                        x-if="filteredPackages.length === 0 && activeTab === 'packages' && !isLoading">
-                                        <p class="text-gray-500 col-span-full">Tidak ada paket ditemukan.</p>
-                                    </template>
+
+                                    <div x-show="(activeTab === 'products' && filteredProducts.length === 0) || (activeTab === 'packages' && filteredPackages.length === 0)"
+                                        class="col-span-full flex flex-col items-center justify-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
+                                        <div
+                                            class="w-20 h-20 bg-orange-50 rounded-full flex items-center justify-center mb-4">
+                                            <i class="bi bi-search text-3xl text-orange-300"></i>
+                                        </div>
+                                        <p class="text-gray-500 font-bold">Item tidak ditemukan</p>
+                                        <p class="text-gray-400 text-sm">Coba kata kunci lain atau kategori berbeda</p>
+                                    </div>
                                 </div>
                             </div>
 
                             {{-- RIGHT COLUMN: Cart and Totals --}}
                             <div class="lg:col-span-1">
-                                <div class="sticky top-6">
-                                    <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                                        <i class="bi bi-basket-fill text-orange-500 mr-2"></i> Keranjang Belanja
-                                    </h3>
+                                <div
+                                    class="sticky top-6 border border-gray-200 rounded-2xl bg-white shadow-sm overflow-hidden">
+                                    <div class="p-5 border-b border-gray-100 bg-gray-50/50">
+                                        <h3 class="text-lg font-bold text-gray-900 flex items-center">
+                                            <i class="bi bi-basket-fill text-orange-500 mr-2 text-xl"></i>
+                                            Keranjang Belanja
+                                            <template x-if="cart.items.length > 0">
+                                                <span
+                                                    class="ml-2 px-2 py-0.5 text-xs bg-orange-100 text-orange-600 rounded-full"
+                                                    x-text="cart.items.length"></span>
+                                            </template>
+                                        </h3>
+                                    </div>
 
-                                    <div
-                                        class="bg-gray-50 p-4 rounded-xl mb-4 h-[300px] overflow-y-auto border border-gray-200">
-                                        <template x-if="cart.items.length === 0">
-                                            <p class="text-gray-500 text-center py-4">Keranjang kosong.</p>
-                                        </template>
-                                        <template x-for="(item, index) in cart.items" :key="index">
-                                            <div
-                                                class="flex items-center justify-between border-b border-gray-200 py-3 last:border-b-0">
-                                                <input type="hidden" :name="'items[' + index + '][item_type]'"
-                                                    :value="item.item_type">
-                                                <input type="hidden" :name="'items[' + index + '][item_id]'"
-                                                    :value="item.item_id">
-                                                <input type="hidden" :name="'items[' + index + '][item_name]'"
-                                                    :value="item.item_name">
-                                                <input type="hidden" :name="'items[' + index + '][unit_price]'"
-                                                    :value="item.unit_price">
-
-                                                <div class="flex-1">
-                                                    <p class="font-medium text-sm text-gray-800" x-text="item.item_name">
-                                                    </p>
-                                                    <p class="text-xs text-gray-500"
-                                                        x-text="item.item_type.toUpperCase()"></p>
-                                                    <p class="text-sm text-orange-600 font-semibold"
-                                                        x-text="item.quantity + ' x Rp ' + item.unit_price.toLocaleString('id-ID')">
-                                                    </p>
+                                    <div class="p-5">
+                                        <div
+                                            class="bg-gray-50 rounded-xl mb-6 h-[300px] overflow-y-auto border border-gray-100 p-2 custom-scrollbar">
+                                            <template x-if="cart.items.length === 0">
+                                                <div
+                                                    class="flex flex-col items-center justify-center h-full text-gray-400">
+                                                    <i class="bi bi-cart2 text-4xl mb-2"></i>
+                                                    <p class="text-sm">Keranjang masih kosong</p>
                                                 </div>
+                                            </template>
 
-                                                <div class="flex items-center space-x-2">
-                                                    <input type="number" min="1"
-                                                        :name="'items[' + index + '][quantity]'"
-                                                        x-model.number="item.quantity" @input="updateItemQuantity(index)"
-                                                        class="w-14 px-1 py-1 border rounded-lg text-center text-sm" />
-
+                                            <template x-for="(item, index) in cart.items" :key="index">
+                                                <div
+                                                    class="bg-white rounded-lg p-3 mb-2 border border-gray-100 shadow-sm transition-all hover:border-orange-200">
+                                                    <input type="hidden" :name="'items[' + index + '][item_type]'"
+                                                        :value="item.item_type">
+                                                    <input type="hidden" :name="'items[' + index + '][item_id]'"
+                                                        :value="item.item_id">
+                                                    <input type="hidden" :name="'items[' + index + '][item_name]'"
+                                                        :value="item.item_name">
+                                                    <input type="hidden" :name="'items[' + index + '][unit_price]'"
+                                                        :value="item.unit_price">
                                                     <input type="hidden" :name="'items[' + index + '][subtotal]'"
                                                         :value="item.subtotal">
 
-                                                    <button type="button" @click="removeFromCart(index)"
-                                                        class="text-red-600 hover:text-red-800 transition-colors p-1">
-                                                        <i class="bi bi-trash-fill"></i>
-                                                    </button>
+                                                    <div class="flex justify-between items-start mb-2">
+                                                        <div class="flex-1 min-w-0 pr-2">
+                                                            <p class="font-bold text-sm text-gray-800 truncate"
+                                                                x-text="item.item_name"></p>
+                                                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider"
+                                                                x-text="item.item_type"></p>
+                                                        </div>
+                                                        <button type="button" @click="removeFromCart(index)"
+                                                            class="text-gray-300 hover:text-red-500 transition-colors">
+                                                            <i class="bi bi-x-circle-fill"></i>
+                                                        </button>
+                                                    </div>
+
+                                                    <div class="flex items-center justify-between mt-3">
+                                                        <p class="text-sm text-orange-600 font-bold"
+                                                            x-text="'Rp ' + (item.unit_price * item.quantity).toLocaleString('id-ID')">
+                                                        </p>
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="text-[10px] text-gray-400">Qty:</span>
+                                                            <input type="number" min="1"
+                                                                :name="'items[' + index + '][quantity]'"
+                                                                x-model.number="item.quantity"
+                                                                @input="updateItemQuantity(index)"
+                                                                class="w-12 px-1 py-1 border border-gray-200 rounded-md text-center text-xs font-bold focus:ring-1 focus:ring-orange-500 focus:border-orange-500 outline-none" />
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </template>
-                                        @error('items')
-                                            <p class="mt-2 text-sm text-red-600">Keranjang tidak boleh kosong.</p>
-                                        @enderror
-                                    </div>
-
-                                    {{-- Basic Info - Hidden in Left Column --}}
-                                    <div class="space-y-4 mb-4">
-                                        <div>
-                                            <label for="customer_name"
-                                                class="block text-sm font-semibold text-gray-700 mb-2">Nama
-                                                Pelanggan</label>
-                                            <input type="text" name="customer_name" id="customer_name"
-                                                x-model="customerName" class="w-full px-4 py-3 border rounded-xl"
-                                                placeholder="Nama pelanggan (opsional)">
-                                        </div>
-
-                                        <div>
-                                            <label for="phone"
-                                                class="block text-sm font-semibold text-gray-700 mb-2">Telepon</label>
-                                            <div
-                                                class="flex rounded-xl border focus-within:ring-2 focus-within:ring-orange-500 transition-all">
-                                                <span
-                                                    class="inline-flex items-center px-4 text-gray-500 bg-gray-50 border-r border-gray-300 rounded-l-xl text-sm font-medium">+62</span>
-                                                <input type="text" name="customer_phone" id="phone"
-                                                    x-model="customerPhone"
-                                                    class="flex-1 px-4 py-3 border-0 rounded-r-xl focus:ring-0"
-                                                    placeholder="813xxxxxxxx" @input="formatPhoneNumber" maxlength="15">
-                                            </div>
-                                            @error('customer_phone')
-                                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                            </template>
+                                            @error('items')
+                                                <p class="mt-2 text-xs text-red-600 font-medium px-2">
+                                                    <i class="bi bi-exclamation-circle mr-1"></i> Keranjang tidak boleh kosong.
+                                                </p>
                                             @enderror
                                         </div>
-                                    </div>
 
-                                    {{-- Discount and Payment --}}
-                                    <div class="grid grid-cols-2 gap-4 mb-4">
-                                        <div>
-                                            <label class="block text-sm font-semibold text-gray-700 mb-2">Diskon
-                                                Tipe</label>
-                                            <select name="discount_type" x-model="cart.discount_type"
-                                                @change="recalculateTotals" class="w-full px-4 py-3 border rounded-xl">
-                                                <option value="none">none</option>
-                                                <option value="percentage">percentage</option>
-                                                <option value="nominal">nominal</option>
+                                        <div
+                                            class="space-y-4 mb-6 bg-gray-50/50 p-4 rounded-xl border border-dashed border-gray-200">
+                                            <div>
+                                                <label for="customer_name"
+                                                    class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nama
+                                                    Pelanggan</label>
+                                                <input type="text" name="customer_name" id="customer_name"
+                                                    x-model="customerName"
+                                                    class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none"
+                                                    placeholder="Nama pelanggan (opsional)">
+                                            </div>
+
+                                            <div>
+                                                <label for="phone"
+                                                    class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Telepon</label>
+                                                <div
+                                                    class="flex rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-orange-500/20 focus-within:border-orange-500 transition-all bg-white overflow-hidden">
+                                                    <span
+                                                        class="inline-flex items-center px-3 text-gray-400 bg-gray-50 border-r border-gray-100 text-xs font-bold">+62</span>
+                                                    <input type="text" name="customer_phone" id="phone"
+                                                        x-model="customerPhone"
+                                                        class="flex-1 px-3 py-2.5 border-0 text-sm focus:ring-0 outline-none"
+                                                        placeholder="813xxxxxxxx" @input="formatPhoneNumber"
+                                                        maxlength="15">
+                                                </div>
+                                                @error('customer_phone')
+                                                    <p class="mt-1 text-[11px] text-red-600 font-medium">{{ $message }}
+                                                    </p>
+                                                @enderror
+                                            </div>
+                                        </div>
+
+                                        <div class="grid grid-cols-2 gap-3 mb-4">
+                                            <div class="col-span-1">
+                                                <label
+                                                    class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipe
+                                                    Diskon</label>
+                                                <select name="discount_type" x-model="cart.discount_type"
+                                                    @change="recalculateTotals"
+                                                    class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500 outline-none">
+                                                    <option value="none">None</option>
+                                                    <option value="percentage">%</option>
+                                                    <option value="nominal">Rp</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-span-1">
+                                                <label
+                                                    class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nilai
+                                                    Diskon</label>
+                                                <input type="number" name="discount_value"
+                                                    x-model.number="cart.discount_value" min="0" step="0.01"
+                                                    @input="recalculateTotals"
+                                                    class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-orange-500 focus:border-orange-500 outline-none">
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-6">
+                                            <label
+                                                class="block text-xs font-bold text-orange-500 uppercase tracking-wider mb-2 text-red-500">Metode
+                                                Pembayaran *</label>
+                                            <select name="payment_method" x-model="cart.payment_method"
+                                                @change="recalculateTotals"
+                                                class="w-full px-3 py-2 border border-orange-200 rounded-xl text-sm font-bold bg-orange-50 text-orange-700 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                                                required>
+                                                <option value="cash">CASH (TUNAI)</option>
+                                                <option value="qris">QRIS</option>
                                             </select>
                                         </div>
-                                        <div>
-                                            <label class="block text-sm font-semibold text-gray-700 mb-2">Nilai
-                                                Diskon</label>
-                                            <input type="number" name="discount_value"
-                                                x-model.number="cart.discount_value" min="0" step="0.01"
-                                                @input="recalculateTotals" class="w-full px-4 py-3 border rounded-xl">
-                                        </div>
-                                    </div>
 
-                                    <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Metode Pembayaran
-                                            <span class="text-red-500">*</span></label>
-                                        <select name="payment_method" x-model="cart.payment_method"
-                                            @change="recalculateTotals" class="w-full px-4 py-3 border rounded-xl"
-                                            required>
-                                            <option value="cash">cash</option>
-                                            <option value="qris">qris</option>
-                                        </select>
-                                    </div>
+                                        <div
+                                            class="rounded-2xl p-5 text-white shadow-xl shadow-orange-900/10 space-y-3">
+                                            <div class="flex justify-between text-xs text-orange-400">
+                                                <span>Subtotal</span>
+                                                <span x-text="'Rp ' + cart.subtotal_amount.toLocaleString('id-ID')"></span>
+                                                <input type="hidden" name="subtotal_amount"
+                                                    :value="cart.subtotal_amount">
+                                            </div>
+                                            <div class="flex justify-between text-xs text-red-400">
+                                                <span>Diskon</span>
+                                                <span
+                                                    x-text="'- Rp ' + cart.discount_amount.toLocaleString('id-ID')"></span>
+                                                <input type="hidden" name="discount_amount"
+                                                    :value="cart.discount_amount">
+                                            </div>
+                                            <div class="flex justify-between items-center pt-2 border-t border-orange-800">
+                                                <span class="text-orange-400 text-sm font-medium">Total Akhir</span>
+                                                <span class="text-xl font-black text-orange-400"
+                                                    x-text="'Rp ' + cart.final_amount.toLocaleString('id-ID')"></span>
+                                                <input type="hidden" name="final_amount" :value="cart.final_amount">
+                                            </div>
 
-                                    {{-- Totals Summary --}}
-                                    <div class="mt-6 border-t border-gray-200 pt-4 space-y-3">
-                                        <div class="flex justify-between text-gray-700">
-                                            <span>Subtotal:</span>
-                                            <span x-text="'Rp ' + cart.subtotal_amount.toLocaleString('id-ID')"></span>
-                                            <input type="hidden" name="subtotal_amount" :value="cart.subtotal_amount">
-                                        </div>
-                                        <div class="flex justify-between text-red-500">
-                                            <span>Diskon:</span>
-                                            <span x-text="'- Rp ' + cart.discount_amount.toLocaleString('id-ID')"></span>
-                                            <input type="hidden" name="discount_amount" :value="cart.discount_amount">
-                                        </div>
-                                        <div class="flex justify-between text-xl font-bold text-gray-900 border-t pt-2">
-                                            <span>Total Akhir:</span>
-                                            <span x-text="'Rp ' + cart.final_amount.toLocaleString('id-ID')"></span>
-                                            <input type="hidden" name="final_amount" :value="cart.final_amount">
+                                            <div class="pt-4 space-y-3" x-show="cart.payment_method === 'cash'"
+                                                x-transition>
+                                                <div class="relative">
+                                                    <label
+                                                        class="block text-[10px] font-bold text-orange-500 uppercase mb-1">Nominal
+                                                        Bayar</label>
+                                                    <div class="flex items-center">
+                                                        <span
+                                                            class="absolute left-3 text-orange-400 font-bold text-sm">Rp</span>
+                                                        <input type="number" name="paid_amount"
+                                                            x-model.number="cart.paid_amount" min="0"
+                                                            @input="recalculateTotals"
+                                                            :readonly="cart.payment_method !== 'cash'"
+                                                            class="w-full pl-10 pr-4 py-2.5 bg-orange-800 border-0 rounded-xl text-lg font-bold text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                                                            placeholder="0">
+                                                    </div>
+                                                </div>
+                                                <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl">
+                                                    <span class="text-xs font-medium text-orange-400">Kembalian</span>
+                                                    <span class="text-lg font-bold text-green-400"
+                                                        x-text="'Rp ' + cart.change_amount.toLocaleString('id-ID')"></span>
+                                                    <input type="hidden" name="change_amount"
+                                                        :value="cart.change_amount">
+                                                </div>
+                                            </div>
                                         </div>
 
-                                        <div class="pt-2">
-                                            <label class="block text-sm font-semibold text-gray-700 mb-2">Bayar
-                                                (tunai)</label>
-                                            <input type="number" name="paid_amount" x-model.number="cart.paid_amount"
-                                                min="0" @input="recalculateTotals"
-                                                :readonly="cart.payment_method !== 'cash'"
-                                                class="w-full px-4 py-3 border rounded-xl"
-                                                :class="{ 'bg-gray-50': cart.payment_method !== 'cash' }">
-                                        </div>
+                                        <div class="mt-6 space-y-3">
+                                            <button type="submit"
+                                                :disabled="cart.items.length === 0 || (cart.payment_method === 'cash' && cart
+                                                    .paid_amount < cart.final_amount)"
+                                                class="w-full inline-flex items-center justify-center px-8 py-4 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl text-white font-bold text-sm shadow-lg shadow-orange-500/30 hover:shadow-orange-500/40 transform active:scale-[0.98] transition-all disabled:opacity-30 disabled:orangescale disabled:cursor-not-allowed uppercase tracking-widest">
+                                                <i class="bi bi-shield-check mr-2 text-lg"></i> Simpan Penjualan
+                                            </button>
 
-                                        <div class="flex justify-between text-lg font-bold text-green-600 border-t pt-2">
-                                            <span>Kembalian:</span>
-                                            <span x-text="'Rp ' + cart.change_amount.toLocaleString('id-ID')"></span>
-                                            <input type="hidden" name="change_amount" :value="cart.change_amount">
+                                            <a href="{{ route('sales.index') }}"
+                                                class="w-full inline-flex items-center justify-center px-6 py-3 border border-orange-200 rounded-xl text-xs font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-all uppercase tracking-widest">
+                                                Batal
+                                            </a>
                                         </div>
-                                    </div>
-
-                                    {{-- Actions --}}
-                                    <div class="border-t border-gray-200 pt-6 mt-6">
-                                        <button type="submit"
-                                            :disabled="cart.items.length === 0 || (cart.payment_method === 'cash' && cart
-                                                .paid_amount < cart.final_amount)"
-                                            class="w-full inline-flex items-center justify-center px-8 py-3 bg-gradient-to-r from-orange-600 to-red-600 rounded-xl text-lg font-medium text-white hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                                            <i class="bi bi-cash-stack mr-2"></i> Simpan Penjualan
-                                        </button>
-                                        <a href="{{ route('sales.index') }}"
-                                            class="mt-3 w-full inline-flex items-center justify-center px-6 py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-all">
-                                            Batal
-                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -303,6 +443,8 @@
             customerName: '{{ old('customer_name') ?? '' }}',
             customerPhone: '{{ old('customer_phone') ?? '' }}',
             activeTab: 'products', // 'products' or 'packages'
+            categories: @js($categories),
+            filterCategory: 'all',
             isLoading: false,
 
             // Item Data
@@ -325,9 +467,17 @@
 
             // --- COMPUTED PROPERTIES (for Item Cards) ---
             get filteredProducts() {
-                return this.rawProducts.filter(item =>
-                    item.name.toLowerCase().includes(this.searchTerm.toLowerCase())
-                );
+                return this.rawProducts.filter(item => {
+                    // Filter berdasarkan Nama
+                    const matchesSearch = item.name.toLowerCase().includes(this
+                        .searchTerm.toLowerCase());
+
+                    // Filter berdasarkan Kategori (Pastikan data item memiliki property 'category')
+                    const matchesCategory = this.filterCategory === 'all' || item
+                        .category === this.filterCategory;
+
+                    return matchesSearch && matchesCategory;
+                });
             },
             get filteredPackages() {
                 return this.rawPackages.filter(item =>
@@ -487,7 +637,7 @@
                     .final_amount) {
                     alert('Jumlah bayar tidak mencukupi!');
                     return;
-                }                
+                }
 
                 // The form is ready, submit it
                 document.getElementById('saleForm').submit();

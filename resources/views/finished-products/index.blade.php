@@ -23,7 +23,7 @@
             <div x-data="sortableTable(@js($finishedProducts))" @sort-column.window="sortBy($event.detail)"
                 class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
                 {{-- Card Header --}}
-                <x-index.card-header title="Daftar Produk Siap Jual" />
+                <x-index.card-header title="Produk Siap Jual" />
 
                 {{-- Filter Section --}}
                 <x-filter-bar searchPlaceholder="Cari nama, kode, atau deskripsi produk siap jual..." :selects="$selects ?? []" />

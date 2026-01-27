@@ -5,14 +5,14 @@
 @section('content')
     <div class="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30">
         {{-- Page Header --}}
-        <x-index.header title="Role & Hak Akses" addRoute="{{ route('roles.create') }}" />
+        <x-index.header title="Role & Hak Akses" />
 
         {{-- Main Content --}}
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
             <div x-data="sortableTable(@js($roles))" @sort-column.window="sortBy($event.detail)"
                 class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
                 {{-- Card Header --}}
-                <x-index.card-header title="Daftar Role" />
+                <x-index.card-header title="Role" />
 
                 {{-- Filter Section --}}
                 <x-filter-bar searchPlaceholder="Cari role..." :selects="$selects" />

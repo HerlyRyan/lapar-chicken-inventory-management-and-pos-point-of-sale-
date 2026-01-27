@@ -13,7 +13,7 @@
                 class="bg-white rounded-lg sm:rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
 
                 {{-- Card Header --}}
-                <x-index.card-header title="Daftar Pengajuan Produksi" />
+                <x-index.card-header title="Pengajuan Produksi" />
 
                 {{-- Filter Section --}}
                 <x-filter-bar searchPlaceholder="Cari nama, kode, atau alamat supplier..." :selects="$selects" />

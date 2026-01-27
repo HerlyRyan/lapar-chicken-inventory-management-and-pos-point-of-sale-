@@ -13,7 +13,7 @@
             <div x-data="sortableTable(@js($purchaseOrders))" @sort-column.window="sortBy($event.detail)"
                 class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
                 {{-- Card Header --}}
-                <x-index.card-header title="Daftar Purchase Orders" />
+                <x-index.card-header title="Purchase Orders" />
 
                 {{-- Filter Section --}}
                 <x-filter-bar searchPlaceholder="Cari nama, kode, atau po..." :selects="$selects" :date="true" />
@@ -121,7 +121,7 @@
                                                 editUrl: '/purchase-orders/' + order.id + '/edit',
                                                 deleteUrl: '/purchase-orders/' + order.id,
                                                 toggleUrl: '/purchase-orders/' + order.id + '/toggle-status',
-                                                itemName: 'order ' + order.name,
+                                                itemName: 'order ' + order.order_number,
                                             }">
                                                 <x-index.action-buttons :view="true" :edit="true"
                                                     :delete="true" />

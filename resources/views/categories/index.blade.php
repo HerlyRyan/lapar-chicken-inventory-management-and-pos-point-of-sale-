@@ -13,7 +13,7 @@
             <div x-data="sortableTable(@js($categories))" @sort-column.window="sortBy($event.detail)"
                 class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
                 {{-- Card Header --}}
-                <x-index.card-header title="Daftar Kategori" />
+                <x-index.card-header title="Kategori" />
 
                 {{-- Filter Section --}}
                 <x-filter-bar searchPlaceholder="Cari kode atau nama kategori..." :selects="$selects ?? []" />

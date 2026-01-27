@@ -5,7 +5,7 @@
 @section('content')
     <div class="max-w-7xl mx-auto p-6 sm:p-8 bg-white shadow-xl rounded-xl print:shadow-none print:rounded-none">
 
-        <x-report.header :title="$reportTitle ?? 'LAPORAN STOK TRANSFER'" address="Jl. Utama Lapar Chicken No. 123, Jakarta" />
+        <x-report.header :title="$reportTitle ?? 'LAPORAN STOK TRANSFER'"/>
 
         <div class="text-xs text-gray-700 mb-4 flex justify-between print:text-[10px]">
             <p><b>Tanggal Cetak:</b> {{ now()->format('d F Y') }}</p>
