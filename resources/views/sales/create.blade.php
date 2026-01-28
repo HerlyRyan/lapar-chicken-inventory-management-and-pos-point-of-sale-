@@ -30,7 +30,7 @@
     <div class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 py-6">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8" x-data="saleForm()">
             {{-- Header Section --}}
-            <x-form.header title="Penjualan Baru" backRoute="{{ route('sales.index') }}" />
+            <x-form.header title="Penjualan" backRoute="{{ route('sales.index') }}" />
 
             <div class="mt-6 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
                 <x-form.card-header title="Buat Penjualan" type="add" />

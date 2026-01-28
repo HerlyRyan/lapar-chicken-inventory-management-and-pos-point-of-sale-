@@ -63,8 +63,8 @@ class User extends Authenticatable
      */
     public function isSuperAdmin()
     {
-        return $this->roles()->where(function($q){
-            $q->where('code','super_admin')->orWhere('name','Super Admin');
+        return $this->roles()->where(function ($q) {
+            $q->where('code', 'super_admin')->orWhere('name', 'Super Admin');
         })->exists();
     }
 
@@ -74,8 +74,8 @@ class User extends Authenticatable
     public function isPrimarySuperAdmin()
     {
         if (!$this->isSuperAdmin()) return false;
-        $first = self::whereHas('roles', function($q){
-            $q->where('code','super_admin')->orWhere('name','Super Admin');
+        $first = self::whereHas('roles', function ($q) {
+            $q->where('code', 'super_admin')->orWhere('name', 'Super Admin');
         })->orderBy('id')->first();
         return $first && $first->id === $this->id;
     }
@@ -93,6 +93,11 @@ class User extends Authenticatable
         return $this->hasMany(UserRole::class);
     }
 
+    public function getPrimaryRole()
+    {
+        return $this->userRoles()->with('role')->first()?->role;
+    }
+
     // Permission methods
     public function hasRole($roleName)
     {
@@ -101,7 +106,7 @@ class User extends Authenticatable
 
     public function hasPermission($permissionCode)
     {
-        return $this->roles()->whereHas('permissions', function($query) use ($permissionCode) {
+        return $this->roles()->whereHas('permissions', function ($query) use ($permissionCode) {
             $query->where('code', $permissionCode);
         })->exists();
     }
@@ -111,7 +116,7 @@ class User extends Authenticatable
         if (is_string($roles)) {
             return $this->hasRole($roles);
         }
-        
+
         return $this->roles()->whereIn('code', $roles)->exists();
     }
 
@@ -120,15 +125,15 @@ class User extends Authenticatable
         if (is_string($permissions)) {
             return $this->hasPermission($permissions);
         }
-        
-        return $this->roles()->whereHas('permissions', function($query) use ($permissions) {
+
+        return $this->roles()->whereHas('permissions', function ($query) use ($permissions) {
             $query->whereIn('code', $permissions);
         })->exists();
     }
 
     public function getAllPermissions()
     {
-        return Permission::whereHas('rolePermissions.role.userRoles', function($query) {
+        return Permission::whereHas('rolePermissions.role.userRoles', function ($query) {
             $query->where('user_id', $this->id);
         })->get();
     }

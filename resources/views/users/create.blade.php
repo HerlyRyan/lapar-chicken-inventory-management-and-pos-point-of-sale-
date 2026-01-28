@@ -324,70 +324,68 @@
     </div>
 @endsection
 
-@push('scripts')
-    <script>
-        // Preview avatar image when selected
-        function previewAvatar(input) {
-            const file = input.files[0];
-            const preview = document.getElementById('avatar-preview');
-            const previewText = document.getElementById('avatar-preview-text');
+<script>
+    // Preview avatar image when selected
+    function previewAvatar(input) {
+        const file = input.files[0];
+        const preview = document.getElementById('avatar-preview');
+        const previewText = document.getElementById('avatar-preview-text');
 
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    preview.classList.remove('hidden');
-                    previewText.classList.add('hidden');
-                };
-                reader.readAsDataURL(file);
-            } else {
-                preview.classList.add('hidden');
-                previewText.classList.remove('hidden');
-                preview.src = '#';
-            }
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+                previewText.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.classList.add('hidden');
+            previewText.classList.remove('hidden');
+            preview.src = '#';
         }
+    }
 
-        // Format phone number to ensure it contains only digits
-        function formatPhoneNumber(input) {
-            // Remove any non-numeric characters
-            let value = input.value.replace(/\D/g, '');
+    // Format phone number to ensure it contains only digits
+    function formatPhoneNumber(input) {
+        // Remove any non-numeric characters
+        let value = input.value.replace(/\D/g, '');
 
-            // Ensure it's only digits
-            input.value = value;
+        // Ensure it's only digits
+        input.value = value;
 
-            // Update the form field with the formatted value
-            if (value.length > 0) {
-                // Check if it meets the pattern (8-13 digits)
-                const isValid = /^\d{8,13}$/.test(value);
+        // Update the form field with the formatted value
+        if (value.length > 0) {
+            // Check if it meets the pattern (8-13 digits)
+            const isValid = /^\d{8,13}$/.test(value);
 
-                // Visual feedback with Tailwind classes
-                const parentDiv = input.closest('.flex');
-                if (isValid) {
-                    parentDiv.classList.remove('border-red-300', 'ring-2', 'ring-red-200');
-                    parentDiv.classList.add('border-green-300', 'ring-2', 'ring-green-200');
+            // Visual feedback with Tailwind classes
+            const parentDiv = input.closest('.flex');
+            if (isValid) {
+                parentDiv.classList.remove('border-red-300', 'ring-2', 'ring-red-200');
+                parentDiv.classList.add('border-green-300', 'ring-2', 'ring-green-200');
+            } else {
+                parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200');
+                if (value.length > 0) {
+                    parentDiv.classList.add('border-red-300', 'ring-2', 'ring-red-200');
                 } else {
-                    parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200');
-                    if (value.length > 0) {
-                        parentDiv.classList.add('border-red-300', 'ring-2', 'ring-red-200');
-                    } else {
-                        parentDiv.classList.remove('border-red-300', 'ring-2', 'ring-red-200');
-                    }
+                    parentDiv.classList.remove('border-red-300', 'ring-2', 'ring-red-200');
                 }
-            } else {
-                const parentDiv = input.closest('.flex');
-                parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200', 'border-red-300', 'ring-2',
-                    'ring-red-200');
             }
+        } else {
+            const parentDiv = input.closest('.flex');
+            parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200', 'border-red-300', 'ring-2',
+                'ring-red-200');
         }
+    }
 
-        // Prepare the phone number before form submission
-        function preparePhoneNumber() {
-            const phoneInput = document.getElementById('phone');
-            if (phoneInput && phoneInput.value) {
-                // Replace the original phone value with the full number
-                phoneInput.value = '62' + phoneInput.value;
-            }
-            return true;
+    // Prepare the phone number before form submission
+    function preparePhoneNumber() {
+        const phoneInput = document.getElementById('phone');
+        if (phoneInput && phoneInput.value) {
+            // Replace the original phone value with the full number
+            phoneInput.value = '62' + phoneInput.value;
         }
-    </script>
-@endpush
+        return true;
+    }
+</script>

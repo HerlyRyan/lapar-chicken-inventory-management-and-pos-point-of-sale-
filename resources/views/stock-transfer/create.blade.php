@@ -243,6 +243,7 @@
 
     @include('components.init-tooltips')
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         $(document).ready(function() {
             // Initialize from branch
@@ -461,6 +462,7 @@
                 if (it.notes) formData.append(`items[${i}][notes]`, it.notes);
             });
             formData.append('_token', '{{ csrf_token() }}');
+            formData.append('from_branch_id', $('#from_branch_id').val());
 
             $.ajax({
                 url: '{{ route('stock-transfer.store') }}',

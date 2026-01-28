@@ -245,7 +245,10 @@ class StockTransferController extends Controller
             ]);
         }
 
-        $fromBranchId = app()->bound('current_branch_id') ? app('current_branch_id') : (session('current_branch_id') ?? (Auth::user()->branch_id ?? null));
+        $fromBranchId = $request->from_branch_id
+            ?? app()->bound('current_branch_id')
+            ?? session('current_branch_id')
+            ?? Auth::user()->branch_id;
         if (!$fromBranchId) {
             return response()->json([
                 'success' => false,

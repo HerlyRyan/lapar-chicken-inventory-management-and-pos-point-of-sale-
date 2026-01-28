@@ -231,7 +231,9 @@
                                         Developer Mode
                                     @endif
                                 </div>
-                                <div class="text-xs text-orange-200">Administrator</div>
+                                <div class="text-xs text-orange-200">
+                                    {{ Auth::user()->getPrimaryRole()?->name }}
+                                </div>
                             </div>
                             <svg class="w-4 h-4 transition-transform duration-200" :class="open ? 'rotate-180' : ''"
                                 fill="currentColor" viewBox="0 0 24 24">
@@ -263,7 +265,7 @@
                                                     Developer Mode
                                                 @endif
                                             </div>
-                                            <div class="text-xs text-gray-500">Administrator</div>
+                                            <div class="text-xs text-gray-500">{{ Auth::user()->getPrimaryRole()?->name }}</div>
                                         </div>
                                     </div>
                                 </div>

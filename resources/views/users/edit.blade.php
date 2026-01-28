@@ -72,8 +72,8 @@
                         </div>
                     @endif
 
-                    <form action="{{ route('users.update', $user) }}" method="POST" enctype="multipart/form-data" id="userForm"
-                        onsubmit="return preparePhoneNumber()">
+                    <form action="{{ route('users.update', $user) }}" method="POST" enctype="multipart/form-data"
+                        id="userForm" onsubmit="return preparePhoneNumber()">
                         @csrf
                         @method('PUT')
 
@@ -133,8 +133,8 @@
                                         </span>
                                         <input type="text" name="phone" id="phone"
                                             class="flex-1 px-4 py-3 border-0 rounded-r-xl focus:ring-0 focus:outline-none"
-                                            value="{{ old('phone', ltrim($user->phone, '62')) }}" required placeholder="813xxxxxxxx"
-                                            oninput="formatPhoneNumber(this)" maxlength="15">
+                                            value="{{ old('phone', ltrim($user->phone, '62')) }}" required
+                                            placeholder="813xxxxxxxx" oninput="formatPhoneNumber(this)" maxlength="15">
                                     </div>
                                     <p class="mt-2 text-sm text-gray-600">
                                         <i class="bi bi-info-circle mr-1"></i>Format: 8-13 digit angka (untuk WhatsApp)
@@ -166,7 +166,8 @@
                                         class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 @error('password') border-red-300 ring-2 ring-red-200 @enderror"
                                         placeholder="Kosongkan jika tidak ingin mengubah">
                                     <p class="mt-2 text-sm text-gray-600">
-                                        <i class="bi bi-info-circle mr-1"></i>Minimal 8 karakter (kosongkan jika tidak ingin mengubah)
+                                        <i class="bi bi-info-circle mr-1"></i>Minimal 8 karakter (kosongkan jika tidak
+                                        ingin mengubah)
                                     </p>
                                     @error('password')
                                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
@@ -289,33 +290,34 @@
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                                         Foto Saat Ini & Preview
                                     </label>
-                                    
+
                                     {{-- Current Photo --}}
-                                    @if($user->avatar)
+                                    @if ($user->avatar)
                                         <div class="mb-4">
                                             <p class="text-xs text-gray-500 mb-2">Foto saat ini:</p>
-                                            <div class="w-full h-32 bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
-                                                <img src="{{ Storage::url($user->avatar) }}" alt="Current Avatar" 
-                                                     class="w-full h-full object-cover">
+                                            <div
+                                                class="w-full h-32 bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
+                                                <img src="{{ Storage::url($user->avatar) }}" alt="Current Avatar"
+                                                    class="w-full h-full object-cover">
                                             </div>
                                         </div>
                                     @endif
 
                                     {{-- New Photo Preview --}}
-                                    <div id="new-avatar-container" 
-                                         class="{{ $user->avatar ? '' : 'mt-0' }}">
-                                        <p class="text-xs text-gray-500 mb-2" id="preview-label" 
-                                           style="{{ $user->avatar ? 'display: none;' : '' }}">
+                                    <div id="new-avatar-container" class="{{ $user->avatar ? '' : 'mt-0' }}">
+                                        <p class="text-xs text-gray-500 mb-2" id="preview-label"
+                                            style="{{ $user->avatar ? 'display: none;' : '' }}">
                                             {{ $user->avatar ? 'Foto baru:' : 'Preview foto:' }}
                                         </p>
                                         <div class="w-full h-32 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center overflow-hidden"
-                                             id="avatar-preview-container">
+                                            id="avatar-preview-container">
                                             <div class="text-center text-gray-500" id="avatar-preview-text">
                                                 <i class="bi bi-person-circle text-3xl mb-1 block"></i>
-                                                <span class="text-xs">{{ $user->avatar ? 'Preview foto baru' : 'Preview foto akan tampil di sini' }}</span>
+                                                <span
+                                                    class="text-xs">{{ $user->avatar ? 'Preview foto baru' : 'Preview foto akan tampil di sini' }}</span>
                                             </div>
                                             <img id="avatar-preview" src="#" alt="Preview Foto Baru"
-                                                 class="hidden w-full h-full object-cover">
+                                                class="hidden w-full h-full object-cover">
                                         </div>
                                     </div>
                                 </div>
@@ -368,74 +370,77 @@
     </div>
 @endsection
 
-@push('scripts')
-    <script>
-        // Preview avatar image when selected
-        function previewAvatar(input) {
-            const file = input.files[0];
-            const preview = document.getElementById('avatar-preview');
-            const previewText = document.getElementById('avatar-preview-text');
-            const previewLabel = document.getElementById('preview-label');
+<script>
+    // Preview avatar image when selected
+    function previewAvatar(input) {
+        const file = input.files[0];
+        const preview = document.getElementById('avatar-preview');
+        const previewText = document.getElementById('avatar-preview-text');
+        const previewLabel = document.getElementById('preview-label');
 
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    preview.classList.remove('hidden');
-                    previewText.classList.add('hidden');
-                    previewLabel.style.display = 'block';
-                    previewLabel.textContent = 'Foto baru:';
-                };
-                reader.readAsDataURL(file);
-            } else {
-                preview.classList.add('hidden');
-                previewText.classList.remove('hidden');
-                previewLabel.style.display = @if($user->avatar) 'none' @else 'block' @endif;
-                preview.src = '#';
-            }
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+                previewText.classList.add('hidden');
+                previewLabel.style.display = 'block';
+                previewLabel.textContent = 'Foto baru:';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.classList.add('hidden');
+            previewText.classList.remove('hidden');
+            previewLabel.style.display =
+                @if ($user->avatar)
+                    'none'
+                @else
+                    'block'
+                @endif ;
+            preview.src = '#';
         }
+    }
 
-        // Format phone number to ensure it contains only digits
-        function formatPhoneNumber(input) {
-            // Remove any non-numeric characters
-            let value = input.value.replace(/\D/g, '');
+    // Format phone number to ensure it contains only digits
+    function formatPhoneNumber(input) {
+        // Remove any non-numeric characters
+        let value = input.value.replace(/\D/g, '');
 
-            // Ensure it's only digits
-            input.value = value;
+        // Ensure it's only digits
+        input.value = value;
 
-            // Update the form field with the formatted value
-            if (value.length > 0) {
-                // Check if it meets the pattern (8-13 digits)
-                const isValid = /^\d{8,13}$/.test(value);
+        // Update the form field with the formatted value
+        if (value.length > 0) {
+            // Check if it meets the pattern (8-13 digits)
+            const isValid = /^\d{8,13}$/.test(value);
 
-                // Visual feedback with Tailwind classes
-                const parentDiv = input.closest('.flex');
-                if (isValid) {
-                    parentDiv.classList.remove('border-red-300', 'ring-2', 'ring-red-200');
-                    parentDiv.classList.add('border-green-300', 'ring-2', 'ring-green-200');
+            // Visual feedback with Tailwind classes
+            const parentDiv = input.closest('.flex');
+            if (isValid) {
+                parentDiv.classList.remove('border-red-300', 'ring-2', 'ring-red-200');
+                parentDiv.classList.add('border-green-300', 'ring-2', 'ring-green-200');
+            } else {
+                parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200');
+                if (value.length > 0) {
+                    parentDiv.classList.add('border-red-300', 'ring-2', 'ring-red-200');
                 } else {
-                    parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200');
-                    if (value.length > 0) {
-                        parentDiv.classList.add('border-red-300', 'ring-2', 'ring-red-200');
-                    } else {
-                        parentDiv.classList.remove('border-red-300', 'ring-2', 'ring-red-200');
-                    }
+                    parentDiv.classList.remove('border-red-300', 'ring-2', 'ring-red-200');
                 }
-            } else {
-                const parentDiv = input.closest('.flex');
-                parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200', 'border-red-300', 'ring-2',
-                    'ring-red-200');
             }
+        } else {
+            const parentDiv = input.closest('.flex');
+            parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200', 'border-red-300', 'ring-2',
+                'ring-red-200');
         }
+    }
 
-        // Prepare the phone number before form submission
-        function preparePhoneNumber() {
-            const phoneInput = document.getElementById('phone');
-            if (phoneInput && phoneInput.value) {
-                // Replace the original phone value with the full number
-                phoneInput.value = '62' + phoneInput.value;
-            }
-            return true;
+    // Prepare the phone number before form submission
+    function preparePhoneNumber() {
+        const phoneInput = document.getElementById('phone');
+        if (phoneInput && phoneInput.value) {
+            // Replace the original phone value with the full number
+            phoneInput.value = '62' + phoneInput.value;
         }
-    </script>
-@endpush
+        return true;
+    }
+</script>

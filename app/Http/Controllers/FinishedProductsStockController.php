@@ -226,6 +226,7 @@ class FinishedProductsStockController extends Controller
         ]);
 
         // Anda perlu juga mengambil data package di sini jika ada
+        
         $packages = []; // Logika untuk mengambil packages (contoh: PackageBranchStock)
 
         return response()->json([
