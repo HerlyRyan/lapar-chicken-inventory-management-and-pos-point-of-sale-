@@ -343,20 +343,37 @@ class SaleController extends Controller
             'qris' => 'QRIS',
         ];
 
-        $selects = [
-            ['name' => 'branch_id', 'label' => 'Semua Cabang', 'options' => $branches],
-            [
-                'name' => 'status',
-                'label' => 'Semua Status',
-                'options' => $statuses,
-            ],
-            [
-                'name' => 'payment_method',
-                'label' => 'Semua Metode Pembayaran',
-                'options' => $paymentMethod,
-            ],
+        $selects = [];
+        if (Auth::user()->getPrimaryRole()?->name == 'Super Admin') {
+            $selects = [
+                ['name' => 'branch_id', 'label' => 'Semua Cabang', 'options' => $branches],
+                [
+                    'name' => 'status',
+                    'label' => 'Semua Status',
+                    'options' => $statuses,
+                ],
+                [
+                    'name' => 'payment_method',
+                    'label' => 'Semua Metode Pembayaran',
+                    'options' => $paymentMethod,
+                ],
 
-        ];
+            ];
+        } else {
+            $selects = [
+                [
+                    'name' => 'status',
+                    'label' => 'Semua Status',
+                    'options' => $statuses,
+                ],
+                [
+                    'name' => 'payment_method',
+                    'label' => 'Semua Metode Pembayaran',
+                    'options' => $paymentMethod,
+                ],
+
+            ];
+        }
 
         // === RESPONSE ===
         if ($request->ajax()) {
@@ -389,7 +406,12 @@ class SaleController extends Controller
                 },
             ]);
 
-        return view('sales.create', compact('branches', 'categories'));
+        $user = auth()->user();
+
+        $userBranchId = $user->branch_id; // null kalau admin
+        $isBranchLocked = !is_null($userBranchId);
+
+        return view('sales.create', compact('branches', 'categories', 'userBranchId', 'isBranchLocked'));
     }
 
 

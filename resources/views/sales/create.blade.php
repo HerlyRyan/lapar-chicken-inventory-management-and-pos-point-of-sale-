@@ -28,7 +28,10 @@
     </style>
 
     <div class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 py-6">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8" x-data="saleForm()">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8" x-data="saleForm({
+            userBranchId: @json($userBranchId),
+            isBranchLocked: @json($isBranchLocked)
+        })">
             {{-- Header Section --}}
             <x-form.header title="Penjualan" backRoute="{{ route('sales.index') }}" />
 
@@ -41,7 +44,7 @@
                         @csrf
 
                         {{-- Step 1: Branch Selection (Always visible, determines item availability) --}}
-                        <div class="mb-8 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+                        <div class="mb-8 p-4 bg-orange-50 border border-orange-200 rounded-xl" x-show="!isBranchLocked">
                             <label for="branch_id" class="block text-lg font-bold text-gray-800 mb-2">
                                 Pilih Cabang <span class="text-red-500">*</span>
                             </label>
@@ -53,11 +56,12 @@
                                         {{ $b->name }} ({{ $b->code }})
                                     </option>
                                 @endforeach
+                                @error('branch_id')
                             </select>
-                            @error('branch_id')
                                 <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
+                        <input type="hidden" name="branch_id" x-model="branchId">
 
                         {{-- Main Content: Item Selection (Left) and Cart (Right) --}}
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8" x-show="branchId" x-cloak>
@@ -363,8 +367,7 @@
                                             </select>
                                         </div>
 
-                                        <div
-                                            class="rounded-2xl p-5 text-white shadow-xl shadow-orange-900/10 space-y-3">
+                                        <div class="rounded-2xl p-5 text-white shadow-xl shadow-orange-900/10 space-y-3">
                                             <div class="flex justify-between text-xs text-orange-400">
                                                 <span>Subtotal</span>
                                                 <span x-text="'Rp ' + cart.subtotal_amount.toLocaleString('id-ID')"></span>
@@ -438,8 +441,9 @@
 
 <script>
     document.addEventListener('alpine:init', () => {
-        Alpine.data('saleForm', () => ({
-            branchId: '{{ old('branch_id') ?? '' }}',
+        Alpine.data('saleForm', (config) => ({
+            branchId: config.userBranchId ?? '',
+            isBranchLocked: config.isBranchLocked ?? false,
             customerName: '{{ old('customer_name') ?? '' }}',
             customerPhone: '{{ old('customer_phone') ?? '' }}',
             activeTab: 'products', // 'products' or 'packages'
@@ -498,10 +502,14 @@
                     }));
                     this.recalculateTotals();
                 }
-
+                
                 // If branch selected on load (e.g., old input), fetch items
                 if (this.branchId) {
                     this.fetchBranchItems();
+                }
+
+                if (this.cart.items.length > 0) {
+                    this.recalculateTotals();
                 }
             },
 

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Branch;
 use App\Models\FinishedProduct;
 use App\Models\FinishedBranchStock;
+use App\Models\SalesPackage;
 
 class FinishedProductsStockController extends Controller
 {
@@ -209,25 +210,32 @@ class FinishedProductsStockController extends Controller
 
     public function items(Branch $branch)
     {
-        // 1. Ambil data stok cabang (FinishedBranchStock)
-        $branchStocks = FinishedBranchStock::with('finishedProduct')
+        // ===== PRODUCTS =====
+        $branchStocks = FinishedBranchStock::with(['finishedProduct.category'])
             ->where('branch_id', $branch->id)
             ->get();
 
-        // 2. Ubah format agar frontend dapat langsung pakai.
-        // PENTING: Gunakan kolom 'quantity' dari FinishedBranchStock sebagai 'stock' di frontend.
         $products = $branchStocks->map(fn($item) => [
-            'id' => $item->finished_product_id,   // ← gunakan product_id
-            'stock_id' => $item->id,              // ← optional kalau perlu tracking stock
-            'name' => $item->finishedProduct->name,
-            'price' => $item->finishedProduct->price,
-            'stock' => $item->quantity,
-            'category' => $item->finishedProduct->category->code
+            'id'       => $item->finished_product_id,
+            'stock_id' => $item->id,
+            'name'     => $item->finishedProduct->name,
+            'price'    => (float) $item->finishedProduct->price,
+            'stock'    => (float) $item->quantity,
+            'category' => $item->finishedProduct->category?->code,
         ]);
 
-        // Anda perlu juga mengambil data package di sini jika ada
-        
-        $packages = []; // Logika untuk mengambil packages (contoh: PackageBranchStock)
+        // ===== PACKAGES =====
+        $packages = SalesPackage::with(['packageItems.finishedProduct', 'category'])
+            ->where('is_active', true)
+            ->get()
+            ->filter(fn($pkg) => $pkg->isAvailableInBranch($branch->id))
+            ->map(fn($pkg) => [
+                'id'       => $pkg->id,
+                'name'     => $pkg->name,
+                'price'    => (float) $pkg->final_price,
+                'stock'    => $pkg->getAvailableQuantityInBranch($branch->id),
+                'category' => $pkg->category?->code,
+            ]);
 
         return response()->json([
             'products' => $products,
