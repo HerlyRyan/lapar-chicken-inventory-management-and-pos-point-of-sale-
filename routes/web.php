@@ -82,23 +82,60 @@ Route::post('/logout', function (Request $request) {
 })->name('logout')->middleware('auth');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', function (Request $request) {
-        // Clear selected branch
-        if ($request->clear_dashboard_branch == 1) {
-            session(['branch_id' => 0]);
-        }
+    Route::middleware('role:SUPER_ADMIN,MANAGER')->group(function () {
 
-        // Set selected branch
-        if ($request->has('branch_id')) {
-            session(['branch_id' => $request->branch_id]);
-        }
+        Route::get('/dashboard', function (Request $request) {
+            // Clear selected branch
+            if ($request->clear_dashboard_branch == 1) {
+                session(['branch_id' => 0]);
+            }
 
-        return view('dashboard.index');
-    })->name('dashboard');
+            // Set selected branch
+            if ($request->has('branch_id')) {
+                session(['branch_id' => $request->branch_id]);
+            }
 
-    Route::prefix('dashboard/sales')->group(function () {
-        Route::get('/yearly', [DashboardController::class, 'yearly']);
-        Route::get('/monthly', [DashboardController::class, 'monthly']);
+            return view('dashboard.index');
+        })->name('dashboard');
+
+        Route::prefix('dashboard/sales')->group(function () {
+            Route::get('/yearly', [DashboardController::class, 'yearly']);
+            Route::get('/monthly', [DashboardController::class, 'monthly']);
+        });
+    });
+
+    Route::middleware('role:SUPER_ADMIN')->group(function () {
+        // ===== DATA MASTER ROUTES =====
+        // User and Role Management
+        Route::resource('users', UserController::class);
+        Route::get('/users/data', [UserController::class, 'data'])->name('users.data'); // untuk ajax
+
+        Route::resource('roles', RoleController::class);
+        Route::resource('permissions', PermissionController::class);
+
+        // User Role Management Routes
+        Route::get('users/{user}/roles/edit', [UserRoleController::class, 'edit'])->name('user-roles.edit');
+        Route::put('users/{user}/roles', [UserRoleController::class, 'update'])->name('user-roles.update');
+        Route::post('users/{user}/roles', [UserRoleController::class, 'assignRole'])->name('user-roles.assign');
+        Route::delete('users/{user}/roles/{role}', [UserRoleController::class, 'removeRole'])->name('user-roles.remove');
+
+        // Branch Management
+        Route::resource('branches', BranchController::class);
+        Route::patch('branches/{branch}/toggle-status', [BranchController::class, 'toggleStatus'])->name('branches.toggle-status');
+        Route::post('/switch-branch', [BranchController::class, 'switchBranch'])->name('switch-branch');
+        Route::get('/api/branches/{branch}/inventory-summary', [BranchController::class, 'getInventorySummary'])->name('api.branch.inventory-summary');
+        Route::post('/api/branches/transfer-stock', [BranchController::class, 'transferStock'])->name('api.branch.transfer-stock');
+
+        // Product Categories and Units
+        Route::resource('categories', CategoryController::class);
+        Route::patch('categories/{category}/toggle-status', [CategoryController::class, 'toggleStatus'])->name('categories.toggle-status');
+        Route::get('api/categories/active', [CategoryController::class, 'getActiveCategories'])->name('api.categories.active');
+        Route::resource('units', UnitController::class);
+        Route::patch('units/{unit}/toggle-status', [UnitController::class, 'toggleStatus'])->name('units.toggle-status');
+
+        // Supplier Management
+        Route::resource('suppliers', SupplierController::class);
+        Route::patch('suppliers/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])->name('suppliers.toggle-status');
     });
 
     // Semi-Finished Usage Approvals (Approvals Inbox)
@@ -107,39 +144,6 @@ Route::middleware('auth')->group(function () {
         // Redirect to unified detail page if needed
         Route::get('{semi_finished_usage_approval}', [SemiFinishedUsageApprovalController::class, 'show'])->name('show');
     });
-
-    // ===== DATA MASTER ROUTES =====
-
-    // User and Role Management
-    Route::resource('users', UserController::class);
-    Route::get('/users/data', [UserController::class, 'data'])->name('users.data'); // untuk ajax
-
-    Route::resource('roles', RoleController::class);
-    Route::resource('permissions', PermissionController::class);
-
-    // User Role Management Routes
-    Route::get('users/{user}/roles/edit', [UserRoleController::class, 'edit'])->name('user-roles.edit');
-    Route::put('users/{user}/roles', [UserRoleController::class, 'update'])->name('user-roles.update');
-    Route::post('users/{user}/roles', [UserRoleController::class, 'assignRole'])->name('user-roles.assign');
-    Route::delete('users/{user}/roles/{role}', [UserRoleController::class, 'removeRole'])->name('user-roles.remove');
-
-    // Branch Management
-    Route::resource('branches', BranchController::class);
-    Route::patch('branches/{branch}/toggle-status', [BranchController::class, 'toggleStatus'])->name('branches.toggle-status');
-    Route::post('/switch-branch', [BranchController::class, 'switchBranch'])->name('switch-branch');
-    Route::get('/api/branches/{branch}/inventory-summary', [BranchController::class, 'getInventorySummary'])->name('api.branch.inventory-summary');
-    Route::post('/api/branches/transfer-stock', [BranchController::class, 'transferStock'])->name('api.branch.transfer-stock');
-
-    // Product Categories and Units
-    Route::resource('categories', CategoryController::class);
-    Route::patch('categories/{category}/toggle-status', [CategoryController::class, 'toggleStatus'])->name('categories.toggle-status');
-    Route::get('api/categories/active', [CategoryController::class, 'getActiveCategories'])->name('api.categories.active');
-    Route::resource('units', UnitController::class);
-    Route::patch('units/{unit}/toggle-status', [UnitController::class, 'toggleStatus'])->name('units.toggle-status');
-
-    // Supplier Management
-    Route::resource('suppliers', SupplierController::class);
-    Route::patch('suppliers/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])->name('suppliers.toggle-status');
 
     // Materials Management
     // Raw Materials Stock Monitoring (ensure this is above the resource to avoid collision with {raw_material})
@@ -239,25 +243,36 @@ Route::middleware('auth')->group(function () {
     // Removed duplicate route
 
     // ===== PRODUCTION CENTER WORKFLOW =====
+    Route::middleware('role:SUPER_ADMIN,KRU_PRODUKSI,KEPALA_PRODUKSI')->group(function () {
+        // Production Center Dashboard (deprecated) -> redirect to unified dashboard
+        Route::get('production-center', function () {
+            return redirect()->to('/dashboard?branch_id=5');
+        })->name('production-center.index');
 
-    // Production Center Dashboard (deprecated) -> redirect to unified dashboard
-    Route::get('production-center', function () {
-        return redirect()->to('/dashboard?branch_id=5');
-    })->name('production-center.index');
+        // Production Requests (Kepala Produksi)
+        Route::prefix('production-requests')->name('production-requests.')->group(function () {
+            Route::get('/', [ProductionRequestController::class, 'index'])->name('index');
+            Route::get('create', [ProductionRequestController::class, 'create'])->name('create');
+            Route::post('/', [ProductionRequestController::class, 'store'])->name('store');
+            Route::get('{productionRequest}', [ProductionRequestController::class, 'show'])->name('show');
+            Route::get('{productionRequest}/edit', [ProductionRequestController::class, 'edit'])->name('edit');
+            Route::put('{productionRequest}', [ProductionRequestController::class, 'update'])->name('update');
+            Route::delete('{productionRequest}', [ProductionRequestController::class, 'destroy'])->name('destroy');
+            // Alternative GET route for delete (debugging)
+            Route::get('{productionRequest}/destroy-get', [ProductionRequestController::class, 'destroyGet'])->name('destroy-get');
+            // Confirmation page for delete
+            Route::get('{productionRequest}/delete-confirm', [ProductionRequestController::class, 'deleteConfirm'])->name('delete-confirm');
+        });
 
-    // Production Requests (Kepala Produksi)
-    Route::prefix('production-requests')->name('production-requests.')->group(function () {
-        Route::get('/', [ProductionRequestController::class, 'index'])->name('index');
-        Route::get('create', [ProductionRequestController::class, 'create'])->name('create');
-        Route::post('/', [ProductionRequestController::class, 'store'])->name('store');
-        Route::get('{productionRequest}', [ProductionRequestController::class, 'show'])->name('show');
-        Route::get('{productionRequest}/edit', [ProductionRequestController::class, 'edit'])->name('edit');
-        Route::put('{productionRequest}', [ProductionRequestController::class, 'update'])->name('update');
-        Route::delete('{productionRequest}', [ProductionRequestController::class, 'destroy'])->name('destroy');
-        // Alternative GET route for delete (debugging)
-        Route::get('{productionRequest}/destroy-get', [ProductionRequestController::class, 'destroyGet'])->name('destroy-get');
-        // Confirmation page for delete
-        Route::get('{productionRequest}/delete-confirm', [ProductionRequestController::class, 'deleteConfirm'])->name('delete-confirm');
+        // Production Processes (Kru Produksi)
+        Route::prefix('production-processes')->name('production-processes.')->group(function () {
+            Route::get('/', [ProductionProcessController::class, 'index'])->name('index');
+            Route::get('{productionRequest}', [ProductionProcessController::class, 'show'])->name('show');
+            Route::post('{productionRequest}/start', [ProductionProcessController::class, 'start'])->name('start');
+            Route::post('{productionRequest}/update-status', [ProductionProcessController::class, 'updateStatus'])->name('update-status');
+            Route::post('{productionRequest}/complete', [ProductionProcessController::class, 'complete'])->name('complete');
+            Route::get('{productionRequest}/planned-outputs', [ProductionProcessController::class, 'getPlannedOutputs'])->name('planned-outputs');
+        });
     });
 
     // Production Approvals (Manager)
@@ -269,16 +284,6 @@ Route::middleware('auth')->group(function () {
         Route::get('{productionRequest}', [ProductionApprovalController::class, 'show'])->name('show');
         Route::post('{productionRequest}/approve', [ProductionApprovalController::class, 'approve'])->name('approve');
         Route::post('{productionRequest}/reject', [ProductionApprovalController::class, 'reject'])->name('reject');
-    });
-
-    // Production Processes (Kru Produksi)
-    Route::prefix('production-processes')->name('production-processes.')->group(function () {
-        Route::get('/', [ProductionProcessController::class, 'index'])->name('index');
-        Route::get('{productionRequest}', [ProductionProcessController::class, 'show'])->name('show');
-        Route::post('{productionRequest}/start', [ProductionProcessController::class, 'start'])->name('start');
-        Route::post('{productionRequest}/update-status', [ProductionProcessController::class, 'updateStatus'])->name('update-status');
-        Route::post('{productionRequest}/complete', [ProductionProcessController::class, 'complete'])->name('complete');
-        Route::get('{productionRequest}/planned-outputs', [ProductionProcessController::class, 'getPlannedOutputs'])->name('planned-outputs');
     });
 
     // Semi-Finished Stock Management (Unified)
@@ -374,28 +379,30 @@ Route::middleware('auth')->group(function () {
         Route::post('{semiFinishedUsageRequest}/complete', [SemiFinishedUsageProcessController::class, 'complete'])->name('complete');
     });
 
-    // ===== SALES MANAGEMENT =====
-    Route::prefix('sales')->name('sales.')->group(function () {
-        Route::get('/', [SaleController::class, 'index'])->name('index');
-        Route::get('create', [SaleController::class, 'create'])->name('create');
-        Route::post('/', [SaleController::class, 'store'])->name('store');
-        Route::get('{sale}', [SaleController::class, 'show'])->name('show');
-        Route::delete('{sale}', [SaleController::class, 'destroy'])->name('destroy');
-        Route::post('{sale}/send-whatsapp', [SaleController::class, 'sendWhatsApp'])->name('send-whatsapp');
-        Route::get('{sale}/receipt/download', [ReceiptController::class, 'downloadPdf'])->name('receipt.download');
+    Route::middleware('role:SUPER_ADMIN,KRU_TOKO,KEPALA_TOKO,MANAGER')->group(function () {
+        // ===== SALES MANAGEMENT =====
+        Route::prefix('sales')->name('sales.')->group(function () {
+            Route::get('/', [SaleController::class, 'index'])->name('index');
+            Route::get('create', [SaleController::class, 'create'])->name('create');
+            Route::post('/', [SaleController::class, 'store'])->name('store');
+            Route::get('{sale}', [SaleController::class, 'show'])->name('show');
+            Route::delete('{sale}', [SaleController::class, 'destroy'])->name('destroy');
+            Route::post('{sale}/send-whatsapp', [SaleController::class, 'sendWhatsApp'])->name('send-whatsapp');
+            Route::get('{sale}/receipt/download', [ReceiptController::class, 'downloadPdf'])->name('receipt.download');
+        });
+
+        // Sales API Routes
+        Route::prefix('api/sales')->name('api.sales.')->group(function () {
+            Route::get('products', [SaleController::class, 'apiProducts'])->name('products');
+            Route::get('packages', [SaleController::class, 'apiPackages'])->name('packages');
+            Route::post('validate-cart-stock', [SaleController::class, 'validateCartStock'])->name('validate-cart-stock');
+        });
+
+        // Receipt Download
+        Route::get('receipt/{sale}/download', [ReceiptController::class, 'downloadPdf'])->name('receipt.download');
+
+        Route::get('/branches/{branch}/items', [FinishedProductsStockController::class, 'items'])->name('branches.items');
     });
-
-    // Sales API Routes
-    Route::prefix('api/sales')->name('api.sales.')->group(function () {
-        Route::get('products', [SaleController::class, 'apiProducts'])->name('products');
-        Route::get('packages', [SaleController::class, 'apiPackages'])->name('packages');
-        Route::post('validate-cart-stock', [SaleController::class, 'validateCartStock'])->name('validate-cart-stock');
-    });
-
-    // Receipt Download
-    Route::get('receipt/{sale}/download', [ReceiptController::class, 'downloadPdf'])->name('receipt.download');
-
-
 
     // Reports routes removed intentionally during redesign phase
 
@@ -428,43 +435,44 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/home', [HomeController::class, 'index'])->name('home');
 
-    Route::get('/branches/{branch}/items', [FinishedProductsStockController::class, 'items'])->name('branches.items');
-
     // General fallback route for 404s (must be the last route)
     Route::fallback(function () {
         abort(404);
     });
 
-    // Report Controller
-    Route::prefix('reports/')->name('reports.')->group(function () {
-        Route::get('branches', [BranchReportController::class, 'index'])->name('branches.index');
-        Route::get('branches/print', [BranchReportController::class, 'print'])->name('branches.print');
+    Route::middleware('role:SUPER_ADMIN')->group(function () {
 
-        Route::get('suppliers', [SupplierReportController::class, 'index'])->name('suppliers.index');
-        Route::get('suppliers/print', [SupplierReportController::class, 'print'])->name('suppliers.print');
+        // Report Controller
+        Route::prefix('reports/')->name('reports.')->group(function () {
+            Route::get('branches', [BranchReportController::class, 'index'])->name('branches.index');
+            Route::get('branches/print', [BranchReportController::class, 'print'])->name('branches.print');
 
-        Route::get('raw-materials', [RawMaterialReportController::class, 'index'])->name('raw-materials.index');
-        Route::get('raw-materials/print', [RawMaterialReportController::class, 'print'])->name('raw-materials.print');
+            Route::get('suppliers', [SupplierReportController::class, 'index'])->name('suppliers.index');
+            Route::get('suppliers/print', [SupplierReportController::class, 'print'])->name('suppliers.print');
 
-        Route::get('semi-finished', [SemiFinishedReportController::class, 'index'])->name('semi-finished.index');
-        Route::get('semi-finished/print', [SemiFinishedReportController::class, 'print'])->name('semi-finished.print');
+            Route::get('raw-materials', [RawMaterialReportController::class, 'index'])->name('raw-materials.index');
+            Route::get('raw-materials/print', [RawMaterialReportController::class, 'print'])->name('raw-materials.print');
 
-        Route::get('finished', [FinishedReportController::class, 'index'])->name('finished.index');
-        Route::get('finished/print', [FinishedReportController::class, 'print'])->name('finished.print');
+            Route::get('semi-finished', [SemiFinishedReportController::class, 'index'])->name('semi-finished.index');
+            Route::get('semi-finished/print', [SemiFinishedReportController::class, 'print'])->name('semi-finished.print');
 
-        Route::get('sale-packages', [SalePackagesReportController::class, 'index'])->name('sale-packages.index');
-        Route::get('sale-packages/print', [SalePackagesReportController::class, 'print'])->name('sale-packages.print');
+            Route::get('finished', [FinishedReportController::class, 'index'])->name('finished.index');
+            Route::get('finished/print', [FinishedReportController::class, 'print'])->name('finished.print');
 
-        Route::get('sales', [SalesReportController::class, 'index'])->name('sales.index');
-        Route::get('sales/print', [SalesReportController::class, 'print'])->name('sales.print');
+            Route::get('sale-packages', [SalePackagesReportController::class, 'index'])->name('sale-packages.index');
+            Route::get('sale-packages/print', [SalePackagesReportController::class, 'print'])->name('sale-packages.print');
 
-        Route::get('stock-transfers', [StockTransferReportController::class, 'index'])->name('stock-transfers.index');
-        Route::get('stock-transfers/print', [StockTransferReportController::class, 'print'])->name('stock-transfers.print');
+            Route::get('sales', [SalesReportController::class, 'index'])->name('sales.index');
+            Route::get('sales/print', [SalesReportController::class, 'print'])->name('sales.print');
 
-        Route::get('best-selling', [ProductBestSellingReportController::class, 'index'])->name('best-selling.index');
-        Route::get('best-selling/print', [ProductBestSellingReportController::class, 'print'])->name('best-selling.print');
+            Route::get('stock-transfers', [StockTransferReportController::class, 'index'])->name('stock-transfers.index');
+            Route::get('stock-transfers/print', [StockTransferReportController::class, 'print'])->name('stock-transfers.print');
 
-        Route::get('semi-finished-usage', [SemiFinishedUsageReportController::class, 'index'])->name('semi-finished-usage.index');
-        Route::get('semi-finished-usage/print', [SemiFinishedUsageReportController::class, 'print'])->name('semi-finished-usage.print');
+            Route::get('best-selling', [ProductBestSellingReportController::class, 'index'])->name('best-selling.index');
+            Route::get('best-selling/print', [ProductBestSellingReportController::class, 'print'])->name('best-selling.print');
+
+            Route::get('semi-finished-usage', [SemiFinishedUsageReportController::class, 'index'])->name('semi-finished-usage.index');
+            Route::get('semi-finished-usage/print', [SemiFinishedUsageReportController::class, 'print'])->name('semi-finished-usage.print');
+        });
     });
 });

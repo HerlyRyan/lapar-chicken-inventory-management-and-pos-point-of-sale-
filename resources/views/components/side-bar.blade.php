@@ -26,8 +26,7 @@
 
         {{-- Navigation Content --}}
         <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-
-            @if (auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('Manager'))
+            @if (auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('Manajer'))
                 {{-- Dashboard --}}
                 <a href="{{ route('dashboard') }}"
                     class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition-all duration-200 group {{ request()->routeIs('dashboard') ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500' : 'text-gray-700' }}">
@@ -39,7 +38,9 @@
                     </div>
                     <span class="font-medium">Dashboard</span>
                 </a>
+            @endif
 
+            @if (auth()->user()->hasRole('Super Admin'))
                 {{-- DATA MASTER Dropdown --}}
                 <div x-data="{ open: {{ request()->routeIs(
                     'users.*',
@@ -120,7 +121,7 @@
                             class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('categories.*') ? 'bg-orange-50 text-orange-600' : '' }}">
                             Kategori Produk
                         </a>
-                        @if (auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('Manager'))
+                        @if (auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('Manajer'))
                             <a href="{{ route('sales-packages.index') }}"
                                 class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('sales-packages.*') ? 'bg-orange-50 text-orange-600' : '' }}">
                                 Paket Penjualan
@@ -128,7 +129,9 @@
                         @endif
                     </div>
                 </div>
+            @endif
 
+            @if (auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('Manajer'))
                 {{-- STOK Dropdown --}}
                 <div x-data="{ open: {{ request()->routeIs('raw-materials.*', 'semi-finished-products.*', 'finished-products.*', 'stock-opnames.*')
                     ? 'true'
@@ -220,7 +223,10 @@
                         </a>
                     </div>
                 </div>
+            @endif
 
+            @if (auth()->user()->hasRole('Super Admin') ||
+                    auth()->user()->hasRole('Kepala Produksi') || auth()->user()->hasRole('Kru Produksi'))
                 {{-- PUSAT PRODUKSI Dropdown --}}
                 <div x-data="{ open: {{ request()->routeIs('production-requests.*', 'production-approvals.*', 'production-processes.*') ? 'true' : 'false' }} }" class="rounded-xl">
                     <button @click="open = !open"
@@ -313,11 +319,10 @@
             @endif
 
 
-
             @if (auth()->check() &&
                     auth()->user() &&
                     (auth()->user()->hasRole('Super Admin') ||
-                        auth()->user()->hasRole('Manager') ||
+                        auth()->user()->hasRole('Manajer') ||
                         auth()->user()->hasRole('Kepala Toko') ||
                         auth()->user()->hasRole('Kru Toko')))
                 {{-- OPERASIONAL CABANG Dropdown --}}
@@ -362,7 +367,7 @@
                         x-transition:leave-end="opacity-0 -translate-y-2" x-cloak class="mt-2 ml-11 space-y-1">
 
                         @if (auth()->user()->hasRole('Super Admin') ||
-                                auth()->user()->hasRole('Manager') ||
+                                auth()->user()->hasRole('Manajer') ||
                                 auth()->user()->hasRole('Kepala Toko'))
                             <a href="{{ route('semi-finished-usage-requests.index') }}"
                                 class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('semi-finished-usage-requests.*') ? 'bg-orange-50 text-orange-600' : '' }}">
@@ -371,7 +376,7 @@
                         @endif
 
                         @if (auth()->user()->hasRole('Super Admin') ||
-                                auth()->user()->hasRole('Manager') ||
+                                auth()->user()->hasRole('Manajer') ||
                                 auth()->user()->hasRole('Kepala Toko'))
                             {{-- <a href="{{ route('semi-finished-usage-approvals.index') }}"
                             class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('semi-finished-usage-approvals.*') ? 'bg-orange-50 text-orange-600' : '' }}">
@@ -380,7 +385,7 @@
                         @endif
 
                         @if (auth()->user()->hasRole('Super Admin') ||
-                                auth()->user()->hasRole('Manager') ||
+                                auth()->user()->hasRole('Manajer') ||
                                 auth()->user()->hasRole('Kepala Toko'))
                             {{-- <a href="{{ route('semi-finished-usage-processes.index', ['branch_id' => $selectedBranch?->id]) }}"
                             class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('semi-finished-usage-processes.*') ? 'bg-orange-50 text-orange-600' : '' }}">
@@ -396,7 +401,7 @@
 
                         @if (!$isProductionCenter || $isSuperAdmin)
                             @if (auth()->user()->hasRole('Super Admin') ||
-                                    auth()->user()->hasRole('Manager') ||
+                                    auth()->user()->hasRole('Manajer') ||
                                     auth()->user()->hasRole('Kepala Toko') ||
                                     auth()->user()->hasRole('Kru Toko'))
                                 <a href="{{ route('sales.index') }}"
@@ -406,7 +411,7 @@
                             @endif
 
                             @if (auth()->user()->hasRole('Super Admin') ||
-                                    auth()->user()->hasRole('Manager') ||
+                                    auth()->user()->hasRole('Manajer') ||
                                     auth()->user()->hasRole('Kepala Toko'))
                                 {{-- <a href="{{ route('destruction-reports.index') }}"
                                 class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('destruction-reports.*') ? 'bg-orange-50 text-orange-600' : '' }}">
@@ -416,7 +421,7 @@
                         @endif
 
                         @if (auth()->user()->hasRole('Super Admin') ||
-                                auth()->user()->hasRole('Manager') ||
+                                auth()->user()->hasRole('Manajer') ||
                                 auth()->user()->hasRole('Kepala Toko'))
                             <a href="{{ route('stock-transfer.index') }}"
                                 class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('stock-transfer.*') ? 'bg-orange-50 text-orange-600' : '' }}">

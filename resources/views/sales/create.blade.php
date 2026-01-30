@@ -57,10 +57,12 @@
                                     </option>
                                 @endforeach
                                 @error('branch_id')
+                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
                             </select>
-                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
                         </div>
+
+                        {{-- Use this when user login is branch crew --}}
                         <input type="hidden" name="branch_id" x-model="branchId">
 
                         {{-- Main Content: Item Selection (Left) and Cart (Right) --}}
@@ -502,7 +504,7 @@
                     }));
                     this.recalculateTotals();
                 }
-                
+
                 // If branch selected on load (e.g., old input), fetch items
                 if (this.branchId) {
                     this.fetchBranchItems();

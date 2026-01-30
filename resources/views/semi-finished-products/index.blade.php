@@ -170,26 +170,6 @@
                                                     </svg>
                                                 </button>
                                             </div>
-
-                                            @if ($branchForStock || $selectedBranch)
-                                                <div class="mt-2 inline-flex rounded-md shadow-sm" role="group">
-                                                    <a :href="'/semi-finished-products/' + product.id +
-                                                        '{{ request('branch_id') ? '?branch_id=' . request('branch_id') . '&action=stock-in' : '?action=stock-in' }}'"
-                                                        class="inline-flex items-center px-2 py-1 border border-green-200 text-green-700 bg-white hover:bg-green-50">
-                                                        <i class="bi bi-plus-circle me-1"></i>In
-                                                    </a>
-                                                    <a :href="'/semi-finished-products/' + product.id +
-                                                        '{{ request('branch_id') ? '?branch_id=' . request('branch_id') . '&action=stock-out' : '?action=stock-out' }}'"
-                                                        class="inline-flex items-center px-2 py-1 border border-yellow-200 text-yellow-700 bg-white hover:bg-yellow-50">
-                                                        <i class="bi bi-dash-circle me-1"></i>Out
-                                                    </a>
-                                                    <a :href="'/semi-finished-products/' + product.id +
-                                                        '{{ request('branch_id') ? '?branch_id=' . request('branch_id') . '&action=stock-return' : '?action=stock-return' }}'"
-                                                        class="inline-flex items-center px-2 py-1 border border-blue-200 text-blue-700 bg-white hover:bg-blue-50">
-                                                        <i class="bi bi-arrow-return-left me-1"></i>Return
-                                                    </a>
-                                                </div>
-                                            @endif
                                         </td>
                                     </tr>
                                 </template>

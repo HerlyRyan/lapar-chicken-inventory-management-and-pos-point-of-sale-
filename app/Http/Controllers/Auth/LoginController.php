@@ -47,6 +47,10 @@ class LoginController extends Controller
             return '/sales';
         }
 
+        if ($role === 'Kru Produksi' || $role === 'Kepala Produksi') {
+            return '/production-requests';
+        }
+
         return '/dashboard';
     }
 

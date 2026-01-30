@@ -238,8 +238,8 @@ class FinishedProductsStockController extends Controller
             ]);
 
         return response()->json([
-            'products' => $products,
-            'packages' => $packages,
+            'products' => $products->values()->toArray(),
+            'packages' => $packages->values()->toArray(),
         ]);
     }
 }
