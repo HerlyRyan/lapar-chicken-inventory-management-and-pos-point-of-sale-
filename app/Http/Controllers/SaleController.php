@@ -401,6 +401,9 @@ class SaleController extends Controller
                 'label' => $cat->name,
                 'icon'  => match ($cat->name) {
                     'Ala Carte' => 'bi-egg-fried',
+                    'Geprek Ala Carte' => 'bi-egg-fried',
+                    'Sauce' => 'bi-egg-fried',
+                    'Snack' => 'bi-egg-fried',
                     'Drink'     => 'bi-cup-straw',
                     default     => 'bi-tags',
                 },
