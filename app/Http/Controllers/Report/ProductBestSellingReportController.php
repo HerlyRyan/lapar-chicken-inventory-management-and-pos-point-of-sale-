@@ -111,7 +111,6 @@ class ProductBestSellingReportController extends Controller
         ]);
     }
 
-
     public function print(Request $request)
     {
         $query = SaleItem::query()

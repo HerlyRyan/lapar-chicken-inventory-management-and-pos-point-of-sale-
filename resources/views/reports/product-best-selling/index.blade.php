@@ -24,7 +24,7 @@
                     <table class="min-w-full divide-y divide-gray-200">
                         <x-index.table-head :columns="$columns" print="true" />
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <template x-for="(item, index) in sortedRows" :key="item.item_id">
+                            <template x-for="(item, index) in sortedRows" :key="`${item.branch_id}-${item.item_id}`">
                                 <tr class="hover:bg-gray-50 transition-colors duration-150">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="index + 1"></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="item.branch_name">
@@ -50,7 +50,7 @@
 
                 {{-- Mobile Cards --}}
                 <div class="md:hidden divide-y divide-gray-200">
-                    <template x-for="(item, index) in sortedRows" :key="item.item_id">
+                    <template x-for="(item, index) in sortedRows" :key="`${item.branch_id}-${item.item_id}`">
                         <div class="p-4 hover:bg-gray-50 transition-colors duration-150">
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between">
