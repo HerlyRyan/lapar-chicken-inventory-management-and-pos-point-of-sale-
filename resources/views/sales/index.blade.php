@@ -8,6 +8,41 @@
         <x-index.header title="Penjualan" subtitle="Kelola data transaksi penjualan" addRoute="{{ route('sales.create') }}"
             addText="Buat Penjualan Baru" />
 
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                {{-- Card 1: Penjualan Hari Ini --}}
+                <div class="bg-gradient-to-br from-orange-500 to-red-600 p-5 rounded-2xl shadow-md text-white">
+                    <p class="text-xs font-bold opacity-80 uppercase tracking-wider">Penjualan Hari Ini</p>
+                    <div class="mt-2 flex items-baseline justify-between">
+                        <h3 class="text-2xl font-extrabold">Rp {{ number_format($todaySalesAmount, 0, ',', '.') }}</h3>
+                    </div>
+                    <p class="mt-1 text-sm opacity-90">
+                        Total hari ini dari {{ $todaySalesCount }} transaksi
+                    </p>
+                </div>
+
+                {{-- Card 2: Detail Transaksi Harian (Metode) --}}
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider text-center mb-3">Metode Bayar (Hari
+                        Ini)</p>
+                    <div class="flex divide-x divide-gray-100">
+                        <div class="flex-1 text-center">
+                            <p class="text-xs text-gray-500">Tunai</p>
+                            <p class="font-bold text-green-600">{{ $todayCashCount }} <span
+                                    class="text-[10px] text-gray-400">Tx</span></p>
+                        </div>
+                        <div class="flex-1 text-center">
+                            <p class="text-xs text-gray-500">QRIS</p>
+                            <p class="font-bold text-blue-600">{{ $todayQrisCount }} <span
+                                    class="text-[10px] text-gray-400">Tx</span></p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
             <div x-data="sortableTable(@js($sales->items()))" @sort-column.window="sortBy($event.detail)"
                 class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">

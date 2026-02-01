@@ -72,14 +72,14 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Mulai</label>
                 <input type="date" name="start_date" x-model="$store.table.start_date"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
-                    value="{{ request('start_date') }}">
+                    value="{{ request('start_date', now()->toDateString()) }}">
             </div>
 
             <div class="lg:col-span-2 xl:col-span-1">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Akhir</label>
                 <input type="date" name="end_date" x-model="$store.table.end_date"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
-                    value="{{ request('end_date') }}">
+                    value="{{ request('end_date', now()->toDateString()) }}">
             </div>
         @endif
     </div>

@@ -11,6 +11,7 @@ use App\Models\FinishedBranchStock;
 use App\Models\SalesPackage;
 use App\Models\SalesPackageItem;
 use App\Models\Category;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -300,14 +301,15 @@ class SaleController extends Controller
             $query->where('payment_method', $request->payment_method);
         }
 
-        // Filter by date range
-        if ($request->filled('start_date') && !empty($request->start_date)) {
-            $query->whereDate('created_at', '>=', $request->start_date);
-        }
+        $startDate = $request->filled('start_date')
+            ? Carbon::parse($request->start_date)->startOfDay()
+            : now()->startOfDay();
 
-        if ($request->filled('end_date') && !empty($request->end_date)) {
-            $query->whereDate('created_at', '<=', $request->end_date);
-        }
+        $endDate = $request->filled('end_date')
+            ? Carbon::parse($request->end_date)->endOfDay()
+            : now()->endOfDay();
+        // Filter by date range
+        $query->whereBetween('created_at', [$startDate, $endDate]);
 
         // === SORTING ===
         if ($sortBy = $request->get('sort_by')) {
@@ -327,7 +329,7 @@ class SaleController extends Controller
         }
 
         /** @var \Illuminate\Pagination\LengthAwarePaginator $sales */
-        $sales = $query->paginate(10);
+        $sales = $query->orderBy('created_at', 'desc')->paginate(10);
 
         // Get all branches for filter dropdown
         $branches = Branch::where('is_active', true)->orderBy('name')->pluck('name', 'id')->toArray();
@@ -343,37 +345,19 @@ class SaleController extends Controller
             'qris' => 'QRIS',
         ];
 
-        $selects = [];
-        if (Auth::user()->getPrimaryRole()?->name == 'Super Admin') {
-            $selects = [
-                ['name' => 'branch_id', 'label' => 'Semua Cabang', 'options' => $branches],
-                [
-                    'name' => 'status',
-                    'label' => 'Semua Status',
-                    'options' => $statuses,
-                ],
-                [
-                    'name' => 'payment_method',
-                    'label' => 'Semua Metode Pembayaran',
-                    'options' => $paymentMethod,
-                ],
+        $selects = [
+            [
+                'name' => 'status',
+                'label' => 'Semua Status',
+                'options' => $statuses,
+            ],
+            [
+                'name' => 'payment_method',
+                'label' => 'Semua Metode Pembayaran',
+                'options' => $paymentMethod,
+            ],
 
-            ];
-        } else {
-            $selects = [
-                [
-                    'name' => 'status',
-                    'label' => 'Semua Status',
-                    'options' => $statuses,
-                ],
-                [
-                    'name' => 'payment_method',
-                    'label' => 'Semua Metode Pembayaran',
-                    'options' => $paymentMethod,
-                ],
-
-            ];
-        }
+        ];
 
         // === RESPONSE ===
         if ($request->ajax()) {
@@ -383,7 +367,20 @@ class SaleController extends Controller
             ]);
         }
 
-        return view('sales.index', compact('sales', 'branches', 'columns', 'selects'));
+        return view('sales.index', [
+            'sales' => $sales,
+            'branches' => $branches,
+            'columns' => $columns,
+            'selects' => $selects,
+
+            // Data Harian
+            'todaySalesAmount' => $sales->sum('final_amount'),
+            'todaySalesCount'  => $sales->count(),
+
+            // Detail Metode Bayar Harian
+            'todayCashCount' => $sales->where('payment_method', 'cash')->count(),
+            'todayQrisCount' => $sales->where('payment_method', 'qris')->count(),
+        ]);
     }
 
     /**
