@@ -1,20 +1,60 @@
 @props(['mobile' => false])
 
 @if (auth()->check() && auth()->user())
-    <div class="h-full flex flex-col">
+    <style>
+        /* Custom Scrollbar Orange */
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            /* Firefox: thumb warna orange-200, track transparan */
+            scrollbar-color: transparent transparent;
+            transition: all 0.3s ease;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: transparent;
+            border-radius: 10px;
+        }
+
+        /* Munculkan warna orange saat kursor masuk ke sidebar */
+        .custom-scrollbar:hover {
+            /* Firefox: orange-300 */
+            scrollbar-color: #fdba74 transparent;
+        }
+
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+            /* Chrome/Safari: orange-400 (sedikit lebih gelap agar terlihat jelas) */
+            background: #fb923c;
+        }
+
+        /* Tambahan: Saat scrollbar ditarik (active), buat warnanya lebih gelap */
+        .custom-scrollbar::-webkit-scrollbar-thumb:active {
+            background: #ea580c;
+            /* orange-600 */
+        }
+    </style>
+
+    <div class="h-screen sticky top-0 flex flex-col bg-white border-r border-gray-100 shadow-sm overflow-hidden">
+
         {{-- Sidebar Header --}}
-        <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-orange-50 to-red-50">
+        <div class="flex-none px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-orange-50 to-red-50">
             <div class="flex items-center justify-between">
                 <div class="flex items-center">
                     <img src="{{ asset('img/Logo.png') }}" alt="Lapar Chicken" class="w-8 h-8 rounded-lg shadow-md">
                     <div class="ml-3">
-                        <h2 class="font-bold text-gray-800">Navigation</h2>
-                        <p class="text-xs text-gray-500">Main Menu</p>
+                        <h2 class="font-bold text-gray-800 tracking-tight">Navigation</h2>
+                        <p class="text-[10px] uppercase tracking-wider font-semibold text-gray-400">Main Menu</p>
                     </div>
                 </div>
                 @if ($mobile)
-                    <button @click="sidebarOpen = false"
-                        class="p-2 rounded-lg hover:bg-white/50 transition-colors duration-200">
+                    <button @click="sidebarOpen = false" class="p-2 rounded-lg hover:bg-white/50 transition-colors">
                         <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M6 18L18 6M6 6l12 12" />
@@ -25,7 +65,7 @@
         </div>
 
         {{-- Navigation Content --}}
-        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+        <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
             @if (auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('Manajer'))
                 {{-- Dashboard --}}
                 <a href="{{ route('dashboard') }}"
@@ -226,7 +266,8 @@
             @endif
 
             @if (auth()->user()->hasRole('Super Admin') ||
-                    auth()->user()->hasRole('Kepala Produksi') || auth()->user()->hasRole('Kru Produksi'))
+                    auth()->user()->hasRole('Kepala Produksi') ||
+                    auth()->user()->hasRole('Kru Produksi'))
                 {{-- PUSAT PRODUKSI Dropdown --}}
                 <div x-data="{ open: {{ request()->routeIs('production-requests.*', 'production-approvals.*', 'production-processes.*') ? 'true' : 'false' }} }" class="rounded-xl">
                     <button @click="open = !open"

@@ -83,7 +83,6 @@ Route::post('/logout', function (Request $request) {
 
 Route::middleware('auth')->group(function () {
     Route::middleware('role:SUPER_ADMIN,MANAGER')->group(function () {
-
         Route::get('/dashboard', function (Request $request) {
             // Clear selected branch
             if ($request->clear_dashboard_branch == 1) {
