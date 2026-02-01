@@ -7,8 +7,12 @@
         @keydown.escape.window="closeAllModals()">
 
         {{-- Page Header --}}
-        <x-index.header title="Proses Produksi" subtitle="Kelola proses penggunaan bahan mentah untuk produksi"
-            addRoute="{{ route('production-requests.create') }}" addText="Buat Pengajuan Baru" />
+        @if (auth()->user()->hasRole('Manajer'))
+            <x-index.header title="Proses Produksi" subtitle="Kelola proses penggunaan bahan mentah untuk produksi" />
+        @else
+            <x-index.header title="Proses Produksi" subtitle="Kelola proses penggunaan bahan mentah untuk produksi"
+                addRoute="{{ route('production-requests.create') }}" addText="Buat Pengajuan Baru" />
+        @endif
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
 
@@ -87,24 +91,30 @@
 
                                     <td class="px-6 py-4 text-center">
                                         <div class="flex flex-col gap-2 mx-auto w-32">
-                                            @if ($request->isApproved())
-                                                <button @click="openModal('start', {{ $request->id }})"
-                                                    class="px-3 py-2 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm">
-                                                    Mulai Produksi
-                                                </button>
-                                            @elseif($request->isInProgress())
-                                                <button @click="openModal('update', {{ $request->id }})"
-                                                    class="px-3 py-2 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-lg">
-                                                    Update Progress
-                                                </button>
-                                                <button @click="openModal('complete', {{ $request->id }})"
-                                                    class="px-3 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">
-                                                    Selesaikan
-                                                </button>
-                                            @else
+                                            @if (auth()->user()->hasRole('Manajer'))
                                                 <span
                                                     class="px-3 py-2 text-xs font-medium text-gray-500 bg-gray-100 rounded-lg">Tidak
                                                     ada aksi</span>
+                                            @else
+                                                @if ($request->isApproved())
+                                                    <button @click="openModal('start', {{ $request->id }})"
+                                                        class="px-3 py-2 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm">
+                                                        Mulai Produksi
+                                                    </button>
+                                                @elseif($request->isInProgress())
+                                                    <button @click="openModal('update', {{ $request->id }})"
+                                                        class="px-3 py-2 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-lg">
+                                                        Update Progress
+                                                    </button>
+                                                    <button @click="openModal('complete', {{ $request->id }})"
+                                                        class="px-3 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">
+                                                        Selesaikan
+                                                    </button>
+                                                @else
+                                                    <span
+                                                        class="px-3 py-2 text-xs font-medium text-gray-500 bg-gray-100 rounded-lg">Tidak
+                                                        ada aksi</span>
+                                                @endif
                                             @endif
                                         </div>
                                     </td>
@@ -142,7 +152,8 @@
                                 <div
                                     class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
                                     <span class="font-medium text-gray-700" x-text="item.name"></span>
-                                    <span class="px-3 py-1 bg-white border rounded-lg text-sm font-bold text-blue-600" x-text="`${Number(item.qty)} ${item.unit}`"></span>
+                                    <span class="px-3 py-1 bg-white border rounded-lg text-sm font-bold text-blue-600"
+                                        x-text="`${Number(item.qty)} ${item.unit}`"></span>
                                 </div>
                             </template>
                         </div>

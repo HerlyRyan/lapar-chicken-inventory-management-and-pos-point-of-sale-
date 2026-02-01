@@ -66,7 +66,10 @@
 
         {{-- Navigation Content --}}
         <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
-            @if (auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('Manajer'))
+            @if (auth()->user()->hasRole('Super Admin') ||
+                    auth()->user()->hasRole('Manajer') ||
+                    auth()->user()->hasRole('Kepala Toko') ||
+                    auth()->user()->hasRole('Kru Toko'))
                 {{-- Dashboard --}}
                 <a href="{{ route('dashboard') }}"
                     class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition-all duration-200 group {{ request()->routeIs('dashboard') ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500' : 'text-gray-700' }}">
@@ -267,7 +270,8 @@
 
             @if (auth()->user()->hasRole('Super Admin') ||
                     auth()->user()->hasRole('Kepala Produksi') ||
-                    auth()->user()->hasRole('Kru Produksi'))
+                    auth()->user()->hasRole('Kru Produksi') ||
+                    auth()->user()->hasRole('Manajer'))
                 {{-- PUSAT PRODUKSI Dropdown --}}
                 <div x-data="{ open: {{ request()->routeIs('production-requests.*', 'production-approvals.*', 'production-processes.*') ? 'true' : 'false' }} }" class="rounded-xl">
                     <button @click="open = !open"
@@ -316,7 +320,14 @@
                         </a>
                     </div>
                 </div>
+            @endif
 
+            @if (auth()->user()->hasRole('Super Admin') ||
+                    auth()->user()->hasRole('Kepala Produksi') ||
+                    auth()->user()->hasRole('Kru Produksi') ||
+                    auth()->user()->hasRole('Manajer') ||
+                    auth()->user()->hasRole('Kepala Toko') ||
+                    auth()->user()->hasRole('Kru Toko'))
                 {{-- DISTRIBUSI Dropdown --}}
                 <div x-data="{ open: {{ request()->routeIs('semi-finished-distributions.*') ? 'true' : 'false' }} }" class="rounded-xl">
                     <button @click="open = !open"
@@ -347,14 +358,23 @@
                         x-transition:leave="transition ease-in duration-150"
                         x-transition:leave-start="opacity-100 translate-y-0"
                         x-transition:leave-end="opacity-0 -translate-y-2" x-cloak class="mt-2 ml-11 space-y-1">
-                        <a href="{{ route('semi-finished-distributions.index') }}"
-                            class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('semi-finished-distributions.index') ? 'bg-orange-50 text-orange-600' : '' }}">
-                            Pengiriman ke Cabang
-                        </a>
-                        <a href="{{ route('semi-finished-distributions.inbox', ['branch_id' => $selectedBranch?->id]) }}"
-                            class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('semi-finished-distributions.inbox') ? 'bg-orange-50 text-orange-600' : '' }}">
-                            Kotak Masuk
-                        </a>
+                        @if (auth()->user()->hasRole('Super Admin') ||
+                                auth()->user()->hasRole('Kepala Produksi') ||
+                                auth()->user()->hasRole('Kru Produksi'))
+                            <a href="{{ route('semi-finished-distributions.index') }}"
+                                class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('semi-finished-distributions.index') ? 'bg-orange-50 text-orange-600' : '' }}">
+                                Pengiriman ke Cabang
+                            </a>
+                        @endif
+                        @if (auth()->user()->hasRole('Super Admin') ||
+                                auth()->user()->hasRole('Kepala Toko') ||
+                                auth()->user()->hasRole('Kru Toko') ||
+                                auth()->user()->hasRole('Manajer'))
+                            <a href="{{ route('semi-finished-distributions.inbox', ['branch_id' => $selectedBranch?->id]) }}"
+                                class="block px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-600 text-gray-600 text-sm font-medium transition-colors duration-200 {{ request()->routeIs('semi-finished-distributions.inbox') ? 'bg-orange-50 text-orange-600' : '' }}">
+                                Kotak Masuk
+                            </a>
+                        @endif
                     </div>
                 </div>
             @endif

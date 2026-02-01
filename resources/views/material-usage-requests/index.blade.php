@@ -5,9 +5,13 @@
 @section('content')
     <div class="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30">
         {{-- Page Header --}}
-        <x-index.header title="Permintaan Penggunaan Bahan" subtitle="Kelola permintaan penggunaan bahan"
-            addRoute="{{ isset($currentBranchId) && $currentBranchId ? route('semi-finished-usage-requests.create', ['branch_id' => $currentBranchId]) : route('semi-finished-usage-requests.create') }}"
-            addText="Buat Permintaan Baru" />
+        @if (auth()->user()->hasRole('Manajer'))
+            <x-index.header title="Permintaan Penggunaan Bahan" subtitle="Kelola permintaan penggunaan bahan" />
+        @else
+            <x-index.header title="Permintaan Penggunaan Bahan" subtitle="Kelola permintaan penggunaan bahan"
+                addRoute="{{ isset($currentBranchId) && $currentBranchId ? route('semi-finished-usage-requests.create', ['branch_id' => $currentBranchId]) : route('semi-finished-usage-requests.create') }}"
+                addText="Buat Permintaan Baru" />
+        @endif
 
         {{-- Main Content --}}
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
@@ -64,45 +68,47 @@
                                         
                                         }">
                                             <div class="flex items-center gap-2 sm:gap-3">
-                                                {{-- Confirm & Reject (only when status is pending) --}}
-                                                <template x-if="req.status === 'pending'" x-data="materialModals()">
-                                                    <div class="flex items-center gap-2 sm:gap-3">
-                                                        <button type="button"
-                                                            @click="openAccept(req.id, req.request_number ?? req.number ?? req.id)"
-                                                            class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
-                                                            bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700
-                                                            text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                                            title="Terima">
-                                                            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none"
-                                                                stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                                    stroke-width="2" d="M5 13l4 4L19 7" />
-                                                            </svg>
-                                                        </button>
+                                                @if (auth()->user()->hasRole('Manajer') || auth()->user()->hasRole('Super Admin'))
+                                                    {{-- Confirm & Reject (only when status is pending) --}}
+                                                    <template x-if="req.status === 'pending'" x-data="materialModals()">
+                                                        <div class="flex items-center gap-2 sm:gap-3">
+                                                            <button type="button"
+                                                                @click="openAccept(req.id, req.request_number ?? req.number ?? req.id)"
+                                                                class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                                                        bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700
+                                                        text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                                                title="Terima">
+                                                                <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none"
+                                                                    stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2" d="M5 13l4 4L19 7" />
+                                                                </svg>
+                                                            </button>
 
-                                                        <button type="button"
-                                                            @click="openReject(req.id, req.request_number ?? req.number ?? req.id)"
-                                                            class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
-                                                            bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
-                                                            text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                                            title="Tolak">
-                                                            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none"
-                                                                stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                                    stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                                            </svg>
-                                                        </button>
+                                                            <button type="button"
+                                                                @click="openReject(req.id, req.request_number ?? req.number ?? req.id)"
+                                                                class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                                                        bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
+                                                        text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                                                title="Tolak">
+                                                                <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none"
+                                                                    stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                                </svg>
+                                                            </button>
 
-                                                        <!-- === Modal Area === -->
-                                                        <template x-if="openModal === 'accept'">
-                                                            @include('material-usage-requests.accept-modal')
-                                                        </template>
+                                                            <!-- === Modal Area === -->
+                                                            <template x-if="openModal === 'accept'">
+                                                                @include('material-usage-requests.accept-modal')
+                                                            </template>
 
-                                                        <template x-if="openModal === 'reject'">
-                                                            @include('material-usage-requests.reject-modal')
-                                                        </template>
-                                                    </div>
-                                                </template>
+                                                            <template x-if="openModal === 'reject'">
+                                                                @include('material-usage-requests.reject-modal')
+                                                            </template>
+                                                        </div>
+                                                    </template>
+                                                @endif
 
                                                 {{-- Default action buttons --}}
                                                 <x-index.action-buttons :view="true" :edit="true"
@@ -161,44 +167,46 @@
                                 }">
                                     <div class="flex items-center gap-2 sm:gap-3">
                                         {{-- Confirm & Reject (only when status is pending) --}}
-                                        <template x-if="req.status === 'pending'" x-data="materialModals()">
-                                            <div class="flex items-center gap-2 sm:gap-3">
-                                                <button type="button"
-                                                    @click="openAccept(req.id, req.request_number ?? req.number ?? req.id)"
-                                                    class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                                        @if (auth()->user()->hasRole('Manajer') || auth()->user()->hasRole('Super Admin'))
+                                            <template x-if="req.status === 'pending'" x-data="materialModals()">
+                                                <div class="flex items-center gap-2 sm:gap-3">
+                                                    <button type="button"
+                                                        @click="openAccept(req.id, req.request_number ?? req.number ?? req.id)"
+                                                        class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
                                                             bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700
                                                             text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                                    title="Terima">
-                                                    <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor"
-                                                        viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2" d="M5 13l4 4L19 7" />
-                                                    </svg>
-                                                </button>
+                                                        title="Terima">
+                                                        <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none"
+                                                            stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2" d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                    </button>
 
-                                                <button type="button"
-                                                    @click="openReject(req.id, req.request_number ?? req.number ?? req.id)"
-                                                    class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                                                    <button type="button"
+                                                        @click="openReject(req.id, req.request_number ?? req.number ?? req.id)"
+                                                        class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
                                                             bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
                                                             text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                                    title="Tolak">
-                                                    <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none"
-                                                        stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                                    </svg>
-                                                </button>
+                                                        title="Tolak">
+                                                        <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none"
+                                                            stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
 
-                                                <!-- === Modal Area === -->
-                                                <template x-if="openModal === 'accept'">
-                                                    @include('material-usage-requests.accept-modal')
-                                                </template>
+                                                    <!-- === Modal Area === -->
+                                                    <template x-if="openModal === 'accept'">
+                                                        @include('material-usage-requests.accept-modal')
+                                                    </template>
 
-                                                <template x-if="openModal === 'reject'">
-                                                    @include('material-usage-requests.reject-modal')
-                                                </template>
-                                            </div>
-                                        </template>
+                                                    <template x-if="openModal === 'reject'">
+                                                        @include('material-usage-requests.reject-modal')
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        @endif
 
                                         {{-- Default action buttons --}}
                                         <x-index.action-buttons :view="true" :edit="true" :delete="true" />

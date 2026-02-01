@@ -116,44 +116,46 @@
                                         }">
                                             <div class="flex items-center gap-2 sm:gap-3">
                                                 {{-- Confirm & Reject (only when status is sent) --}}
-                                                <template x-if="isSent" x-data="distributionModals()">
-                                                    <div class="flex items-center gap-2 sm:gap-3">
-                                                        <button type="button"
-                                                            x-on:click="$dispatch('open-accept-modal', { id: dist.id })"
-                                                            class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                                                @if (auth()->user()->hasRole('Manajer') || auth()->user()->hasRole('Super Admin'))
+                                                    <template x-if="isSent" x-data="distributionModals()">
+                                                        <div class="flex items-center gap-2 sm:gap-3">
+                                                            <button type="button"
+                                                                x-on:click="$dispatch('open-accept-modal', { id: dist.id })"
+                                                                class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
                                                                 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700
                                                                 text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                                            title="Terima">
-                                                            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none"
-                                                                stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                                    stroke-width="2" d="M5 13l4 4L19 7" />
-                                                            </svg>
-                                                        </button>
+                                                                title="Terima">
+                                                                <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none"
+                                                                    stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2" d="M5 13l4 4L19 7" />
+                                                                </svg>
+                                                            </button>
 
-                                                        <button type="button"
-                                                            x-on:click="$dispatch('open-reject-modal', { id: dist.id })"
-                                                            class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                                                            <button type="button"
+                                                                x-on:click="$dispatch('open-reject-modal', { id: dist.id })"
+                                                                class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
                                                                 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
                                                                 text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                                            title="Tolak">
-                                                            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none"
-                                                                stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                                    stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                                            </svg>
-                                                        </button>
+                                                                title="Tolak">
+                                                                <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none"
+                                                                    stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                                </svg>
+                                                            </button>
 
-                                                        <!-- === Modal Area === -->
-                                                        <template x-if="openModal === 'accept'">
-                                                            @include('semi-finished-distributions.partials.accept-modal')
-                                                        </template>
+                                                            <!-- === Modal Area === -->
+                                                            <template x-if="openModal === 'accept'">
+                                                                @include('semi-finished-distributions.partials.accept-modal')
+                                                            </template>
 
-                                                        <template x-if="openModal === 'reject'">
-                                                            @include('semi-finished-distributions.partials.reject-modal')
-                                                        </template>
-                                                    </div>
-                                                </template>
+                                                            <template x-if="openModal === 'reject'">
+                                                                @include('semi-finished-distributions.partials.reject-modal')
+                                                            </template>
+                                                        </div>
+                                                    </template>
+                                                @endif
 
                                                 {{-- Default action buttons --}}
                                                 <x-index.action-buttons :view="true" />
@@ -277,46 +279,48 @@
                                 }" class="w-full">
                                     <div class="flex items-center justify-between gap-2 sm:gap-3">
                                         {{-- Left: Confirm & Reject (only when status is sent) --}}
-                                        <div class="flex items-center gap-2">
-                                            <template x-if="isSent" x-data="distributionModals()">
-                                                <div class="flex items-center gap-2">
-                                                    <button type="button"
-                                                        x-on:click="$dispatch('open-accept-modal', { id: dist.id })"
-                                                        class="group relative inline-flex items-center justify-center w-9 h-9
+                                        @if (auth()->user()->hasRole('Manajer') || auth()->user()->hasRole('Super Admin'))
+                                            <div class="flex items-center gap-2">
+                                                <template x-if="isSent" x-data="distributionModals()">
+                                                    <div class="flex items-center gap-2">
+                                                        <button type="button"
+                                                            x-on:click="$dispatch('open-accept-modal', { id: dist.id })"
+                                                            class="group relative inline-flex items-center justify-center w-9 h-9
                                                             bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700
                                                             text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                                        title="Terima">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                            viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2" d="M5 13l4 4L19 7" />
-                                                        </svg>
-                                                    </button>
+                                                            title="Terima">
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                                viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2" d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        </button>
 
-                                                    <button type="button"
-                                                        x-on:click="$dispatch('open-reject-modal', { id: dist.id })"
-                                                        class="group relative inline-flex items-center justify-center w-9 h-9
+                                                        <button type="button"
+                                                            x-on:click="$dispatch('open-reject-modal', { id: dist.id })"
+                                                            class="group relative inline-flex items-center justify-center w-9 h-9
                                                             bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
                                                             text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                                        title="Tolak">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                            viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                                        </svg>
-                                                    </button>
+                                                            title="Tolak">
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                                viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                        </button>
 
-                                                    <!-- Modals (kept here so mobile can open them too) -->
-                                                    <template x-if="openModal === 'accept'">
-                                                        @include('semi-finished-distributions.partials.accept-modal')
-                                                    </template>
+                                                        <!-- Modals (kept here so mobile can open them too) -->
+                                                        <template x-if="openModal === 'accept'">
+                                                            @include('semi-finished-distributions.partials.accept-modal')
+                                                        </template>
 
-                                                    <template x-if="openModal === 'reject'">
-                                                        @include('semi-finished-distributions.partials.reject-modal')
-                                                    </template>
-                                                </div>
-                                            </template>
-                                        </div>
+                                                        <template x-if="openModal === 'reject'">
+                                                            @include('semi-finished-distributions.partials.reject-modal')
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        @endif
 
                                         {{-- Right: Default action buttons (stack / wrap on very small screens) --}}
                                         <div class="flex items-center gap-2 flex-shrink-0">

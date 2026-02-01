@@ -5,8 +5,12 @@
 @section('content')
     <div class="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30">
         {{-- Page Header --}}
-        <x-index.header title="Penjualan" subtitle="Kelola data transaksi penjualan" addRoute="{{ route('sales.create') }}"
-            addText="Buat Penjualan Baru" />
+        @if (auth()->user()->hasRole('Manajer'))
+            <x-index.header title="Penjualan" subtitle="Kelola data transaksi penjualan" />
+        @else
+            <x-index.header title="Penjualan" subtitle="Kelola data transaksi penjualan" addRoute="{{ route('sales.create') }}"
+                addText="Buat Penjualan Baru" />
+        @endif
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -104,16 +108,18 @@
                                         }" class="flex items-center gap-2">
                                             <x-index.action-buttons :view="true" />
 
-                                            <template x-if="status === 'completed'">
-                                                <button
-                                                    @click="$dispatch('open-cancel-modal', { action: cancelUrl, saleNumber: saleNumber })"
-                                                    class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                                            @if (auth()->user()->hasRole('Manajer') || auth()->user()->hasRole('Super Admin'))
+                                                <template x-if="status === 'completed'">
+                                                    <button
+                                                        @click="$dispatch('open-cancel-modal', { action: cancelUrl, saleNumber: saleNumber })"
+                                                        class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
                        bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
                        text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                                    title="Batalkan Transaksi">
-                                                    <i class="bi bi-x-circle"></i>
-                                                </button>
-                                            </template>
+                                                        title="Batalkan Transaksi">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </button>
+                                                </template>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>
@@ -179,16 +185,18 @@
                                 }" class="flex items-center gap-2">
                                     <x-index.action-buttons :view="true" />
 
-                                    <template x-if="status === 'completed'">
-                                        <button
-                                            @click="$dispatch('open-cancel-modal', { action: cancelUrl, saleNumber: saleNumber })"
-                                            class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                                    @if (auth()->user()->hasRole('Manajer') || auth()->user()->hasRole('Super Admin'))
+                                        <template x-if="status === 'completed'">
+                                            <button
+                                                @click="$dispatch('open-cancel-modal', { action: cancelUrl, saleNumber: saleNumber })"
+                                                class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
                        bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
                        text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                            title="Batalkan Transaksi">
-                                            <i class="bi bi-x-circle"></i>
-                                        </button>
-                                    </template>
+                                                title="Batalkan Transaksi">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        </template>
+                                    @endif
                                 </div>
                             </div>
                         </div>

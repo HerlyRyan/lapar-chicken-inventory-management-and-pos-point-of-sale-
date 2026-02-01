@@ -82,7 +82,7 @@ Route::post('/logout', function (Request $request) {
 })->name('logout')->middleware('auth');
 
 Route::middleware('auth')->group(function () {
-    Route::middleware('role:SUPER_ADMIN,MANAGER')->group(function () {
+    Route::middleware('role:SUPER_ADMIN,MANAGER,KEPALA_TOKO,KRU_TOKO')->group(function () {
         Route::get('/dashboard', function (Request $request) {
             // Clear selected branch
             if ($request->clear_dashboard_branch == 1) {
@@ -100,6 +100,13 @@ Route::middleware('auth')->group(function () {
         Route::prefix('dashboard/sales')->group(function () {
             Route::get('/yearly', [DashboardController::class, 'yearly']);
             Route::get('/monthly', [DashboardController::class, 'monthly']);
+        });
+
+        // Semi-Finished Usage Approvals (Approvals Inbox)
+        Route::prefix('semi-finished-usage-approvals')->name('semi-finished-usage-approvals.')->group(function () {
+            Route::get('/', [SemiFinishedUsageApprovalController::class, 'index'])->name('index');
+            // Redirect to unified detail page if needed
+            Route::get('{semi_finished_usage_approval}', [SemiFinishedUsageApprovalController::class, 'show'])->name('show');
         });
     });
 
@@ -137,67 +144,63 @@ Route::middleware('auth')->group(function () {
         Route::patch('suppliers/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])->name('suppliers.toggle-status');
     });
 
-    // Semi-Finished Usage Approvals (Approvals Inbox)
-    Route::prefix('semi-finished-usage-approvals')->name('semi-finished-usage-approvals.')->group(function () {
-        Route::get('/', [SemiFinishedUsageApprovalController::class, 'index'])->name('index');
-        // Redirect to unified detail page if needed
-        Route::get('{semi_finished_usage_approval}', [SemiFinishedUsageApprovalController::class, 'show'])->name('show');
+    Route::middleware('role:SUPER_ADMIN,MANAGER')->group(function () {
+        // Materials Management
+        // Raw Materials Stock Monitoring (ensure this is above the resource to avoid collision with {raw_material})
+        Route::get('raw-materials/stock', [RawMaterialStockController::class, 'index'])->name('raw-materials.stock');
+        Route::resource('raw-materials', RawMaterialController::class); // Bahan mentah
+        Route::patch('raw-materials/{rawMaterial}/toggle-status', [RawMaterialController::class, 'toggleStatus'])->name('raw-materials.toggle-status');
+
+        // Raw Materials Branch Stock Management Routes
+        Route::post('raw-materials/{rawMaterial}/initialize-branch-stocks', [RawMaterialController::class, 'initializeBranchStocks'])->name('raw-materials.initialize-branch-stocks');
+        Route::post('raw-materials/{rawMaterial}/branch-stock/{branchId}/add', [RawMaterialController::class, 'addBranchStock'])->name('raw-materials.add-branch-stock');
+        Route::post('raw-materials/{rawMaterial}/branch-stock/{branchId}/reduce', [RawMaterialController::class, 'reduceBranchStock'])->name('raw-materials.reduce-branch-stock');
+        Route::post('raw-materials/{rawMaterial}/branch-stock/{branchId}/minimum', [RawMaterialController::class, 'setMinimumStock'])->name('raw-materials.set-minimum-stock');
+
+        // Raw Materials API for real-time price updates
+        Route::get('api/raw-materials/latest-prices', [RawMaterialController::class, 'getLatestPrices'])->name('api.raw-materials.latest-prices');
+
+        // ===== PRODUCTS MANAGEMENT ROUTES =====
+
+        // Semi-Finished Products
+        Route::resource('semi-finished-products', SemiFinishedProductController::class);
+        Route::patch('semi-finished-products/{semiFinishedProduct}/toggle-status', [SemiFinishedProductController::class, 'toggleStatus'])->name('semi-finished-products.toggle-status');
+        Route::post('semi-finished-products/stock/update', [SemiFinishedProductController::class, 'updateStock'])->name('semi-finished-products.stock.update');
+        Route::post('semi-finished-products/{semiFinishedProduct}/update-stock', [SemiFinishedProductController::class, 'updateStock'])->name('semi-finished-products.update-stock');
+        Route::post('semi-finished-products/{semiFinishedProduct}/transfer-stock', [SemiFinishedProductController::class, 'transferStock'])->name('semi-finished-products.transfer-stock');
+        Route::get('semi-finished-products/{semiFinishedProduct}/stock-data', [SemiFinishedProductController::class, 'stockData'])->name('semi-finished-products.stock-data');
+        Route::get('api/semi-finished-products', [SemiFinishedProductController::class, 'apiIndex'])->name('api.semi-finished-products');
+
+        // Finished Products
+        Route::resource('finished-products', FinishedProductController::class);
+        Route::patch('finished-products/{finishedProduct}/toggle-status', [FinishedProductController::class, 'toggleStatus'])->name('finished-products.toggle-status');
+        Route::get('api/finished-products', [FinishedProductController::class, 'apiIndex'])->name('api.finished-products');
+
+        // ===== PURCHASE MANAGEMENT ROUTES =====
+
+        // Purchase Orders
+        Route::resource('purchase-orders', PurchaseOrderController::class);
+        Route::patch('purchase-orders/{purchaseOrder}/mark-as-ordered', [PurchaseOrderController::class, 'markAsOrdered'])->name('purchase-orders.mark-as-ordered');
+        Route::get('purchase-orders/{purchaseOrder}/print', [PurchaseOrderController::class, 'print'])->name('purchase-orders.print');
+
+        // Purchase Order API Routes
+        // Web route deprecated -> redirect to existing API route (preserve supplier_id)
+        Route::get('purchase-orders/materials-by-supplier', function (Request $request) {
+            $supplierId = $request->query('supplier_id');
+            if ($supplierId) {
+                return redirect()->route('api.materials-by-supplier', ['supplier_id' => $supplierId]);
+            }
+            // Fallback: go to API route without supplier (will likely 404)
+            return redirect()->to('/api/materials-by-supplier');
+        })->name('purchase-orders.materials-by-supplier');
+        // Legacy alias route -> keep redirecting through the web alias (preserve query string)
+        Route::get('get-materials-by-supplier', function (Request $request) {
+            $qs = $request->getQueryString();
+            return redirect()->to(route('purchase-orders.materials-by-supplier') . ($qs ? ('?' . $qs) : ''));
+        })->name('get.materials-by-supplier');
+        Route::post('purchase-orders/validate-prices', [PurchaseOrderController::class, 'validateMaterialPrices'])->name('purchase-orders.validate-prices');
     });
 
-    // Materials Management
-    // Raw Materials Stock Monitoring (ensure this is above the resource to avoid collision with {raw_material})
-    Route::get('raw-materials/stock', [RawMaterialStockController::class, 'index'])->name('raw-materials.stock');
-    Route::resource('raw-materials', RawMaterialController::class); // Bahan mentah
-    Route::patch('raw-materials/{rawMaterial}/toggle-status', [RawMaterialController::class, 'toggleStatus'])->name('raw-materials.toggle-status');
-
-    // Raw Materials Branch Stock Management Routes
-    Route::post('raw-materials/{rawMaterial}/initialize-branch-stocks', [RawMaterialController::class, 'initializeBranchStocks'])->name('raw-materials.initialize-branch-stocks');
-    Route::post('raw-materials/{rawMaterial}/branch-stock/{branchId}/add', [RawMaterialController::class, 'addBranchStock'])->name('raw-materials.add-branch-stock');
-    Route::post('raw-materials/{rawMaterial}/branch-stock/{branchId}/reduce', [RawMaterialController::class, 'reduceBranchStock'])->name('raw-materials.reduce-branch-stock');
-    Route::post('raw-materials/{rawMaterial}/branch-stock/{branchId}/minimum', [RawMaterialController::class, 'setMinimumStock'])->name('raw-materials.set-minimum-stock');
-
-    // Raw Materials API for real-time price updates
-    Route::get('api/raw-materials/latest-prices', [RawMaterialController::class, 'getLatestPrices'])->name('api.raw-materials.latest-prices');
-
-    // ===== PRODUCTS MANAGEMENT ROUTES =====
-
-    // Semi-Finished Products
-    Route::resource('semi-finished-products', SemiFinishedProductController::class);
-    Route::patch('semi-finished-products/{semiFinishedProduct}/toggle-status', [SemiFinishedProductController::class, 'toggleStatus'])->name('semi-finished-products.toggle-status');
-    Route::post('semi-finished-products/stock/update', [SemiFinishedProductController::class, 'updateStock'])->name('semi-finished-products.stock.update');
-    Route::post('semi-finished-products/{semiFinishedProduct}/update-stock', [SemiFinishedProductController::class, 'updateStock'])->name('semi-finished-products.update-stock');
-    Route::post('semi-finished-products/{semiFinishedProduct}/transfer-stock', [SemiFinishedProductController::class, 'transferStock'])->name('semi-finished-products.transfer-stock');
-    Route::get('semi-finished-products/{semiFinishedProduct}/stock-data', [SemiFinishedProductController::class, 'stockData'])->name('semi-finished-products.stock-data');
-    Route::get('api/semi-finished-products', [SemiFinishedProductController::class, 'apiIndex'])->name('api.semi-finished-products');
-
-    // Finished Products
-    Route::resource('finished-products', FinishedProductController::class);
-    Route::patch('finished-products/{finishedProduct}/toggle-status', [FinishedProductController::class, 'toggleStatus'])->name('finished-products.toggle-status');
-    Route::get('api/finished-products', [FinishedProductController::class, 'apiIndex'])->name('api.finished-products');
-
-    // ===== PURCHASE MANAGEMENT ROUTES =====
-
-    // Purchase Orders
-    Route::resource('purchase-orders', PurchaseOrderController::class);
-    Route::patch('purchase-orders/{purchaseOrder}/mark-as-ordered', [PurchaseOrderController::class, 'markAsOrdered'])->name('purchase-orders.mark-as-ordered');
-    Route::get('purchase-orders/{purchaseOrder}/print', [PurchaseOrderController::class, 'print'])->name('purchase-orders.print');
-
-    // Purchase Order API Routes
-    // Web route deprecated -> redirect to existing API route (preserve supplier_id)
-    Route::get('purchase-orders/materials-by-supplier', function (Request $request) {
-        $supplierId = $request->query('supplier_id');
-        if ($supplierId) {
-            return redirect()->route('api.materials-by-supplier', ['supplier_id' => $supplierId]);
-        }
-        // Fallback: go to API route without supplier (will likely 404)
-        return redirect()->to('/api/materials-by-supplier');
-    })->name('purchase-orders.materials-by-supplier');
-    // Legacy alias route -> keep redirecting through the web alias (preserve query string)
-    Route::get('get-materials-by-supplier', function (Request $request) {
-        $qs = $request->getQueryString();
-        return redirect()->to(route('purchase-orders.materials-by-supplier') . ($qs ? ('?' . $qs) : ''));
-    })->name('get.materials-by-supplier');
-    Route::post('purchase-orders/validate-prices', [PurchaseOrderController::class, 'validateMaterialPrices'])->name('purchase-orders.validate-prices');
 
     // Stock Management
     Route::get('api/stock/{itemType}/{itemId}/branch/{branchId}', [BranchController::class, 'getItemStock'])->name('api.stock.check');
@@ -237,12 +240,8 @@ Route::middleware('auth')->group(function () {
     Route::patch('sales-packages/{salesPackage}/toggle-status', [SalesPackageController::class, 'toggleStatus'])->name('sales-packages.toggle-status');
     Route::get('api/sales-packages/branch/{branch_id}', [SalesPackageController::class, 'getPackagesForBranch'])->name('api.sales-packages.branch');
 
-    // ===== RAW MATERIALS STOCK MONITORING =====
-
-    // Removed duplicate route
-
     // ===== PRODUCTION CENTER WORKFLOW =====
-    Route::middleware('role:SUPER_ADMIN,KRU_PRODUKSI,KEPALA_PRODUKSI')->group(function () {
+    Route::middleware('role:SUPER_ADMIN,KRU_PRODUKSI,KEPALA_PRODUKSI,MANAGER')->group(function () {
         // Production Center Dashboard (deprecated) -> redirect to unified dashboard
         Route::get('production-center', function () {
             return redirect()->to('/dashboard?branch_id=5');
@@ -382,8 +381,10 @@ Route::middleware('auth')->group(function () {
         // ===== SALES MANAGEMENT =====
         Route::prefix('sales')->name('sales.')->group(function () {
             Route::get('/', [SaleController::class, 'index'])->name('index');
-            Route::get('create', [SaleController::class, 'create'])->name('create');
-            Route::post('/', [SaleController::class, 'store'])->name('store');
+            Route::middleware('role:SUPER_ADMIN,KRU_TOKO,KEPALA_TOKO')->group(function () {
+                Route::get('create', [SaleController::class, 'create'])->name('create');
+                Route::post('/', [SaleController::class, 'store'])->name('store');
+            });
             Route::get('{sale}', [SaleController::class, 'show'])->name('show');
             Route::delete('{sale}', [SaleController::class, 'destroy'])->name('destroy');
             Route::post('{sale}/send-whatsapp', [SaleController::class, 'sendWhatsApp'])->name('send-whatsapp');

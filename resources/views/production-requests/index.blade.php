@@ -5,8 +5,12 @@
 @section('content')
     <div class="min-h-screen bg-gradient-to-br from-gray-50 via-green-50/30 to-blue-50/30">
         {{-- Page Header --}}
-        <x-index.header title="Pengajuan Produksi" subtitle="Kelola pengajuan penggunaan bahan mentah untuk produksi"
-            addRoute="{{ route('production-requests.create') }}" addText="Buat Pengajuan Baru" />
+        @if (auth()->user()->hasRole('Manajer'))
+            <x-index.header title="Pengajuan Produksi" subtitle="Kelola pengajuan penggunaan bahan mentah untuk produksi" />
+        @else
+            <x-index.header title="Pengajuan Produksi" subtitle="Kelola pengajuan penggunaan bahan mentah untuk produksi"
+                addRoute="{{ route('production-requests.create') }}" addText="Buat Pengajuan Baru" />
+        @endif
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
             <div x-data="sortableTable(@js($productionRequests->items()))" @sort-column.window="sortBy($event.detail)"
@@ -75,38 +79,40 @@
                                             isActive: pr.status === 'approved'
                                         }">
                                             <div class="flex items-center gap-2 sm:gap-3">
-                                                <div x-data="approvalHandler()">
-                                                    <template x-if="pr.status === 'pending'">
-                                                        <div class="flex items-center gap-2">
-                                                            <button type="button" @click="openModal(pr.id, 'approve')"
-                                                                class="group relative inline-flex items-center justify-center w-9 h-9
-                                                        bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700
-                                                        text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                                                title="Terima">
-                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                                    viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                                        stroke-width="2" d="M5 13l4 4L19 7" />
-                                                                </svg>
-                                                            </button>
+                                                @if (auth()->user()->hasRole('Manajer') || auth()->user()->hasRole('Super Admin'))
+                                                    <div x-data="approvalHandler()">
+                                                        <template x-if="pr.status === 'pending'">
+                                                            <div class="flex items-center gap-2">
+                                                                <button type="button" @click="openModal(pr.id, 'approve')"
+                                                                    class="group relative inline-flex items-center justify-center w-9 h-9
+                                                    bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700
+                                                    text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                                                    title="Terima">
+                                                                    <svg class="w-4 h-4" fill="none"
+                                                                        stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                                            stroke-width="2" d="M5 13l4 4L19 7" />
+                                                                    </svg>
+                                                                </button>
 
-                                                            <button type="button" @click="openModal(pr.id, 'reject')"
-                                                                class="group relative inline-flex items-center justify-center w-9 h-9
-                                                        bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
-                                                        text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                                                title="Tolak">
-                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                                    viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                                        stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                                                </svg>
-                                                            </button>
-                                                        </div>
+                                                                <button type="button" @click="openModal(pr.id, 'reject')"
+                                                                    class="group relative inline-flex items-center justify-center w-9 h-9
+                                                    bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
+                                                    text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                                                    title="Tolak">
+                                                                    <svg class="w-4 h-4" fill="none"
+                                                                        stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                                            stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
 
-                                                    </template>
+                                                        </template>
 
-                                                    @include('production-requests.approval-rejected-modal')
-                                                </div>
+                                                        @include('production-requests.approval-rejected-modal')
+                                                    </div>
+                                                @endif
 
                                                 <x-index.action-buttons :view="true" :edit="true"
                                                     :delete="true" :toggle="false" />
@@ -200,38 +206,40 @@
                                             itemName: 'pengajuan ' + pr.request_code,
                                             isActive: pr.status === 'approved'
                                         }" class="flex items-center gap-2">
-                                            <div class="flex items-center gap-2" x-data="approvalHandler()">
-                                                <template x-if="pr.status === 'pending'">
-                                                    <div class="flex items-center gap-2">
-                                                        <button type="button" @click="openModal(pr.id, 'approve')"
-                                                            class="group relative inline-flex items-center justify-center w-9 h-9
-                                                        bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700
-                                                        text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                                            title="Terima">
-                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                                viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                                    stroke-width="2" d="M5 13l4 4L19 7" />
-                                                            </svg>
-                                                        </button>
+                                            @if (auth()->user()->hasRole('Manajer') || auth()->user()->hasRole('Super Admin'))
+                                                <div class="flex items-center gap-2" x-data="approvalHandler()">
+                                                    <template x-if="pr.status === 'pending'">
+                                                        <div class="flex items-center gap-2">
+                                                            <button type="button" @click="openModal(pr.id, 'approve')"
+                                                                class="group relative inline-flex items-center justify-center w-9 h-9
+                                                    bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700
+                                                    text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                                                title="Terima">
+                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                                    viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2" d="M5 13l4 4L19 7" />
+                                                                </svg>
+                                                            </button>
 
-                                                        <button type="button" @click="openModal(pr.id, 'reject')"
-                                                            class="group relative inline-flex items-center justify-center w-9 h-9
-                                                        bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
-                                                        text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                                            title="Tolak">
-                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                                viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                                    stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                                            </svg>
-                                                        </button>
-                                                    </div>
+                                                            <button type="button" @click="openModal(pr.id, 'reject')"
+                                                                class="group relative inline-flex items-center justify-center w-9 h-9
+                                                    bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700
+                                                    text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                                                title="Tolak">
+                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                                    viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                                </svg>
+                                                            </button>
+                                                        </div>
 
-                                                </template>
+                                                    </template>
 
-                                                @include('production-requests.approval-rejected-modal')
-                                            </div>
+                                                    @include('production-requests.approval-rejected-modal')
+                                                </div>
+                                            @endif
 
                                             <x-index.action-buttons :view="true" :edit="true" :delete="true"
                                                 :toggle="false" />

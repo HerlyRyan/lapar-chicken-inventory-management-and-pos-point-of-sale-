@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Sale;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
@@ -13,38 +14,45 @@ class DashboardController extends Controller
      */
     public function yearly(Request $request)
     {
+        $user = Auth::user();
+        $isSuperAdmin = $user->hasRole('super-admin');
+        $isAdmin = $user->hasRole('admin');
+
         $year = $request->year ?? now()->year;
 
-        $raw = Sale::selectRaw('MONTH(created_at) as month, SUM(final_amount) as total')
+        $query = Sale::query()
+            ->selectRaw('MONTH(created_at) as month, SUM(final_amount) as total')
             ->whereYear('created_at', $year)
-            ->where('status', 'completed')
+            ->where('status', 'completed');
+
+        // 🔐 Branch filtering (SEBELUM get)
+        if (!$isSuperAdmin && !$isAdmin) {
+            $branchId = app()->bound('current_branch_id')
+                ? app('current_branch_id')
+                : ($user->branch_id ?? null);
+
+            if ($branchId) {
+                $query->where('branch_id', $branchId);
+            }
+        } elseif ($request->filled('branch_id') && $request->branch_id !== 'all') {
+            $query->where('branch_id', $request->branch_id);
+        }
+
+        $raw = $query
             ->groupBy('month')
             ->orderBy('month')
             ->get();
 
-        // UX: pastikan Jan–Des selalu ada (walau 0)
-        $labels = [
-            'Jan',
-            'Feb',
-            'Mar',
-            'Apr',
-            'Mei',
-            'Jun',
-            'Jul',
-            'Agu',
-            'Sep',
-            'Okt',
-            'Nov',
-            'Des'
-        ];
+        // UX: Jan–Des selalu ada
+        $labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
         $values = collect(range(1, 12))->map(
-            fn($m) =>
-            (int) ($raw->firstWhere('month', $m)->total ?? 0)
+            fn($m) => (int) ($raw->firstWhere('month', $m)->total ?? 0)
         );
 
         return response()->json(compact('labels', 'values'));
     }
+
 
     /**
      * Grafik Bulanan
@@ -52,6 +60,10 @@ class DashboardController extends Controller
      */
     public function monthly(Request $request)
     {
+        $user = Auth::user();
+        $isSuperAdmin = $user->hasRole('super-admin');
+        $isAdmin = $user->hasRole('admin');
+
         // Gunakan tahun dan bulan saat ini jika tidak ada input
         $year  = $request->year ?? now()->year;
         $month = $request->month ?? now()->month;
@@ -61,6 +73,19 @@ class DashboardController extends Controller
             ->whereYear('created_at', $year)
             ->whereMonth('created_at', $month)
             ->where('status', 'completed');
+
+        // 🔐 Branch filtering (SEBELUM get)
+        if (!$isSuperAdmin && !$isAdmin) {
+            $branchId = app()->bound('current_branch_id')
+                ? app('current_branch_id')
+                : ($user->branch_id ?? null);
+
+            if ($branchId) {
+                $query->where('branch_id', $branchId);
+            }
+        } elseif ($request->filled('branch_id') && $request->branch_id !== 'all') {
+            $query->where('branch_id', $request->branch_id);
+        }
 
         // Filter range tanggal jika diisi (opsional)
         if ($request->filled(['start', 'end'])) {

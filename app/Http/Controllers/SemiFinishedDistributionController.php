@@ -406,7 +406,7 @@ class SemiFinishedDistributionController extends Controller
         $sameBranch = $user?->branch_id === $distribution->target_branch_id;
         $roleAllowed = true;
         if ($user && method_exists($user, 'hasRole')) {
-            $roleAllowed = $user->hasRole('Kepala Toko') || $user->hasRole('Store Head') || $isSuperAdmin;
+            $roleAllowed = $user->hasRole('Kepala Toko') || $user->hasRole('Manajer') || $isSuperAdmin;
         }
         if (!($isSuperAdmin || ($sameBranch && $roleAllowed))) {
             return redirect()->route('semi-finished-distributions.inbox', ['branch_id' => $distribution->target_branch_id])
@@ -460,7 +460,7 @@ class SemiFinishedDistributionController extends Controller
         $sameBranch = $user?->branch_id === $distribution->target_branch_id;
         $roleAllowed = true;
         if ($user && method_exists($user, 'hasRole')) {
-            $roleAllowed = $user->hasRole('Kepala Toko') || $user->hasRole('Store Head') || $isSuperAdmin;
+            $roleAllowed = $user->hasRole('Kepala Toko') || $user->hasRole('Manajer') || $isSuperAdmin;
         }
         if (!($isSuperAdmin || ($sameBranch && $roleAllowed))) {
             return redirect()->route('semi-finished-distributions.inbox', ['branch_id' => $distribution->target_branch_id])

@@ -72,6 +72,11 @@ class StockTransferController extends Controller
      */
     public function index(Request $request)
     {
+        // Filter by branch for admin users
+        $user = Auth::user();
+        $isSuperAdmin = $user->hasRole('super-admin');
+        $isAdmin = $user->hasRole('admin');
+
         $query = StockTransfer::with(['fromBranch', 'toBranch', 'sentByUser', 'handledByUser', 'finishedProduct', 'semiFinishedProduct']);
 
         $columns = [
@@ -85,6 +90,27 @@ class StockTransferController extends Controller
             ['key' => 'created_at', 'label' => 'Tanggal Pengiriman'],
             ['key' => 'handled_at', 'label' => 'Tanggal Penanganan'],
         ];
+
+        if (!$isSuperAdmin && !$isAdmin) {
+            // User cabang: hanya bisa melihat request yang MELIBATKAN cabangnya
+            $branchId = app()->bound('current_branch_id')
+                ? app('current_branch_id')
+                : ($user->branch_id ?? null);
+
+            if ($branchId) {
+                $query->where(function ($q) use ($branchId) {
+                    $q->where('from_branch_id', $branchId)
+                        ->orWhere('to_branch_id', $branchId);
+                });
+            }
+        } elseif ($request->filled('branch_id') && $request->branch_id !== 'all') {
+            // Admin filter berdasarkan cabang
+            $query->where(function ($q) use ($request) {
+                $q->where('from_branch_id', $request->branch_id)
+                    ->orWhere('to_branch_id', $request->branch_id);
+            });
+        }
+
 
         // Search functionality
         if ($request->has('search') && !empty($request->search)) {
