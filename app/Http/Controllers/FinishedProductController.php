@@ -584,14 +584,15 @@ class FinishedProductController extends Controller
             $validated['photo'] = \App\Helpers\ImageHelper::storeProductImage($request->file('photo'), 'finished');
         }
 
-        // Remove stock_quantity from main product update since it's managed per branch
-        unset($validated['stock_quantity']);
-        unset($validated['image']);
-
         $finishedProduct->update($validated);
 
         // Update branch-specific stock if stock_quantity was provided and we have a specific branch
-        $branchId = $request->input('branch_id') ?: $request->input('header_branch_id') ?: session('selected_branch_id');
+        $branchId = $request->input('branch_id') ?: $request->input('header_branch_id') ?: session('branch_id');
+        if (!$branchId) {
+            return back()->withErrors([
+                'stock_quantity' => 'Pilih cabang terlebih dahulu untuk mengubah stok'
+            ])->withInput();
+        }
 
         if ($branchId && isset($stockQuantity)) {
             // Get or create branch stock record

@@ -73,17 +73,23 @@
                                                 class="inline-flex items-center px-3 py-2 bg-white border rounded-md text-blue-600">
                                                 <i class="fas fa-eye me-2"></i> Detail
                                             </button>
-                                            <template x-if="transfer.status === 'pending'">
+                                            <template x-if="transfer.status === 'sent'">
                                                 <a :href="'/stock-transfer/' + transfer.id + '/edit'"
                                                     class="inline-flex items-center px-3 py-2 bg-white border rounded-md text-yellow-600">
                                                     <i class="fas fa-edit me-2"></i> Edit
                                                 </a>
                                             </template>
-                                            <template x-if="transfer.status === 'pending'">
-                                                <button
-                                                    @click.prevent="confirmCancel('/stock-transfer/' + transfer.id + '/cancel')"
+                                            <template x-if="transfer.status === 'sent'">
+                                                <button @click.prevent="$dispatch('open-approve', transfer.id)"
+                                                    class="inline-flex items-center px-3 py-2 bg-white border rounded-md text-green-600">
+                                                    <i class="fas fa-check me-2"></i> Terima
+                                                </button>
+                                            </template>
+
+                                            <template x-if="transfer.status === 'sent'">
+                                                <button @click.prevent="$dispatch('open-reject', transfer.id)"
                                                     class="inline-flex items-center px-3 py-2 bg-white border rounded-md text-red-600">
-                                                    <i class="fas fa-times me-2"></i> Batalkan
+                                                    <i class="fas fa-times me-2"></i> Tolak
                                                 </button>
                                             </template>
                                         </div>
@@ -125,13 +131,29 @@
                             </div>
 
                             <div class="mt-4 pt-3 border-t border-gray-200">
-                                <div x-data="{
-                                    viewUrl: '/stock-transfers/' + transfer.id,
-                                    editUrl: '/stock-transfers/' + transfer.id + '/edit',
-                                    deleteUrl: '/stock-transfers/' + transfer.id,
-                                }">
-                                    <x-index.action-buttons :view="true" :edit="true" :delete="true" />
-                                </div>
+                                <button @click.prevent="$dispatch('open-detail', transfer.id)"
+                                    class="inline-flex items-center px-3 py-2 bg-white border rounded-md text-blue-600">
+                                    <i class="fas fa-eye me-2"></i> Detail
+                                </button>
+                                <template x-if="transfer.status === 'sent'">
+                                    <a :href="'/stock-transfer/' + transfer.id + '/edit'"
+                                        class="inline-flex items-center px-3 py-2 bg-white border rounded-md text-yellow-600">
+                                        <i class="fas fa-edit me-2"></i> Edit
+                                    </a>
+                                </template>
+                                <template x-if="transfer.status === 'sent'">
+                                    <button @click.prevent="$dispatch('open-approve', transfer.id)"
+                                        class="inline-flex items-center px-3 py-2 bg-white border rounded-md text-green-600">
+                                        <i class="fas fa-check me-2"></i> Terima
+                                    </button>
+                                </template>
+
+                                <template x-if="transfer.status === 'sent'">
+                                    <button @click.prevent="$dispatch('open-reject', transfer.id)"
+                                        class="inline-flex items-center px-3 py-2 bg-white border rounded-md text-red-600">
+                                        <i class="fas fa-times me-2"></i> Tolak
+                                    </button>
+                                </template>
                             </div>
                         </div>
                     </template>
@@ -212,6 +234,7 @@
             border-radius: 10px;
         }
     </style>
+
     <script>
         function stockTransferDetail() {
             return {
@@ -242,39 +265,93 @@
             }
         }
 
-        function confirmCancel(url) {
+        window.addEventListener('open-approve', event => {
+            const id = event.detail;
+
             Swal.fire({
-                title: 'Batalkan Transfer?',
-                text: 'Transfer ini akan dibatalkan dan tidak dapat dikembalikan.',
-                icon: 'warning',
+                title: 'Terima Transfer?',
+                text: 'Stok akan ditambahkan ke cabang tujuan.',
+                icon: 'question',
+                input: 'textarea',
+                inputLabel: 'Catatan (opsional)',
+                inputPlaceholder: 'Tambahkan catatan penerimaan...',
                 showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Ya, Batalkan',
-                cancelButtonText: 'Tidak'
+                confirmButtonColor: '#16a34a',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Ya, Terima',
+                cancelButtonText: 'Batal',
             }).then((result) => {
                 if (result.isConfirmed) {
-                    fetch(url, {
+                    fetch(`/stock-transfer/${id}/accept`, {
                             method: 'POST',
                             headers: {
                                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
                                 'Accept': 'application/json',
                                 'Content-Type': 'application/json'
                             },
-                            body: JSON.stringify({})
-                        }).then(r => r.json())
+                            body: JSON.stringify({
+                                response_notes: result.value
+                            })
+                        })
+                        .then(res => res.json())
                         .then(json => {
                             if (json.success) {
-                                Swal.fire('Dibatalkan!', json.message, 'success').then(() => location.reload());
+                                Swal.fire('Berhasil!', json.message, 'success')
+                                    .then(() => location.reload());
                             } else {
                                 Swal.fire('Gagal!', json.message || 'Terjadi kesalahan', 'error');
                             }
-                        }).catch(() => {
-                            Swal.fire('Error!', 'Terjadi kesalahan', 'error');
+                        })
+                        .catch(() => {
+                            Swal.fire('Error!', 'Terjadi kesalahan server', 'error');
                         });
                 }
             });
-        }
+        });
+
+        window.addEventListener('open-reject', event => {
+            const id = event.detail;
+
+            Swal.fire({
+                title: 'Tolak Transfer?',
+                text: 'Stok tidak akan ditambahkan ke cabang tujuan.',
+                icon: 'question',
+                input: 'textarea',
+                inputLabel: 'Catatan (opsional)',
+                inputPlaceholder: 'Tambahkan catatan penerimaan...',
+                showCancelButton: true,
+                confirmButtonColor: '#e11d48',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Ya, Tolak',
+                cancelButtonText: 'Batal',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`/stock-transfer/${id}/reject`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                response_notes: result.value
+                            })
+                        })
+                        .then(res => res.json())
+                        .then(json => {
+                            if (json.success) {
+                                Swal.fire('Berhasil!', json.message, 'success')
+                                    .then(() => location.reload());
+                            } else {
+                                Swal.fire('Gagal!', json.message || 'Terjadi kesalahan', 'error');
+                            }
+                        })
+                        .catch(() => {
+                            Swal.fire('Error!', 'Terjadi kesalahan server', 'error');
+                        });
+                }
+            });
+        });
 
         // Simple sortableTable helper (keeps original sorting API used in template)
         function sortableTable(rows = []) {

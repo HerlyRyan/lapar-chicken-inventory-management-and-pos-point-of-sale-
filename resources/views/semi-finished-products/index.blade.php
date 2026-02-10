@@ -73,11 +73,11 @@
                                             </template>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <template x-if="product.image && product.image_exists">
-                                                <img :src="'/storage/' + product.image" :alt="product.name"
+                                            <template x-if="product.image">
+                                                <img :src="product.image" :alt="product.name"
                                                     class="rounded-md object-cover" style="width:60px; height:60px;">
                                             </template>
-                                            <template x-if="!product.image || !product.image_exists">
+                                            <template x-if="!product.image">
                                                 <div class="w-15 h-15 bg-gray-100 rounded-md flex items-center justify-center"
                                                     style="width:60px; height:60px;">
                                                     <i class="bi bi-image text-gray-400 text-lg"></i>
@@ -86,9 +86,9 @@
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="text-sm font-medium text-gray-900" x-text="product.name"></div>
-                                            <div class="text-sm text-gray-500"
+                                            {{-- <div class="text-sm text-gray-500"
                                                 x-text="product.description ? product.description.substring(0, 50) + (product.description.length > 50 ? '...' : '') : ''">
-                                            </div>
+                                            </div> --}}
                                         </td>
                                         <td class="px-6 py-4 text-sm">
                                             <template x-if="product.category">

@@ -246,8 +246,11 @@
                                                             <td class="p-3">
                                                                 <input type="number"
                                                                     :name="`realized_outputs[${item.id}]`"
+                                                                    :value="parseInt(item.quantity)" step="1"
+                                                                    min="0"
                                                                     class="w-full rounded-lg border-gray-300 text-center text-sm"
-                                                                    :value="item.quantity" required min="0">
+                                                                    required>
+
                                                             </td>
                                                         </tr>
                                                     </template>
@@ -351,7 +354,7 @@
                     const response = await fetch(`/production-processes/${id}/planned-outputs`);
                     this.plannedOutputs = await response.json();
                 } catch (e) {
-                    console.error("Fetch error");
+                    alert(e);
                 } finally {
                     this.loading = false;
                 }

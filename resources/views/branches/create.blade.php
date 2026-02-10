@@ -181,38 +181,36 @@
     </div>
 @endsection
 
-@push('scripts')
-    <script>
-        // Format phone number to ensure it contains only digits and provide visual feedback
-        function formatPhoneNumber(input) {
-            let value = input.value.replace(/\D/g, '');
-            input.value = value;
+<script>
+    // Format phone number to ensure it contains only digits and provide visual feedback
+    function formatPhoneNumber(input) {
+        let value = input.value.replace(/\D/g, '');
+        input.value = value;
 
-            const parentDiv = input.closest('.flex');
-            if (!parentDiv) return;
+        const parentDiv = input.closest('.flex');
+        if (!parentDiv) return;
 
-            if (value.length > 0) {
-                const isValid = /^\d{8,13}$/.test(value);
-                parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200', 'border-red-300',
-                    'ring-red-200');
-                if (isValid) {
-                    parentDiv.classList.add('border-green-300', 'ring-2', 'ring-green-200');
-                } else {
-                    parentDiv.classList.add('border-red-300', 'ring-2', 'ring-red-200');
-                }
+        if (value.length > 0) {
+            const isValid = /^\d{8,13}$/.test(value);
+            parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200', 'border-red-300',
+                'ring-red-200');
+            if (isValid) {
+                parentDiv.classList.add('border-green-300', 'ring-2', 'ring-green-200');
             } else {
-                parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200', 'border-red-300', 'ring-2',
-                    'ring-red-200');
+                parentDiv.classList.add('border-red-300', 'ring-2', 'ring-red-200');
             }
+        } else {
+            parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200', 'border-red-300', 'ring-2',
+                'ring-red-200');
         }
+    }
 
-        // Prepare the phone number before form submission (prepend country code 62)
-        function preparePhoneNumber() {
-            const phoneInput = document.getElementById('phone');
-            if (phoneInput && phoneInput.value) {
-                phoneInput.value = '62' + phoneInput.value;
-            }
-            return true;
+    // Prepare the phone number before form submission (prepend country code 62)
+    function preparePhoneNumber() {
+        const phoneInput = document.getElementById('phone');
+        if (phoneInput && phoneInput.value) {
+            phoneInput.value = '62' + phoneInput.value;
         }
-    </script>
-@endpush
+        return true;
+    }
+</script>

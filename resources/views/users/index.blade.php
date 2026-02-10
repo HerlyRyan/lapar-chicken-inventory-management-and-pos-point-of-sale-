@@ -84,7 +84,7 @@
                                                 <template x-for="role in user.roles" :key="role.id">
                                                     <span
                                                         class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                                                        x-text="role.name" x-init="console.log('role:', role)">
+                                                        x-text="role.name">
                                                     </span>
                                                 </template>
                                             </div>
@@ -117,10 +117,20 @@
                                             deleteUrl: '/users/' + user.id,
                                             toggleUrl: '/users/' + user.id + '/toggle',
                                             itemName: 'User ' + user.name,
-                                            isActive: user.is_active
+                                            isActive: user.is_active,
+                                            isSuperAdmin() {
+                                                return this.user.roles?.some(r => r.name === 'Super Admin')
+                                            }
                                         }">
-                                            <x-index.action-buttons :view="true" :edit="true" :delete="true"
-                                                :toggle="false" />
+                                            <template x-if="isSuperAdmin()">
+                                                <x-index.action-buttons :view="true" />
+                                            </template>
+
+                                            <template x-if="!isSuperAdmin()">
+                                                <x-index.action-buttons :view="true" :edit="true"
+                                                    :delete="true" :toggle="false" />
+                                            </template>
+
                                         </div>
                                     </td>
                                 </tr>

@@ -116,7 +116,7 @@ class UserController extends Controller
     public function create()
     {
         $branches = Branch::where('is_active', true)->get();
-        $roles = Role::orderBy('name')->get();
+        $roles = Role::where('name', '!=', 'Super Admin')->orderBy('name')->get();
         return view('users.create', compact('branches', 'roles'));
     }
 
@@ -197,7 +197,7 @@ class UserController extends Controller
     public function edit(User $user)
     {
         $branches = Branch::where('is_active', true)->get();
-        $roles = Role::orderBy('name')->get();
+        $roles = Role::where('name', '!=', 'Super Admin')->orderBy('name')->get();
         return view('users.edit', compact('user', 'branches', 'roles'));
     }
 

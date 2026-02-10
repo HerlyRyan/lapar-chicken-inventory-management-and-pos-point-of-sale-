@@ -67,7 +67,7 @@
                                 <option value="">Pilih Jenis</option>
                                 <option value="add">Tambah Stok</option>
                                 <option value="reduce">Kurangi Stok</option>
-                                <option value="set">Atur Ulang Stok</option>
+                                {{-- <option value="set">Atur Ulang Stok</option> --}}
                             </select>
                         </div>
                     </div>
@@ -77,13 +77,15 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             Jumlah <span class="text-red-500">*</span>
                         </label>
-                        <input type="number" x-model="adjustment" @input="previewNewStock()" step="0.001" min="0"
+                        <input type="number" x-model="adjustment" @input="previewNewStock()" step="0.001"
+                            min="0"
                             class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent" />
-                        <p class="text-xs text-gray-500 mt-1" x-text="adjustmentHelp"></p>
+                        <p class="text-xs text-gray-500 mt-1 text-bold" x-text="adjustmentHelp"></p>
                     </div>
 
                     <!-- Preview Stok Baru -->
-                    <div x-show="previewNewStock() && adjustmentType" class="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div x-show="previewNewStock() && adjustmentType"
+                        class="p-3 bg-blue-50 rounded-lg border border-blue-200">
                         <p class="text-sm font-medium text-blue-900">
                             Stok Baru: <span x-text="getNewStockPreview()"></span> unit
                         </p>
@@ -112,7 +114,8 @@
                             Catatan
                         </label>
                         <textarea x-model="note" rows="3"
-                            class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent" placeholder="Catatan tambahan (opsional)"></textarea>
+                            class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent"
+                            placeholder="Catatan tambahan (opsional)"></textarea>
                     </div>
                 </div>
 
@@ -161,7 +164,11 @@
             close() {
                 this.isOpen = false;
                 setTimeout(() => {
-                    this.product = { id: null, name: '', stock: 0 };
+                    this.product = {
+                        id: null,
+                        name: '',
+                        stock: 0
+                    };
                     this.adjustment = null;
                     this.adjustmentType = '';
                     this.reason = '';
@@ -172,12 +179,13 @@
 
             updateAdjustmentUI() {
                 const type = this.adjustmentType;
-                switch(type) {
+                switch (type) {
                     case 'add':
                         this.adjustmentHelp = 'Jumlah yang akan ditambahkan ke stok saat ini';
                         break;
                     case 'reduce':
-                        this.adjustmentHelp = `Jumlah yang akan dikurangi (maksimal: ${this.product.stock})`;
+                        this.adjustmentHelp =
+                            `Jumlah yang akan dikurangi (maksimal: ${this.product.stock})`;
                         break;
                     case 'set':
                         this.adjustmentHelp = 'Stok baru yang akan ditetapkan';
@@ -194,12 +202,17 @@
                 if (!type || quantity === 0) return '';
 
                 let newStock = 0;
-                switch(type) {
+                switch (type) {
                     case 'add':
                         newStock = this.product.stock + quantity;
                         break;
                     case 'reduce':
-                        newStock = Math.max(0, this.product.stock - quantity);
+                        if (quantity > this.product.stock) {
+                            this.adjustmentHelp = `Quantity melebihi stock terkini`;
+                        } else {
+                            newStock = Math.max(0, this.product.stock - quantity);
+                        }
+
                         break;
                     case 'set':
                         newStock = quantity;
@@ -245,12 +258,24 @@
                         throw new Error(msg);
                     }
 
-                    const data = await response.json().catch(() => null);
+                    const data = await response.json();
+
+                    // 🔥 KIRIM EVENT KE INDEX
+                    window.dispatchEvent(new CustomEvent('stock-updated', {
+                        detail: {
+                            productId: data.product_id,
+                            newStock: data.new_stock
+                        }
+                    }));
+
                     this.close();
-                    alert('✅ ' + (data?.message ?? 'Stok berhasil disesuaikan'));
+                    alert('✅ ' + (data.message ?? 'Stok berhasil disesuaikan'));
+                    location.reload();
+
                 } catch (err) {
                     console.error(err);
-                    alert('Terjadi kesalahan saat menyimpan penyesuaian stok: ' + (err.message || err));
+                    alert('Terjadi kesalahan saat menyimpan penyesuaian stok: ' + (err
+                        .message || err));
                 }
             }
         }));

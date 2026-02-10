@@ -6,6 +6,7 @@ use App\Models\Branch;
 use App\Models\SemiFinishedProduct;
 use App\Models\FinishedBranchStock;
 use App\Models\FinishedProduct;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -109,7 +110,7 @@ class BranchController extends Controller
             'type' => 'required|in:branch,production',
             'address' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
-                        'phone' => 'nullable|regex:/^62\d{8,13}$/',
+            'phone' => 'nullable|regex:/^62\d{8,13}$/',
             'is_active' => 'boolean',
         ], [
             'name.required' => 'Nama cabang wajib diisi.',
@@ -120,13 +121,13 @@ class BranchController extends Controller
             'type.required' => 'Tipe cabang wajib dipilih.',
             'type.in' => 'Tipe cabang tidak valid.',
             'address.max' => 'Alamat maksimal 255 karakter.',
-                        'phone.max' => 'Telepon maksimal 20 karakter.',
+            'phone.max' => 'Telepon maksimal 20 karakter.',
             'phone.regex' => 'Format nomor telepon harus dimulai dengan 62 (contoh: 6282255647148).',
             'email.email' => 'Email tidak valid.',
             'email.max' => 'Email maksimal 255 karakter.',
             'is_active.boolean' => 'Status aktif tidak valid.',
         ]);
-        
+
         Branch::create([
             'name' => $request->name,
             'code' => strtoupper($request->code),
@@ -136,7 +137,7 @@ class BranchController extends Controller
             'type' => $request->type,
             'is_active' => $request->has('is_active'),
         ]);
-        
+
         return redirect()->route('branches.index')->with('success', 'Cabang berhasil ditambahkan.');
     }
 
@@ -168,7 +169,7 @@ class BranchController extends Controller
             'type' => 'required|in:branch,production',
             'address' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
-                        'phone' => 'nullable|regex:/^62\d{8,13}$/',
+            'phone' => 'nullable|regex:/^62\d{8,13}$/',
             'is_active' => 'boolean',
         ], [
             'name.required' => 'Nama cabang wajib diisi.',
@@ -179,13 +180,13 @@ class BranchController extends Controller
             'type.required' => 'Tipe cabang wajib dipilih.',
             'type.in' => 'Tipe cabang tidak valid.',
             'address.max' => 'Alamat maksimal 255 karakter.',
-                        'phone.max' => 'Telepon maksimal 20 karakter.',
+            'phone.max' => 'Telepon maksimal 20 karakter.',
             'phone.regex' => 'Format nomor telepon harus dimulai dengan 62 (contoh: 6282255647148).',
             'email.email' => 'Email tidak valid.',
             'email.max' => 'Email maksimal 255 karakter.',
             'is_active.boolean' => 'Status aktif tidak valid.',
         ]);
-        
+
         $branch->update([
             'name' => $request->name,
             'code' => strtoupper($request->code),
@@ -195,7 +196,7 @@ class BranchController extends Controller
             'type' => $request->type,
             'is_active' => $request->has('is_active'),
         ]);
-        
+
         return redirect()->route('branches.index')->with('success', 'Cabang berhasil diperbarui.');
     }
 
@@ -204,10 +205,21 @@ class BranchController extends Controller
      */
     public function destroy(Branch $branch)
     {
+        $hasUser = User::where('branch_id', $branch->id)->exists();
+
+        if ($hasUser) {
+            return redirect()
+                ->route('branches.index')
+                ->with('error', 'Cabang tidak dapat dihapus karena masih digunakan oleh user.');
+        }
+
         $branch->delete();
-        return redirect()->route('branches.index')->with('success', 'Cabang berhasil dihapus.');
+
+        return redirect()
+            ->route('branches.index')
+            ->with('success', 'Cabang berhasil dihapus.');
     }
-    
+
     /**
      * Switch user's active branch (for Super Admin)
      */
@@ -218,7 +230,7 @@ class BranchController extends Controller
         ]);
 
         $user = Auth::user();
-        
+
         // Update user's current branch context
         $branch = Branch::findOrFail($request->branch_id);
         $user->update(['branch_id' => $branch->id]);
@@ -240,11 +252,11 @@ class BranchController extends Controller
     public function getInventorySummary($branchId)
     {
         $branch = Branch::findOrFail($branchId);
-        
+
         // Get stock summary using direct models
         $finishedStocks = \App\Models\FinishedBranchStock::where('branch_id', $branchId)->count();
         $semiFinishedStocks = \App\Models\SemiFinishedBranchStock::where('branch_id', $branchId)->count();
-        
+
         $summary = [
             'finished_products' => $finishedStocks,
             'semi_finished_products' => $semiFinishedStocks,
@@ -266,7 +278,7 @@ class BranchController extends Controller
         try {
             $stock = 0;
             $unitAbbr = null;
-            
+
             switch ($itemType) {
                 case 'finished':
                     $branchStock = FinishedBranchStock::where('branch_id', $branchId)
@@ -277,7 +289,7 @@ class BranchController extends Controller
                     $product = FinishedProduct::with('unit:id,abbreviation')->find($itemId);
                     $unitAbbr = $product && $product->unit ? $product->unit->abbreviation : null;
                     break;
-                    
+
                 case 'semi-finished':
                     $semiFinishedProduct = SemiFinishedProduct::with('unit:id,abbreviation')->find($itemId);
                     if ($semiFinishedProduct) {
@@ -290,11 +302,11 @@ class BranchController extends Controller
                     $unitRel = ($semiFinishedProduct && $semiFinishedProduct->relationLoaded('unit')) ? $semiFinishedProduct->getRelation('unit') : null;
                     $unitAbbr = $unitRel ? $unitRel->abbreviation : null;
                     break;
-                    
+
                 default:
                     return response()->json(['error' => 'Invalid item type'], 400);
             }
-            
+
             return response()->json(['stock' => $stock, 'unit_abbr' => $unitAbbr]);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to fetch stock'], 500);
@@ -309,6 +321,6 @@ class BranchController extends Controller
         $branch->update(['is_active' => !$branch->is_active]);
         $status = $branch->is_active ? 'diaktifkan' : 'dinonaktifkan';
         return redirect()->route('branches.index')
-                        ->with('success', "Cabang berhasil {$status}.");
+            ->with('success', "Cabang berhasil {$status}.");
     }
 }

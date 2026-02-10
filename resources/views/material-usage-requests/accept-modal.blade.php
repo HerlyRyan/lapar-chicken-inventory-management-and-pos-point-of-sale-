@@ -62,7 +62,15 @@
                 </p>
             </div>
 
-
+            <div class="mb-4">
+                <label for="actual_quantity" class="block text-sm font-medium text-slate-700 mb-2">Jumlah Aktual</label>
+                <input type="number" id="actual_quantity" name="actual_quantity" x-model.number="actualQuantity"
+                    min="0" step="0.01" required
+                    class="w-full border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white text-slate-900 shadow-sm transition duration-150"
+                    placeholder="Masukkan jumlah aktual yang disetujui" aria-describedby="actual_quantity_help">
+                <p id="actual_quantity_help" class="mt-2 text-xs text-slate-500">Jumlah bahan yang sebenarnya disetujui
+                    untuk dikirim.</p>
+            </div>
 
             <div class="mb-4">
                 <label for="approval_note" class="block text-sm font-medium text-slate-700 mb-2">Catatan Persetujuan
@@ -95,8 +103,8 @@
                             d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
 
-                    <svg x-show="!isSubmitting" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <svg x-show="!isSubmitting" class="w-4 h-4" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
 

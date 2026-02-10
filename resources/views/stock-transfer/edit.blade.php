@@ -9,7 +9,7 @@
             <x-form.header title="Transfer Stok" backRoute="{{ route('stock-transfer.index') }}" />
 
             {{-- Status Warning --}}
-            @if ($transfer->status !== 'pending')
+            @if ($stock_transfer->status !== 'sent')
                 <div
                     class="mb-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-200 flex items-start gap-3">
                     <div class="flex-shrink-0 mt-0.5">
@@ -18,7 +18,7 @@
                     <div>
                         <h3 class="font-semibold text-amber-900">Transfer Terkunci</h3>
                         <p class="text-sm text-amber-800 mt-1">Transfer ini sudah berstatus
-                            <strong>{{ ucfirst($transfer->status) }}</strong> dan tidak dapat diedit.</p>
+                            <strong>{{ ucfirst($stock_transfer->status) }}</strong> dan tidak dapat diedit.</p>
                     </div>
                 </div>
             @endif
@@ -28,12 +28,12 @@
                 <div class="lg:col-span-2">
                     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
                         {{-- Card Header --}}
-                        <x-form.card-header title="Edit Transfer Stok #{{ $transfer->id }}" type="edit" />
+                        <x-form.card-header title="Edit Transfer Stok #{{ $stock_transfer->id }}" type="edit" />
 
                         {{-- Card Body --}}
                         <div class="p-6 sm:p-8">
                             <form id="transferForm" onsubmit="return validateAndSubmitTransfer(event)"
-                                {{ $transfer->status !== 'pending' ? 'style=pointer-events:none;opacity:0.6;' : '' }}>
+                                {{ $stock_transfer->status !== 'sent' ? 'style=pointer-events:none;opacity:0.6;' : '' }}>
                                 @csrf
                                 @method('PUT')
 
@@ -56,7 +56,7 @@
                                             </label>
                                             <input type="text" id="from_branch_display"
                                                 class="w-full px-4 py-3 border rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed border-gray-200"
-                                                value="{{ $transfer->fromBranch->name ?? 'Cabang tidak ditemukan' }}"
+                                                value="{{ $stock_transfer->fromBranch->name ?? 'Cabang tidak ditemukan' }}"
                                                 disabled>
                                             <p class="mt-2 text-sm text-gray-600">
                                                 <i class="bi bi-info-circle mr-1"></i>Cabang asal tidak dapat diubah
@@ -71,11 +71,11 @@
                                             </label>
                                             <select id="to_branch_id" name="to_branch_id" required
                                                 class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
-                                                {{ $transfer->status !== 'pending' ? 'disabled' : '' }}>
+                                                {{ $stock_transfer->status !== 'sent' ? 'disabled' : '' }}>
                                                 <option value="">Pilih Cabang Tujuan</option>
                                                 @foreach ($branches as $branch)
                                                     <option value="{{ $branch->id }}"
-                                                        {{ $transfer->to_branch_id == $branch->id ? 'selected' : '' }}>
+                                                        {{ $stock_transfer->to_branch_id == $branch->id ? 'selected' : '' }}>
                                                         {{ $branch->name }}
                                                     </option>
                                                 @endforeach
@@ -124,13 +124,13 @@
                                                         <select
                                                             class="item-type w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all appearance-none cursor-pointer text-sm font-medium text-gray-700"
                                                             required
-                                                            {{ $transfer->status !== 'pending' ? 'disabled' : '' }}>
+                                                            {{ $stock_transfer->status !== 'sent' ? 'disabled' : '' }}>
                                                             <option value="">Pilih Jenis</option>
                                                             <option value="finished"
-                                                                {{ $transfer->item_type === 'finished' ? 'selected' : '' }}>
+                                                                {{ $stock_transfer->item_type === 'finished' ? 'selected' : '' }}>
                                                                 Produk Jadi</option>
                                                             <option value="semi-finished"
-                                                                {{ $transfer->item_type === 'semi-finished' ? 'selected' : '' }}>
+                                                                {{ $stock_transfer->item_type === 'semi-finished' ? 'selected' : '' }}>
                                                                 Produk Setengah Jadi</option>
                                                         </select>
                                                         <div
@@ -150,7 +150,7 @@
                                                         <select
                                                             class="item-id w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all appearance-none disabled:bg-gray-100 disabled:cursor-not-allowed text-sm font-medium text-gray-700"
                                                             name="item_id" required
-                                                            {{ $transfer->status !== 'pending' ? 'disabled' : '' }}>
+                                                            {{ $stock_transfer->status !== 'sent' ? 'disabled' : '' }}>
                                                             <option value="">Pilih jenis produk</option>
                                                         </select>
                                                         <div
@@ -179,8 +179,8 @@
                                                         <input type="number"
                                                             class="quantity w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all text-sm font-bold text-gray-800"
                                                             name="quantity" min="1" step="1" required
-                                                            placeholder="0" value="{{ $transfer->quantity }}"
-                                                            {{ $transfer->status !== 'pending' ? 'disabled' : '' }} />
+                                                            placeholder="0" value="{{ $stock_transfer->quantity }}"
+                                                            {{ $stock_transfer->status !== 'sent' ? 'disabled' : '' }} />
                                                         <div
                                                             class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                                                             <i class="fas fa-layer-group text-xs"></i>
@@ -209,8 +209,8 @@
                                                     class="notes w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all text-sm placeholder:text-gray-400"
                                                     name="notes"
                                                     placeholder="Contoh: Barang titipan, stok mendesak, dll..."
-                                                    value="{{ $transfer->notes }}"
-                                                    {{ $transfer->status !== 'pending' ? 'disabled' : '' }} />
+                                                    value="{{ $stock_transfer->notes }}"
+                                                    {{ $stock_transfer->status !== 'sent' ? 'disabled' : '' }} />
                                             </div>
                                         </div>
                                     </div>
@@ -233,7 +233,7 @@
                                 </div>
 
                                 {{-- Form Actions --}}
-                                @if ($transfer->status === 'pending')
+                                @if ($stock_transfer->status === 'sent')
                                     <div class="border-t border-gray-200 pt-6">
                                         <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
                                             <button type="button" onclick="cancelTransfer()"
@@ -265,15 +265,15 @@
                         <div class="p-6 space-y-4">
                             <div>
                                 <p class="text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">ID Transfer</p>
-                                <p class="text-lg font-semibold text-gray-900">#{{ $transfer->id }}</p>
+                                <p class="text-lg font-semibold text-gray-900">#{{ $stock_transfer->id }}</p>
                             </div>
                             <div class="border-t border-gray-200 pt-4">
                                 <p class="text-xs font-bold text-gray-500 uppercase tracking-tight mb-2">Status</p>
-                                @switch($transfer->status)
-                                    @case('pending')
+                                @switch($stock_transfer->status)
+                                    @case('sent')
                                         <span
                                             class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
-                                            <i class="fas fa-clock mr-1.5"></i>Pending
+                                            <i class="fas fa-clock mr-1.5"></i>sent
                                         </span>
                                     @break
 
@@ -301,32 +301,32 @@
                                     @default
                                         <span
                                             class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">
-                                            {{ ucfirst($transfer->status) }}
+                                            {{ ucfirst($stock_transfer->status) }}
                                         </span>
                                 @endswitch
                             </div>
                             <div class="border-t border-gray-200 pt-4">
                                 <p class="text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Dibuat</p>
-                                <p class="text-sm text-gray-700">{{ $transfer->created_at->format('d/m/Y H:i') }}</p>
+                                <p class="text-sm text-gray-700">{{ $stock_transfer->created_at->format('d/m/Y H:i') }}</p>
                             </div>
-                            @if ($transfer->updated_at != $transfer->created_at)
+                            @if ($stock_transfer->updated_at != $stock_transfer->created_at)
                                 <div class="border-t border-gray-200 pt-4">
                                     <p class="text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Diperbarui</p>
-                                    <p class="text-sm text-gray-700">{{ $transfer->updated_at->format('d/m/Y H:i') }}</p>
+                                    <p class="text-sm text-gray-700">{{ $stock_transfer->updated_at->format('d/m/Y H:i') }}</p>
                                 </div>
                             @endif
-                            @if ($transfer->response_notes)
+                            @if ($stock_transfer->response_notes)
                                 <div class="border-t border-gray-200 pt-4">
                                     <p class="text-xs font-bold text-gray-500 uppercase tracking-tight mb-2">Catatan Respon
                                     </p>
-                                    <p class="text-sm text-gray-700">{{ $transfer->response_notes }}</p>
+                                    <p class="text-sm text-gray-700">{{ $stock_transfer->response_notes }}</p>
                                 </div>
                             @endif
                         </div>
                     </div>
 
                     {{-- Tips Card --}}
-                    @if ($transfer->status === 'pending')
+                    @if ($stock_transfer->status === 'sent')
                         <div
                             class="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl shadow-xl border border-orange-200 overflow-hidden">
                             <div class="bg-gradient-to-r from-orange-500 to-red-600 px-6 py-4">
@@ -339,7 +339,7 @@
                                 <ul class="space-y-3 text-sm text-gray-700">
                                     <li class="flex gap-2">
                                         <i class="fas fa-check text-orange-500 font-bold mt-0.5 flex-shrink-0"></i>
-                                        <span>Transfer masih dapat diedit selama berstatus pending</span>
+                                        <span>Transfer masih dapat diedit selama berstatus sent</span>
                                     </li>
                                     <li class="flex gap-2">
                                         <i class="fas fa-check text-orange-500 font-bold mt-0.5 flex-shrink-0"></i>
@@ -362,8 +362,8 @@
 
     <script>
         $(document).ready(function() {
-            const currentItemType = '{{ $transfer->item_type }}';
-            const currentItemId = '{{ $transfer->item_id }}';
+            const currentItemType = '{{ $stock_transfer->item_type }}';
+            const currentItemId = '{{ $stock_transfer->item_id }}';
 
             loadProducts(currentItemType, currentItemId);
             updateStockInfo();
@@ -388,7 +388,7 @@
             $('#transferForm').submit(function(e) {
                 e.preventDefault();
 
-                @if ($transfer->status !== 'pending')
+                @if ($stock_transfer->status !== 'sent')
                     return false;
                 @endif
 
@@ -406,7 +406,7 @@
                 formData.append('_method', 'PUT');
 
                 $.ajax({
-                    url: '{{ route('stock-transfer.update', $transfer->id) }}',
+                    url: '{{ route('stock-transfer.update', $stock_transfer->id) }}',
                     method: 'POST',
                     data: formData,
                     processData: false,
@@ -449,7 +449,7 @@
         function loadProducts(itemType, currentItemId) {
             const type = itemType || $('.item-type').val();
             const itemSelect = $('.item-id');
-            const cItemId = currentItemId || '{{ $transfer->item_id }}';
+            const cItemId = currentItemId || '{{ $stock_transfer->item_id }}';
 
             if (!type) {
                 itemSelect.prop('disabled', true).html('<option value="">Pilih jenis produk</option>');
@@ -481,7 +481,7 @@
         function updateStockInfo() {
             const itemType = $('.item-type').val();
             const itemId = $('.item-id').val();
-            const fromBranchId = '{{ $transfer->from_branch_id }}';
+            const fromBranchId = '{{ $stock_transfer->from_branch_id }}';
             const toBranchId = $('#to_branch_id').val();
             const fromEl = $('.from-stock');
             const toEl = $('.to-stock');
@@ -520,7 +520,7 @@
         }
 
         function updateTransferSummary() {
-            const fromBranchName = '{{ $transfer->fromBranch->name ?? 'Cabang tidak ditemukan' }}';
+            const fromBranchName = '{{ $stock_transfer->fromBranch->name ?? 'Cabang tidak ditemukan' }}';
             const toBranchName = $('#to_branch_id option:selected').text();
             const itemType = $('.item-type').val();
             const itemId = $('.item-id').val();
@@ -555,7 +555,7 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
-                        url: '{{ route('stock-transfer.cancel', $transfer->id) }}',
+                        url: '{{ route('stock-transfer.cancel', $stock_transfer->id) }}',
                         method: 'POST',
                         data: {
                             _token: '{{ csrf_token() }}'

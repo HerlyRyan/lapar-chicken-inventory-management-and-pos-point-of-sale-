@@ -6,7 +6,9 @@ use App\Models\{SemiFinishedProduct, SemiFinishedBranchStock, Branch, Unit, Cate
 use App\Helpers\{ImageHelper, CodeGeneratorHelper};
 use App\Traits\TableFilterTrait;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Reverb\Loggers\Log;
 
 class SemiFinishedProductController extends Controller
 {
@@ -18,18 +20,21 @@ class SemiFinishedProductController extends Controller
 
     public function index(Request $request)
     {
-        $selectedBranchId = request('branch_id');
-        $selectedBranch = null;
         $branchForStock = null;
         $showBranchSelector = true;
 
-        // Determine which branch to use for stock calculation
-        if ($selectedBranchId) {
-            $selectedBranch = Branch::find($selectedBranchId);
-            $branchForStock = $selectedBranch;
-        } elseif (auth()->check() && auth()->user()->branch) {
-            $branchForStock = auth()->user()->branch;
+        // Determine branch for filtering
+        $selectedBranch = null;
+        $currentBranch = auth()->check() ? auth()->user()->branch : null;
+
+        if (session('branch_id')) {
+            $selectedBranch = Branch::where('is_active', true)->find(session('branch_id'));
         }
+
+        // dd($selectedBranch);
+
+        // Determine which branch to use for stock filtering
+        $branchForStock = $selectedBranch ?? $currentBranch;
 
         $query = SemiFinishedProduct::with(['unit', 'category']);
 
@@ -44,6 +49,18 @@ class SemiFinishedProductController extends Controller
             ['key' => 'production_cost', 'label' => 'Biaya Produksi'],
             ['key' => 'is_active', 'label' => 'Status'],
         ];
+
+        // Load semiFinished branch stocks for the specific branch if selected
+        if ($branchForStock) {
+            $query = $query->with(['semiFinishedBranchStocks' => function ($q) use ($branchForStock) {
+                $q->where('branch_id', $branchForStock->id)->with('branch');
+            }]);
+        } else {
+            // Load all semiFinished branch stocks if no specific branch
+            $query = $query->with(['semiFinishedBranchStocks' => function ($q) {
+                $q->with('branch');
+            }]);
+        }
 
         // === SEARCH ===
         if ($search = $request->get('search')) {
@@ -124,12 +141,12 @@ class SemiFinishedProductController extends Controller
 
         // Load semi-finished branch stocks for the specific branch if selected
         if ($branchForStock) {
-            $query = $query->with(['semiFinishedBranchStocks' => function($q) use ($branchForStock) {
+            $query = $query->with(['semiFinishedBranchStocks' => function ($q) use ($branchForStock) {
                 $q->where('branch_id', $branchForStock->id)->with('branch');
             }]);
         } else {
             // Load all semi-finished branch stocks if no specific branch
-            $query = $query->with(['semiFinishedBranchStocks' => function($q) {
+            $query = $query->with(['semiFinishedBranchStocks' => function ($q) {
                 $q->with('branch');
             }]);
         }
@@ -140,11 +157,11 @@ class SemiFinishedProductController extends Controller
                 // Initialize stock for specific branch if it doesn't exist
                 if ($product->semiFinishedBranchStocks->isEmpty()) {
                     $product->initializeStockForBranch($branchForStock->id);
-                    $product->loadMissing(['semiFinishedBranchStocks' => function($q) use ($branchForStock) {
+                    $product->loadMissing(['semiFinishedBranchStocks' => function ($q) use ($branchForStock) {
                         $q->where('branch_id', $branchForStock->id);
                     }]);
                 }
-                
+
                 // Calculate display stock for specific branch
                 $branchStock = $product->semiFinishedBranchStocks->first();
                 $product->display_stock_quantity = $branchStock ? $branchStock->quantity : 0;
@@ -168,13 +185,13 @@ class SemiFinishedProductController extends Controller
     public function create()
     {
         $units = Unit::active()->orderBy('unit_name')->get();
-        
+
         // Get categories filtered by material type for semi-finished products
         $categories = Category::where('is_active', true)->orderBy('name')->get();
 
         if ($units->count() == 0) {
             $message = 'Sebelum menambah bahan setengah jadi, Anda wajib mengisi data satuan terlebih dahulu. ' .
-                      '<a href="' . route('units.index') . '" class="alert-link">Kelola satuan</a>.';
+                '<a href="' . route('units.index') . '" class="alert-link">Kelola satuan</a>.';
             $branchId = request('branch_id') ?: session('selected_branch_id');
             return redirect()->route('semi-finished-products.index', $branchId ? ['branch_id' => $branchId] : [])->with('warning', $message);
         }
@@ -182,19 +199,19 @@ class SemiFinishedProductController extends Controller
         // Get branch context for stock initialization
         $selectedBranch = null;
         $currentBranch = null;
-        
+
         // Only set branch if explicitly selected via branch_id parameter
         // If no branch_id is provided, we're in "overview semua cabang" mode
         if (request('branch_id')) {
             $selectedBranch = Branch::where('is_active', true)->find(request('branch_id'));
         }
-        
+
         // Do NOT automatically use session or user branch for create form
         // This ensures "overview semua cabang" mode works correctly
 
         // Get all branches for selector
         $branches = Branch::where('is_active', true)->orderBy('name')->get();
-        
+
         // Get permission info
         $canSwitchBranch = auth()->check() && auth()->user()->is_superadmin;
 
@@ -231,47 +248,38 @@ class SemiFinishedProductController extends Controller
             'image.max' => 'Ukuran gambar maksimal 2MB.',
         ]);
 
-        $data = $validated;
-        $data['is_active'] = $request->has('is_active');
+        $validated['is_active'] = $request->has('is_active');
 
         // Handle image upload
         if ($request->hasFile('image')) {
-            $data['image'] = ImageHelper::storeProductImage($request->file('image'), 'semi-finished');
-        }
-        
-        // Generate unique code if not provided
-        if (!$request->filled('code')) {
-            $data['code'] = CodeGeneratorHelper::generateProductCode('SF', $data['name'], SemiFinishedProduct::class);
+            $file = $request->file('image');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file->move(public_path('storage/semi-finished'), $filename);
+            $validated['image'] = 'storage/semi-finished/' . $filename;
         }
 
-        $semiFinishedProduct = SemiFinishedProduct::create($data);
+        // Generate unique code if not provided
+        if (!$request->filled('code')) {
+            $validated['code'] = CodeGeneratorHelper::generateProductCode('SF', $validated['name'], SemiFinishedProduct::class);
+        }
+
+        $semiFinishedProduct = SemiFinishedProduct::create($validated);
 
         // Handle stock initialization
         $stockQuantity = $validated['stock_quantity'] ?? 0;
         $stockMode = $validated['stock_mode'] ?? 'all';
-        $branchId = $validated['header_branch_id'] ?? null;
-        
-        // Debug logging
-        \Log::info('Stock initialization debug:', [
-            'stock_quantity' => $stockQuantity,
-            'stock_mode' => $stockMode,
-            'branch_id' => $branchId,
-            'header_branch_id' => $validated['header_branch_id'] ?? 'not set',
-            'request_branch_id' => request('branch_id'),
-        ]);
-        
+        $branchId = session('branch_id') ?? Auth::user()->branch_id;
+
         if ($stockQuantity > 0) {
             if ($stockMode === 'selected' && $branchId) {
                 // Initialize stock for specific branch only
                 $semiFinishedProduct->initializeStockForBranch($branchId, $stockQuantity);
-                \Log::info('Initialized stock for specific branch: ' . $branchId);
             } else {
                 // Initialize stock for all branches (default behavior)
                 $branches = Branch::where('is_active', true)->get();
                 foreach ($branches as $branch) {
                     $semiFinishedProduct->initializeStockForBranch($branch->id, $stockQuantity);
                 }
-                \Log::info('Initialized stock for all branches: ' . $branches->count() . ' branches');
             }
         } else {
             // Always initialize stock with zero for all active branches
@@ -279,7 +287,6 @@ class SemiFinishedProductController extends Controller
             foreach ($branches as $branch) {
                 $semiFinishedProduct->initializeStockForBranch($branch->id, 0);
             }
-            \Log::info('Initialized zero stock for all branches: ' . $branches->count() . ' branches');
         }
 
         return redirect()
@@ -303,7 +310,7 @@ class SemiFinishedProductController extends Controller
 
         $product = SemiFinishedProduct::findOrFail($validated['product_id']);
         $branch = Branch::findOrFail($validated['branch_id']);
-        
+
         // Get or create branch stock record
         $branchStock = SemiFinishedBranchStock::firstOrCreate(
             [
@@ -318,7 +325,7 @@ class SemiFinishedProductController extends Controller
 
         $oldQuantity = $branchStock->quantity;
         $quantityChange = $validated['quantity'];
-        
+
         // Calculate new quantity based on stock type
         switch ($validated['stock_type']) {
             case 'in':
@@ -343,10 +350,10 @@ class SemiFinishedProductController extends Controller
         $branchStock->quantity = $newQuantity;
         $branchStock->last_updated = now();
         $branchStock->save();
-        
+
         $stockTypeText = [
             'in' => 'Stok Masuk',
-            'out' => 'Stok Keluar', 
+            'out' => 'Stok Keluar',
             'return' => 'Stok Return'
         ][$validated['stock_type']];
 
@@ -364,7 +371,7 @@ class SemiFinishedProductController extends Controller
 
         // First, explicitly load the unit relationship to ensure it's available
         $semiFinishedProduct->load('unit');
-        
+
         // Check if unit exists and load it if not
         if (!$semiFinishedProduct->unit && $semiFinishedProduct->unit_id) {
             $unit = Unit::find($semiFinishedProduct->unit_id);
@@ -384,23 +391,23 @@ class SemiFinishedProductController extends Controller
         // Load branch stocks, unit, and category relation
         if ($branchForStock) {
             $semiFinishedProduct->load([
-                'semiFinishedBranchStocks' => function($q) use ($branchForStock) {
+                'semiFinishedBranchStocks' => function ($q) use ($branchForStock) {
                     $q->where('branch_id', $branchForStock->id)->with('branch');
                 },
                 'category',
             ]);
-            
+
             // Initialize stock if it doesn't exist
             if ($semiFinishedProduct->semiFinishedBranchStocks->isEmpty()) {
                 $semiFinishedProduct->initializeStockForBranch($branchForStock->id);
                 // Re-load the relation after initialization
                 $semiFinishedProduct->load([
-                    'semiFinishedBranchStocks' => function($q) use ($branchForStock) {
+                    'semiFinishedBranchStocks' => function ($q) use ($branchForStock) {
                         $q->where('branch_id', $branchForStock->id)->with('branch');
                     },
                 ]);
             }
-            
+
             $displayStockQuantity = $semiFinishedProduct->semiFinishedBranchStocks->first()->quantity ?? 0;
         } else {
             $semiFinishedProduct->load(['semiFinishedBranchStocks.branch']);
@@ -409,7 +416,7 @@ class SemiFinishedProductController extends Controller
 
         // Get the minimum stock value from the product
         $displayMinimumStock = $semiFinishedProduct->minimum_stock ?? 0;
-        
+
         return view('semi-finished-products.show', [
             'semiFinishedProduct' => $semiFinishedProduct,
             'selectedBranch' => $selectedBranch,
@@ -422,7 +429,7 @@ class SemiFinishedProductController extends Controller
 
     public function edit(SemiFinishedProduct $semiFinishedProduct)
     {
-        $selectedBranchId = request('branch_id');
+        $selectedBranchId = request('branch_id') ?? session('branch_id');
         $selectedBranch = null;
         $branchForStock = null;
         $showBranchSelector = true;
@@ -438,24 +445,24 @@ class SemiFinishedProductController extends Controller
         // Load branch stocks and unit relation
         if ($branchForStock) {
             $semiFinishedProduct->load([
-                'semiFinishedBranchStocks' => function($q) use ($branchForStock) {
+                'semiFinishedBranchStocks' => function ($q) use ($branchForStock) {
                     $q->where('branch_id', $branchForStock->id)->with('branch');
                 },
                 'unit'
             ]);
-            
+
             // Initialize stock if it doesn't exist
             if ($semiFinishedProduct->semiFinishedBranchStocks->isEmpty()) {
                 $semiFinishedProduct->initializeStockForBranch($branchForStock->id);
                 // Re-load the relation after initialization
                 $semiFinishedProduct->load([
-                    'semiFinishedBranchStocks' => function($q) use ($branchForStock) {
+                    'semiFinishedBranchStocks' => function ($q) use ($branchForStock) {
                         $q->where('branch_id', $branchForStock->id)->with('branch');
                     },
                     'unit'
                 ]);
             }
-            
+
             $displayStockQuantity = $semiFinishedProduct->semiFinishedBranchStocks->first()->quantity ?? 0;
         } else {
             $semiFinishedProduct->load(['semiFinishedBranchStocks.branch', 'unit']);
@@ -464,7 +471,7 @@ class SemiFinishedProductController extends Controller
 
         // Get all units for the dropdown
         $units = Unit::active()->orderBy('unit_name')->get();
-        
+
         // Get categories filtered by material type for semi-finished products
         $categories = Category::where('is_active', true)->orderBy('name')->get();
 
@@ -521,11 +528,12 @@ class SemiFinishedProductController extends Controller
             if ($semiFinishedProduct->image && file_exists(public_path($semiFinishedProduct->image))) {
                 unlink(public_path($semiFinishedProduct->image));
             }
-            
-            $image = $request->file('image');
-            $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-            $image->move(public_path('img/semi-finished-products'), $imageName);
-            $validated['image'] = 'img/semi-finished-products/' . $imageName;
+
+            // Handle image upload
+            $file = $request->file('image');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file->move(public_path('storage/semi-finished'), $filename);
+            $validated['image'] = 'storage/semi-finished/' . $filename;
         }
 
         // Update the product details
@@ -533,23 +541,23 @@ class SemiFinishedProductController extends Controller
 
         // Handle stock quantity update if provided and branch is selected
         if (isset($validated['stock_quantity'])) {
-            $branchId = $request->input('branch_id');
-            
+            $branchId = $request->input('branch_id') ?? session('branch_id');
+
             // Only update stock if a specific branch is selected
             if ($branchId) {
                 // Get or create branch stock record
                 $branchStock = $semiFinishedProduct->semiFinishedBranchStocks()
                     ->where('branch_id', $branchId)
                     ->first();
-                
+
                 if ($branchStock) {
                     // Update existing stock record (quantity only)
                     $branchStock->quantity = $validated['stock_quantity'];
                     $branchStock->save();
                 } else {
                     // Create new stock record if it doesn't exist
-                    $semiFinishedProduct->initializeStockForBranch(
-                        $branchId, 
+                    $semiFinishedProduct->icccnitializeStockForBranch(
+                        $branchId,
                         $validated['stock_quantity'] ?? 0
                     );
                 }
@@ -557,7 +565,7 @@ class SemiFinishedProductController extends Controller
         }
 
         // Get branch_id from request or session
-        $branchId = request('branch_id') ?: session('selected_branch_id');
+        $branchId = request('branch_id') ?: session('branch_id');
         return redirect()->route('semi-finished-products.index', $branchId ? ['branch_id' => $branchId] : [])
             ->with('success', 'Bahan setengah jadi berhasil diperbarui.');
     }
@@ -612,6 +620,6 @@ class SemiFinishedProductController extends Controller
         $semiFinishedProduct->update(['is_active' => !$semiFinishedProduct->is_active]);
         $status = $semiFinishedProduct->is_active ? 'diaktifkan' : 'dinonaktifkan';
         return redirect()->route('semi-finished-products.index')
-                        ->with('success', "Bahan setengah jadi berhasil {$status}.");
+            ->with('success', "Bahan setengah jadi berhasil {$status}.");
     }
 }

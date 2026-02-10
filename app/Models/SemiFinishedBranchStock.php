@@ -18,7 +18,7 @@ class SemiFinishedBranchStock extends Model
     ];
 
     protected $casts = [
-        'quantity' => 'decimal:2',
+        'quantity' => 'float',
         'maximum_stock' => 'decimal:2',
         'last_updated' => 'datetime'
     ];
@@ -66,7 +66,7 @@ class SemiFinishedBranchStock extends Model
     public function scopeLowStock($query)
     {
         return $query->whereRaw('quantity <= minimum_stock')
-                    ->whereNotNull('minimum_stock');
+            ->whereNotNull('minimum_stock');
     }
 
     public function scopeOutOfStock($query)
@@ -75,28 +75,22 @@ class SemiFinishedBranchStock extends Model
     }
 
     // Methods
-    public function updateStock($quantity, $cost = null, $operation = 'set')
+    public function updateStock(float $quantity, $refId = null, string $mode = 'set'): void
     {
-        $oldStock = $this->quantity;
-        
-        switch ($operation) {
-            case 'add':
-                $this->quantity += $quantity;
-                break;
-            case 'subtract':
-                $this->quantity = max(0, $this->quantity - $quantity);
-                break;
-            case 'set':
-            default:
-                $this->quantity = max(0, $quantity);
-                break;
-        }
+        match ($mode) {
+            'add'      => $this->quantity += $quantity,
+            'reduce' => $this->quantity -= $quantity,
+            'set'      => $this->quantity = (float) $quantity,
+            default    => throw new \InvalidArgumentException('Invalid stock mode'),
+        };
 
-        // No longer updating average_cost as we're using product-level pricing
-        // The cost parameter is ignored as prices are standardized across branches
+        $this->save();
+    }
 
-        $this->last_updated = now();
-        return $this->save();
+    public function setStock(float $quantity): void
+    {
+        $this->quantity = $quantity;
+        $this->save();
     }
 
     /**

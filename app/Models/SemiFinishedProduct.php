@@ -69,7 +69,7 @@ class SemiFinishedProduct extends Model
     {
         return $this->hasMany(SemiFinishedBranchStock::class);
     }
-    
+
 
     // Branch Stock Methods
     public function getStockForBranch($branchId)
@@ -101,11 +101,11 @@ class SemiFinishedProduct extends Model
     public function updateStockForBranch($branchId, $quantity, $cost = null, $operation = 'set')
     {
         $branchStock = $this->getStockForBranch($branchId);
-        
+
         if (!$branchStock) {
             $branchStock = $this->initializeStockForBranch($branchId);
         }
-        
+
         // Always pass null for cost since we're using product-level pricing
         // The cost parameter is kept for backward compatibility but ignored
         return $branchStock->updateStock($quantity, null, $operation);
@@ -138,7 +138,7 @@ class SemiFinishedProduct extends Model
         return $this->getTotalStockAcrossBranches();
     }
 
-    public function getMinimumStockAttribute() 
+    public function getMinimumStockAttribute()
     {
         // Always return product-level minimum_stock as branch-level has been removed
         return $this->attributes['minimum_stock'] ?? 0;
@@ -147,12 +147,12 @@ class SemiFinishedProduct extends Model
     public function isLowStock($branchId = null)
     {
         $minimum_stock = $this->attributes['minimum_stock'] ?? 0;
-        
+
         if ($branchId) {
             $currentStock = $this->getCurrentStockForBranch($branchId);
             return $currentStock <= $minimum_stock;
         }
-        
+
         // Check if total stock across branches is low
         $totalStock = $this->getTotalStockAcrossBranches();
         return $totalStock <= $minimum_stock;
@@ -188,12 +188,12 @@ class SemiFinishedProduct extends Model
         if (!$branchId && auth()->check() && auth()->user()) {
             $branchId = auth()->user()->branch_id;
         }
-        
+
         if (!$branchId) {
             throw new \Exception('Branch ID required for stock update');
         }
-        
-        $operation = $type === 'in' ? 'add' : 'subtract';
+
+        $operation = $type === 'in' ? 'add' : 'reduce';
         return $this->updateStockForBranch($branchId, $quantity, null, $operation);
     }
 
@@ -206,19 +206,19 @@ class SemiFinishedProduct extends Model
     public function scopeLowStock($query, $branchId = null)
     {
         if ($branchId) {
-            return $query->whereHas('semiFinishedBranchStocks', function($q) use ($branchId) {
+            return $query->whereHas('semiFinishedBranchStocks', function ($q) use ($branchId) {
                 $q->where('branch_id', $branchId)->where('quantity', '<', 'minimum_stock');
             });
         }
-        
-        return $query->whereHas('semiFinishedBranchStocks', function($q) {
+
+        return $query->whereHas('semiFinishedBranchStocks', function ($q) {
             $q->where('quantity', '<', 'minimum_stock');
         });
     }
 
     public function scopeForBranch($query, $branchId)
     {
-        return $query->whereHas('semiFinishedBranchStocks', function($q) use ($branchId) {
+        return $query->whereHas('semiFinishedBranchStocks', function ($q) use ($branchId) {
             $q->where('branch_id', $branchId);
         });
     }

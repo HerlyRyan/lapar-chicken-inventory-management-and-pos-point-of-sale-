@@ -41,8 +41,7 @@
             <div class="pt-10 pb-6 px-8 text-center">
                 <div
                     class="inline-flex p-3 rounded-2xl bg-gradient-to-tr from-orange-500 to-yellow-400 shadow-xl shadow-orange-500/30 mb-4 transition-transform hover:scale-110 duration-500">
-                    <img src="{{ asset('img/Logo.png') }}" alt="Logo"
-                        class="w-12 h-12 object-contain">
+                    <img src="{{ asset('img/Logo.png') }}" alt="Logo" class="w-12 h-12 object-contain">
                 </div>
                 <h1 class="text-2xl font-extrabold text-gray-900 tracking-tight">Lapar Chicken</h1>
                 <p class="text-gray-500 text-sm mt-1">Sistem Manajemen Point of Sales</p>
@@ -97,12 +96,6 @@
                     </div>
 
                     <div class="flex items-center justify-between text-sm">
-                        <label class="flex items-center select-none cursor-pointer group">
-                            <input type="checkbox" name="remember"
-                                class="w-5 h-5 rounded-lg border-gray-300 text-orange-600 focus:ring-orange-500/20 transition-all shadow-sm">
-                            <span class="ml-2.5 text-gray-600 group-hover:text-gray-900 transition-colors">Ingat Sesi
-                                Saya</span>
-                        </label>
                         @if (Route::has('password.request'))
                             <a href="{{ route('password.request') }}"
                                 class="font-bold text-orange-600 hover:text-red-600 transition-colors">Lupa

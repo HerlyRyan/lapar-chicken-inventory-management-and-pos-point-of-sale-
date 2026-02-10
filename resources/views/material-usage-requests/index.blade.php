@@ -49,14 +49,16 @@
                                                 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800': req
                                                     .status === 'pending',
                                                 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800': req
-                                                    .status === 'completed',
+                                                    .status === 'approved',
                                                 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800': req
                                                     .status === 'rejected',
+                                                'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800': req
+                                                    .status === 'completed',
                                                 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800': [
                                                     'pending', 'completed', 'rejected'
                                                 ].indexOf(req.status) === -1
                                             }"
-                                            x-text="({ pending: 'Menunggu Persetujuan', completed: 'Selesai', rejected: 'Ditolak' })[req.status] || 'Tidak Diketahui'">
+                                            x-text="({ pending: 'Menunggu Persetujuan', completed: 'Selesai', rejected: 'Ditolak', approved: 'Disetujui' })[req.status] || 'Tidak Diketahui'">
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -153,7 +155,22 @@
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <span class="text-sm text-gray-500">Status:</span>
-                                    <div x-html="req.status_badge"></div>
+                                    <span
+                                        :class="{
+                                            'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800': req
+                                                .status === 'pending',
+                                            'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800': req
+                                                .status === 'approved',
+                                            'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800': req
+                                                .status === 'rejected',
+                                            'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800': req
+                                                .status === 'completed',
+                                            'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800': [
+                                                'pending', 'completed', 'rejected'
+                                            ].indexOf(req.status) === -1
+                                        }"
+                                        x-text="({ pending: 'Menunggu Persetujuan', completed: 'Selesai', rejected: 'Ditolak', approved: 'Disetujui' })[req.status] || 'Tidak Diketahui'">
+                                    </span>
                                 </div>
                             </div>
 

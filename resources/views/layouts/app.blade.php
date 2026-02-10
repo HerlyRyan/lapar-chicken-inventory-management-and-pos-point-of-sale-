@@ -85,6 +85,7 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     // Ambil token dari meta tag Laravel
     const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -155,6 +156,7 @@
             currentId: null,
             requestNumber: null,
             approvalNote: '',
+            actualQuantity: 0,
             rejectReason: '',
             rejectNotes: '',
             isSubmitting: false,
@@ -195,6 +197,7 @@
 
             resetForm() {
                 this.approvalNote = '';
+                this.actualQuantity = 0;
                 this.rejectReason = '';
                 this.rejectNotes = '';
                 this.isSubmitting = false;
@@ -214,7 +217,8 @@
                             'Accept': 'application/json'
                         },
                         body: JSON.stringify({
-                            approval_note: this.approvalNote
+                            approval_note: this.approvalNote,
+                            actual_quantity: Number(this.actualQuantity)
                         })
                     });
 
@@ -229,6 +233,11 @@
                             action: 'approved'
                         }
                     }));
+
+                    const data = await res.json();
+
+                    alert(data.message);
+                    location.reload()
                     this.closeModal();
 
                 } catch (err) {
@@ -258,7 +267,7 @@
                             'Accept': 'application/json'
                         },
                         body: JSON.stringify({
-                            reason: this.rejectReason,
+                            rejection_reason: this.rejectReason,
                             notes: this.rejectNotes
                         })
                     });
@@ -275,6 +284,7 @@
                         }
                     }));
                     this.closeModal();
+                    location.reload()
 
                 } catch (err) {
                     console.error(err);
@@ -302,7 +312,10 @@
             },
 
             openModal(id, action) {
-                console.log('openModal called ✅', { id, action });
+                console.log('openModal called ✅', {
+                    id,
+                    action
+                });
                 this.requestId = id;
                 this.action = action;
                 this.showModal = true;

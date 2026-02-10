@@ -29,13 +29,14 @@
 
                     {{-- Bahan Mentah yang Dibutuhkan --}}
                     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-                        <div class="flex items-center justify-between p-4 border-b">
+                        <div
+                            class="flex items-center justify-between p-4 border-b bg-gradient-to-r from-orange-600 via-orange-700 to-red-700 px-6 py-6">
                             <div class="flex items-center space-x-3">
                                 <div
-                                    class="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                                    class="w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
                                     <i class="bi bi-box-seam text-white"></i>
                                 </div>
-                                <h3 class="text-lg font-semibold text-primary-700">Bahan Mentah yang Dibutuhkan</h3>
+                                <h3 class="text-lg font-semibold text-white">Bahan Mentah yang Dibutuhkan</h3>
                             </div>
                             <button type="button" onclick="addMaterialRow()"
                                 class="inline-flex items-center px-3 py-2 rounded-lg border text-sm font-medium text-orange-600 bg-white hover:bg-orange-50">
@@ -48,63 +49,98 @@
                                 method="POST">
                                 @csrf
                                 <div id="materials-container" class="space-y-4">
-                                    <div class="grid grid-cols-12 gap-4 items-end material-row" data-index="0">
-                                        <div class="col-span-12 lg:col-span-4">
-                                            <label class="block text-sm font-semibold text-gray-700 mb-2">Bahan Mentah <span
-                                                    class="text-red-500">*</span></label>
-                                            <select name="items[0][raw_material_id]"
-                                                class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 material-select"
-                                                required onchange="updateMaterialInfo(0)">
-                                                <option value="">Pilih Bahan Mentah</option>
-                                                @foreach ($rawMaterials as $material)
-                                                    <option value="{{ $material->id }}"
-                                                        data-stock="{{ $material->current_stock }}"
-                                                        data-unit="{{ $material->unit->name ?? '' }}"
-                                                        data-cost="{{ $material->unit_price ?? 0 }}">
-                                                        {{ $material->name }} (Stok:
-                                                        {{ number_format($material->current_stock, 0, ',', '.') }}
-                                                        {{ $material->unit->name ?? '' }})
-                                                    </option>
-                                                @endforeach
-                                            </select>
+                                    {{-- Material Row Container --}}
+                                    <div class="material-row group relative bg-gray-50/50 rounded-2xl p-4 sm:p-6 border border-gray-200 hover:border-blue-300 hover:bg-white transition-all duration-300 shadow-sm hover:shadow-md"
+                                        data-index="0">
+
+                                        {{-- Grid Atas: Input Utama --}}
+                                        <div class="grid grid-cols-12 gap-4 items-start">
+                                            {{-- Bahan Mentah --}}
+                                            <div class="col-span-12 lg:col-span-4">
+                                                <label
+                                                    class="block text-xs font-bold uppercase text-gray-500 mb-2 ml-1">Bahan
+                                                    Mentah <span class="text-red-500">*</span></label>
+                                                <select name="items[0][raw_material_id]"
+                                                    class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 material-select transition-all"
+                                                    required onchange="updateMaterialInfo(0)">
+                                                    <option value="">Pilih Bahan Mentah</option>
+                                                    @foreach ($rawMaterials as $material)
+                                                        <option value="{{ $material->id }}"
+                                                            data-stock="{{ $material->current_stock }}"
+                                                            data-unit="{{ $material->unit->name ?? '' }}"
+                                                            data-cost="{{ $material->unit_price ?? 0 }}">
+                                                            {{ $material->name }} (Stok:
+                                                            {{ number_format($material->current_stock, 0, ',', '.') }}
+                                                            {{ $material->unit->name ?? '' }})
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
+                                            {{-- Jumlah --}}
+                                            <div class="col-span-6 lg:col-span-2">
+                                                <label
+                                                    class="block text-xs font-bold uppercase text-gray-500 mb-2 ml-1">Jumlah
+                                                    <span class="text-red-500">*</span></label>
+                                                <div class="relative">
+                                                    <input type="number" name="items[0][requested_quantity]"
+                                                        class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 quantity-input font-semibold"
+                                                        step="1" min="1" required
+                                                        onchange="calculateRowTotal(0)">
+                                                </div>
+                                            </div>
+
+                                            {{-- Harga/Unit (Readonly) --}}
+                                            <div class="col-span-6 lg:col-span-3">
+                                                <label
+                                                    class="block text-xs font-bold uppercase text-gray-500 mb-2 ml-1">Harga/Unit</label>
+                                                <div class="relative">
+                                                    <span class="absolute left-3 top-3.5 text-gray-400 text-xs">Rp</span>
+                                                    <input type="number" name="items[0][unit_cost]"
+                                                        class="w-full pl-9 pr-4 py-3 bg-gray-100 border-transparent rounded-xl text-gray-500 font-medium cursor-not-allowed cost-input"
+                                                        readonly tabindex="-1">
+                                                </div>
+                                            </div>
+
+                                            {{-- Subtotal --}}
+                                            <div class="col-span-9 lg:col-span-3">
+                                                <label
+                                                    class="block text-xs font-bold uppercase text-gray-500 mb-2 ml-1">Subtotal</label>
+                                                <input type="text" readonly id="total-0"
+                                                    class="w-full px-4 py-3 bg-blue-50 border-transparent rounded-xl text-blue-700 font-bold text-right total-display">
+                                            </div>
                                         </div>
 
-                                        <div class="col-span-6 lg:col-span-2">
-                                            <label class="block text-sm font-semibold text-gray-700 mb-2">Jumlah <span
-                                                    class="text-red-500">*</span></label>
-                                            <input type="number" name="items[0][requested_quantity]"
-                                                class="w-full px-4 py-3 border rounded-xl quantity-input" step="1"
-                                                min="1" required onchange="calculateRowTotal(0)">
-                                            <p class="mt-1 text-xs text-gray-600" id="unit-info-0"></p>
-                                            <p class="mt-1 text-xs text-red-600 hidden" id="stock-warning-0"></p>
+                                        {{-- Grid Bawah: Catatan --}}
+                                        <div class="mt-4 pt-4 border-t border-gray-100">
+                                            <div class="flex items-start gap-3">
+                                                <div class="flex-shrink-0 mt-3 hidden sm:block">
+                                                    <i class="bi bi-chat-left-text text-gray-400"></i>
+                                                </div>
+                                                <div class="flex-grow">
+                                                    <label
+                                                        class="block text-[10px] font-bold uppercase text-gray-400 mb-1 ml-1 tracking-widest">Catatan
+                                                        Tambahan (Opsional)</label>
+                                                    <input type="text" name="items[0][notes]"
+                                                        class="w-full px-4 py-2 bg-transparent border-b border-gray-200 focus:border-blue-500 focus:ring-0 text-sm placeholder-gray-400 transition-all"
+                                                        placeholder="Contoh: Pilih ayam ukuran 1.2kg atau spesifikasi lainnya...">
+                                                </div>
+                                            </div>
+                                            {{-- Action Button (Hapus) --}}
+                                            <div class="col-span-3 lg:col-span-1 flex justify-end pt-7">
+                                                <button type="button" onclick="removeMaterialRow(0)"
+                                                    class="inline-flex items-center justify-center w-12 h-12 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all disabled:opacity-0"
+                                                    disabled>
+                                                    <i class="bi bi-trash3 text-xl"></i>
+                                                </button>
+                                            </div>
                                         </div>
 
-                                        <div class="col-span-6 lg:col-span-2">
-                                            <label class="block text-sm font-semibold text-gray-700 mb-2">Harga/Unit <span
-                                                    class="text-red-500">*</span></label>
-                                            <input type="number" name="items[0][unit_cost]"
-                                                class="w-full px-4 py-3 border rounded-xl cost-input" step="1"
-                                                min="0" required onchange="calculateRowTotal(0)">
-                                        </div>
-
-                                        <div class="col-span-6 lg:col-span-2">
-                                            <label class="block text-sm font-semibold text-gray-700 mb-2">Total</label>
-                                            <input type="text" readonly id="total-0"
-                                                class="w-full px-4 py-3 border rounded-xl total-display bg-gray-50">
-                                        </div>
-
-                                        <div class="col-span-6 lg:col-span-1">
-                                            <label class="block text-sm font-semibold text-gray-700 mb-2">Catatan</label>
-                                            <input type="text" name="items[0][notes]"
-                                                class="w-full px-4 py-3 border rounded-xl" placeholder="Opsional">
-                                        </div>
-
-                                        <div class="col-span-6 lg:col-span-1 flex justify-end">
-                                            <button type="button"
-                                                class="inline-flex items-center px-3 py-2 rounded-lg border text-sm text-red-600 bg-white hover:bg-red-50"
-                                                onclick="removeMaterialRow(0)" disabled>
-                                                <i class="bi bi-trash"></i>
-                                            </button>
+                                        {{-- Stock Warning Alert --}}
+                                        <div id="stock-warning-0"
+                                            class="hidden mt-3 p-3 bg-red-50 border border-red-100 rounded-xl flex items-center text-red-600 text-[11px] font-bold">
+                                            <i class="bi bi-exclamation-circle-fill me-2"></i> PERINGATAN: STOK TERSEDIA
+                                            TIDAK MENCUKUPI
                                         </div>
                                     </div>
                                 </div>
@@ -126,13 +162,14 @@
 
                     {{-- Target Output Bahan Setengah Jadi --}}
                     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-                        <div class="flex items-center justify-between p-4 border-b">
+                        <div
+                            class="flex items-center justify-between p-4 border-b bg-gradient-to-r from-orange-600 via-orange-700 to-red-700 px-6 py-6">
                             <div class="flex items-center space-x-3">
                                 <div
-                                    class="w-9 h-9 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                                    class="w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
                                     <i class="bi bi-diagram-3 text-white"></i>
                                 </div>
-                                <h3 class="text-lg font-semibold text-green-700">Target Output Bahan Setengah Jadi</h3>
+                                <h3 class="text-lg font-semibold text-white">Target Output Bahan Setengah Jadi</h3>
                             </div>
                             <button type="button" onclick="addOutputRow()"
                                 class="inline-flex items-center px-3 py-2 rounded-lg border text-sm font-medium text-green-600 bg-white hover:bg-green-50">
@@ -142,46 +179,71 @@
 
                         <div class="p-6">
                             <div id="outputs-container" class="space-y-4">
-                                <div class="grid grid-cols-12 gap-4 items-end output-row" data-index="0">
-                                    <div class="col-span-12 lg:col-span-6">
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Produk Setengah
-                                            Jadi</label>
-                                        <select name="outputs[0][semi_finished_product_id]"
-                                            class="w-full px-4 py-3 border rounded-xl output-product-select"
-                                            onchange="updateOutputUnit(0)">
-                                            <option value="">Pilih Produk</option>
-                                            @foreach ($semiFinishedProducts as $product)
-                                                <option value="{{ $product->id }}"
-                                                    data-unit="{{ optional($product->getRelation('unit'))->name ?? '' }}"
-                                                    data-unit-abbr="{{ optional($product->getRelation('unit'))->abbreviation ?? '' }}">
-                                                    {{ $product->name }} (Min Stok:
-                                                    {{ number_format($product->minimum_stock ?? 0, 0, ',', '.') }})
-                                                </option>
-                                            @endforeach
-                                        </select>
+                                {{-- Output Row Card --}}
+                                <div class="output-row group relative bg-white rounded-2xl p-5 sm:p-6 border border-gray-200 hover:border-emerald-300 hover:shadow-lg transition-all duration-300 mb-4"
+                                    data-index="0">
+
+                                    {{-- Grid Atas: Produk & Jumlah --}}
+                                    <div class="grid grid-cols-12 gap-5 items-start">
+
+                                        {{-- Pilih Produk Setengah Jadi --}}
+                                        <div class="col-span-12 lg:col-span-7">
+                                            <label
+                                                class="flex items-center text-xs font-bold uppercase text-gray-500 mb-2 ml-1">
+                                                <i class="bi bi-box-seam me-2 text-emerald-500"></i> Produk Setengah Jadi
+                                            </label>
+                                            <select name="outputs[0][semi_finished_product_id]"
+                                                class="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 focus:bg-white transition-all appearance-none output-product-select"
+                                                required onchange="updateOutputUnit(0)">
+                                                <option value="">Cari Produk...</option>
+                                                @foreach ($semiFinishedProducts as $product)
+                                                    <option value="{{ $product->id }}"
+                                                        data-unit="{{ optional($product->getRelation('unit'))->name ?? '' }}"
+                                                        data-unit-abbr="{{ optional($product->getRelation('unit'))->abbreviation ?? '' }}">
+                                                        {{ $product->name }} (Min Stok:
+                                                        {{ number_format($product->minimum_stock ?? 0, 0, ',', '.') }})
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        {{-- Jumlah Rencana --}}
+                                        <div class="col-span-8 lg:col-span-4">
+                                            <label
+                                                class="flex items-center text-xs font-bold uppercase text-gray-500 mb-2 ml-1">
+                                                <i class="bi bi-flag me-2 text-emerald-500"></i> Jumlah Rencana
+                                            </label>
+                                            <div class="relative">
+                                                <input type="number" name="outputs[0][planned_quantity]"
+                                                    class="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 focus:bg-white font-bold text-gray-700 transition-all"
+                                                    step="1" min="1" placeholder="0">
+                                                <span
+                                                    class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-emerald-600 uppercase tracking-widest output-unit-info"
+                                                    id="output-unit-0">
+                                                    {{-- Satuan akan muncul di sini --}}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div class="col-span-6 lg:col-span-3">
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Jumlah
-                                            Rencana</label>
-                                        <input type="number" name="outputs[0][planned_quantity]"
-                                            class="w-full px-4 py-3 border rounded-xl" step="1" min="1"
-                                            placeholder="0">
-                                        <p class="mt-1 text-xs text-gray-600 output-unit-info" id="output-unit-0"></p>
-                                    </div>
-
-                                    <div class="col-span-6 lg:col-span-2">
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Catatan</label>
-                                        <input type="text" name="outputs[0][notes]"
-                                            class="w-full px-4 py-3 border rounded-xl" placeholder="Opsional">
-                                    </div>
-
-                                    <div class="col-span-6 lg:col-span-1 flex justify-end">
-                                        <button type="button"
-                                            class="inline-flex items-center px-3 py-2 rounded-lg border text-sm text-red-600 bg-white hover:bg-red-50"
-                                            onclick="removeOutputRow(0)" disabled>
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                    {{-- Grid Bawah: Catatan --}}
+                                    <div class="mt-5 pt-4 border-t border-dashed border-gray-100">
+                                        <div class="flex items-center gap-3">
+                                            <i class="bi bi-pencil-square text-gray-400"></i>
+                                            <div class="flex-grow">
+                                                <input type="text" name="outputs[0][notes]"
+                                                    class="w-full px-0 py-1 bg-transparent border-0 border-b border-transparent focus:border-emerald-500 focus:ring-0 text-sm text-gray-600 placeholder-gray-400 transition-all"
+                                                    placeholder="Tambahkan catatan hasil produksi di sini (Opsional)...">
+                                            </div>
+                                        </div>
+                                        {{-- Tombol Hapus --}}
+                                        <div class="col-span-4 lg:col-span-1 flex justify-end pt-7">
+                                            <button type="button" onclick="removeOutputRow(0)"
+                                                class="inline-flex items-center justify-center w-12 h-12 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all disabled:opacity-0"
+                                                disabled>
+                                                <i class="bi bi-trash3 text-xl"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

@@ -20,7 +20,12 @@
 
         {{-- Main Content --}}
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-            <div x-data="sortableTable(@js($finishedProducts))" @sort-column.window="sortBy($event.detail)"
+            <div x-data="sortableTable(@js($finishedProducts))"
+                @stock-updated.window="
+        if ($event.detail.productId === product.id) {
+            product.stock = $event.detail.newStock
+        }"
+                @sort-column.window="sortBy($event.detail)"
                 class="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 overflow-hidden">
                 {{-- Card Header --}}
                 <x-index.card-header title="Produk Siap Jual" />

@@ -75,17 +75,17 @@
             </div>
 
             <div class="mb-4" x-show="rejectReason === 'other'">
-                <label for="reject_note" class="block text-sm font-medium text-slate-700 mb-2">Catatan Penolakan
+                <label for="reject_reason" class="block text-sm font-medium text-slate-700 mb-2">Catatan Penolakan
                     (opsional)</label>
-                <textarea id="reject_note" name="reject_note" x-model="rejectNotes" x-ref="rejectNotes" rows="5"
+                <textarea id="reject_reason" name="reject_reason" x-model="rejectNotes" x-ref="rejectNotes" rows="5"
                     maxlength="255"
                     class="w-full border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-rose-400 focus:border-transparent bg-white text-slate-900 shadow-sm transition duration-150 resize-vertical min-h-[100px]"
                     placeholder="Jelaskan alasan penolakan atau instruksi tambahan..."
-                    aria-describedby="reject_note_help reject_note_counter"></textarea>
+                    aria-describedby="reject_reason_help reject_reason_counter"></textarea>
 
-                <div class="flex items-center justify-between mt-2 text-xs text-slate-400" id="reject_note_help">
+                <div class="flex items-center justify-between mt-2 text-xs text-slate-400" id="reject_reason_help">
                     <span>Opsional — tambahkan informasi untuk penerima.</span>
-                    <span id="reject_note_counter" class="text-slate-500"
+                    <span id="reject_reason_counter" class="text-slate-500"
                         x-text="(255 - (rejectNotes ? rejectNotes.length : 0)) + ' karakter tersisa'"></span>
                 </div>
             </div>

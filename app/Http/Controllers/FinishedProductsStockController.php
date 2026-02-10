@@ -141,7 +141,7 @@ class FinishedProductsStockController extends Controller
         if ($user && !$user->hasRole('Super Admin')) {
             $targetBranch = $user->branch; // enforce restriction
         } else {
-            $targetBranchId = $request->input('branch_id', session('selected_dashboard_branch'));
+            $targetBranchId = $request->input('branch_id', session('branch_id'));
             if ($targetBranchId) {
                 $targetBranch = Branch::find($targetBranchId);
             }
@@ -178,9 +178,12 @@ class FinishedProductsStockController extends Controller
                 $newStock = $branchStock->fresh()->quantity;
                 break;
             case 'reduce':
-                if ($qty > $oldStock) {
-                    return redirect()->back()->with('error', 'Jumlah pengurangan tidak boleh lebih besar dari stok saat ini.');
+                if ($type === 'reduce' && $qty > $oldStock) {
+                    return response()->json([
+                        'message' => 'Jumlah pengurangan tidak boleh lebih besar dari stok saat ini.'
+                    ], 422);
                 }
+
                 $branchStock->updateStock('out', $qty, $notes, optional($user)->id);
                 $newStock = $branchStock->fresh()->quantity;
                 break;
@@ -196,16 +199,18 @@ class FinishedProductsStockController extends Controller
                 break;
         }
 
-
         $adjustmentMessages = [
             'add' => 'Stok berhasil ditambahkan',
             'reduce' => 'Stok berhasil dikurangi',
             'set' => 'Stok berhasil diatur ulang',
         ];
 
-        return redirect()
-            ->route('finished-products-stock.index', ['branch_id' => $targetBranch->id])
-            ->with('success', $adjustmentMessages[$type] . '. Stok ' . $finishedProduct->name . ' sekarang: ' . number_format($newStock, 3));
+        return response()->json([
+            'message' => $adjustmentMessages[$type] .
+                '. Stok ' . $finishedProduct->name .
+                ' sekarang: ' . number_format($newStock, 3),
+            'new_stock' => $newStock
+        ]);
     }
 
     public function items(Branch $branch)

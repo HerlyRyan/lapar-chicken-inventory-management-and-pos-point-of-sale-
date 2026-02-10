@@ -116,7 +116,9 @@
                                         }">
                                             <div class="flex items-center gap-2 sm:gap-3">
                                                 {{-- Confirm & Reject (only when status is sent) --}}
-                                                @if (auth()->user()->hasRole('Manajer') || auth()->user()->hasRole('Super Admin'))
+                                                @if (auth()->user()->hasRole('Manajer') ||
+                                                        auth()->user()->hasRole('Super Admin') ||
+                                                        auth()->user()->hasRole('Kepala Toko'))
                                                     <template x-if="isSent" x-data="distributionModals()">
                                                         <div class="flex items-center gap-2 sm:gap-3">
                                                             <button type="button"
@@ -279,7 +281,9 @@
                                 }" class="w-full">
                                     <div class="flex items-center justify-between gap-2 sm:gap-3">
                                         {{-- Left: Confirm & Reject (only when status is sent) --}}
-                                        @if (auth()->user()->hasRole('Manajer') || auth()->user()->hasRole('Super Admin'))
+                                        @if (auth()->user()->hasRole('Manajer') ||
+                                                auth()->user()->hasRole('Super Admin') ||
+                                                auth()->user()->hasRole('Kepala Toko'))
                                             <div class="flex items-center gap-2">
                                                 <template x-if="isSent" x-data="distributionModals()">
                                                     <div class="flex items-center gap-2">

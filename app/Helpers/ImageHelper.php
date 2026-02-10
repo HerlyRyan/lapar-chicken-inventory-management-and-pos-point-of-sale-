@@ -18,7 +18,7 @@ class ImageHelper
     public static function storeProductImage(UploadedFile $file, string $productType, bool $useTimestamp = true)
     {
         // Make sure product type is valid
-        if (!in_array($productType, ['raw-materials', 'semi-finished', 'finished'])) {
+        if (!in_array($productType, ['materials', 'semi-finished', 'finished'])) {
             throw new \InvalidArgumentException("Invalid product type: $productType");
         }
         
@@ -30,7 +30,7 @@ class ImageHelper
         $filename .= uniqid() . '.' . $file->getClientOriginalExtension();
         
         // Store the file
-        $path = $file->storeAs("products/{$productType}", $filename, 'public');
+        $path = $file->storeAs("storage/{$productType}", $filename, 'public');
         
         // Return the path relative to storage/app/public
         return $path;

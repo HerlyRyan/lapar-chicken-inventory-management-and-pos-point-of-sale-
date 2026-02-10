@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Branch;
+use App\Models\FinishedBranchStock;
 use App\Models\SemiFinishedUsageRequest;
 use App\Models\SemiFinishedUsageRequestItem;
 use App\Models\SemiFinishedProduct;
@@ -328,7 +329,7 @@ class SemiFinishedUsageRequestController extends Controller
 
         // Keep view variable name for backward compatibility
         return view('material-usage-requests.edit', [
-            'materialUsageRequest' => $semiFinishedUsageRequest,
+            'usageRequest' => $semiFinishedUsageRequest,
             'semiFinishedProducts' => $semiFinishedProducts,
             'units' => $units,
             'finishedProducts' => $finishedProducts,
@@ -514,12 +515,17 @@ class SemiFinishedUsageRequestController extends Controller
      */
     public function approve(Request $request, SemiFinishedUsageRequest $semiFinishedUsageRequest)
     {
+        $validator = Validator::make($request->all(), [
+            'approval_note' => 'nullable|string',
+            'actual_quantity' => 'nullable|numeric'
+        ]);
+
         if ($semiFinishedUsageRequest->status != SemiFinishedUsageRequest::STATUS_PENDING) {
             return $this->respond($request, false, 'Hanya permintaan dengan status menunggu persetujuan yang dapat disetujui.');
         }
 
         $user = Auth::user();
-        $canApprove = $user->hasAnyRole(['admin', 'super-admin', 'Admin', 'Super Admin', 'Manager', 'Kepala Toko']);
+        $canApprove = $user->hasAnyRole(['Super_Admin', 'Manager', 'Kepala_Toko']);
         if (!$canApprove) {
             return $this->respond($request, false, 'Anda tidak memiliki izin untuk menyetujui permintaan ini.');
         }
@@ -527,7 +533,7 @@ class SemiFinishedUsageRequestController extends Controller
         try {
             DB::beginTransaction();
 
-            $semiFinishedUsageRequest->load(['items.semiFinishedProduct']);
+            $semiFinishedUsageRequest->load(['items.semiFinishedProduct', 'outputs']);
             $branchId = $semiFinishedUsageRequest->requesting_branch_id;
 
             foreach ($semiFinishedUsageRequest->items as $item) {
@@ -561,12 +567,57 @@ class SemiFinishedUsageRequestController extends Controller
                 }
             }
 
+            foreach ($semiFinishedUsageRequest->outputs as $output) {
+
+                $qty = $request->input('actual_quantity') ?? $output->planned_quantity;
+
+                if ($qty <= 0) {
+                    continue;
+                }
+
+                // Tambah stok finished product per cabang
+                $branchStock = FinishedBranchStock::firstOrCreate(
+                    [
+                        'branch_id' => $branchId,
+                        'finished_product_id' => $output->product_id,
+                    ],
+                    [
+                        'quantity' => 0
+                    ]
+                );
+
+                $branchStock->increment('quantity', $qty);
+
+                // Catat movement (IN)
+                if (Schema::hasTable('stock_movements')) {
+                    \App\Models\StockMovement::create([
+                        'finished_product_id' => $output->product_id,
+                        'branch_id' => $branchId,
+                        'type' => 'in',
+                        'movement_category' => 'production',
+                        'quantity' => $qty,
+                        'reference_id' => $semiFinishedUsageRequest->id,
+                        'reference_type' => 'semi_finished_usage_request',
+                        'notes' => "Hasil produksi dari request #{$semiFinishedUsageRequest->request_number}",
+                        'created_by' => Auth::id(),
+                    ]);
+                }
+            }
+
             $semiFinishedUsageRequest->update([
                 'status' => SemiFinishedUsageRequest::STATUS_APPROVED,
                 'approved_by' => Auth::id(),
                 'approved_at' => now(),
                 'approval_notes' => $request->input('approval_note'),
             ]);
+
+            $output = SemiFinishedUsageRequestOutput::where(
+                'semi_finished_request_id',
+                $semiFinishedUsageRequest->id
+            )->firstOrFail();
+
+            $output->actual_quantity = (int) $request->actual_quantity;
+            $output->save();
 
             DB::commit();
 

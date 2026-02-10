@@ -212,13 +212,14 @@ class RawMaterialController extends Controller
             'code.unique' => 'Kode bahan baku sudah digunakan.',
         ]);
 
-
-
         $validated['is_active'] = $request->has('is_active');
 
         // Handle image upload
         if ($request->hasFile('image')) {
-            $validated['image'] = ImageHelper::storeProductImage($request->file('image'), 'raw-materials');
+            $file = $request->file('image');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file->move(public_path('storage/materials'), $filename);
+            $validated['image'] = 'storage/materials/' . $filename;
         }
         
         // Generate unique code if not provided
@@ -299,8 +300,6 @@ class RawMaterialController extends Controller
             'code.required' => 'Kode bahan baku wajib diisi.',
             'code.unique' => 'Kode bahan baku sudah digunakan.',
         ]);
-
-
 
         $validated['is_active'] = $request->has('is_active');
 

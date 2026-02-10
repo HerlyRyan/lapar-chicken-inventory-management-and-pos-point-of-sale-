@@ -367,19 +367,21 @@ class SaleController extends Controller
             ]);
         }
 
+        $completedSales = $sales->where('status', 'completed');
+
         return view('sales.index', [
             'sales' => $sales,
             'branches' => $branches,
             'columns' => $columns,
             'selects' => $selects,
 
-            // Data Harian
-            'todaySalesAmount' => $sales->sum('final_amount'),
-            'todaySalesCount'  => $sales->count(),
+            // Data Harian (hanya completed)
+            'todaySalesAmount' => $completedSales->sum('final_amount'),
+            'todaySalesCount'  => $completedSales->count(),
 
-            // Detail Metode Bayar Harian
-            'todayCashCount' => $sales->where('payment_method', 'cash')->count(),
-            'todayQrisCount' => $sales->where('payment_method', 'qris')->count(),
+            // Detail Metode Bayar Harian (hanya completed)
+            'todayCashCount' => $completedSales->where('payment_method', 'cash')->count(),
+            'todayQrisCount' => $completedSales->where('payment_method', 'qris')->count(),
         ]);
     }
 

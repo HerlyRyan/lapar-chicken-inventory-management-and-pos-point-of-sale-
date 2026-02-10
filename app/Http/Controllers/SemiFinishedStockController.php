@@ -107,78 +107,36 @@ class SemiFinishedStockController extends Controller
      */
     public function adjustStock(Request $request, SemiFinishedProduct $semiFinishedProduct)
     {
-        $request->validate([
+        $validated = $request->validate([
             'adjustment_type' => 'required|in:add,reduce,set',
             'quantity' => 'required|numeric|min:0',
             'reason' => 'required|string|max:500',
             'notes' => 'nullable|string|max:1000',
-            'branch_id' => 'nullable|integer|exists:branches,id',
         ]);
 
-        $user = Auth::user();
+        $branch = auth()->user()?->branch
+            ?? Branch::find(session('branch_id'))
+            ?? Branch::production()->first();
 
-        // Determine target branch for adjustment
-        $targetBranch = null;
-        if ($user && !$user->hasRole('Super Admin')) {
-            $targetBranch = $user->branch; // enforce restriction
-        } else {
-            $targetBranchId = $request->input('branch_id', session('selected_dashboard_branch'));
-            if ($targetBranchId) {
-                $targetBranch = Branch::find($targetBranchId);
-            }
-        }
+        abort_if(!$branch, 422, 'Cabang tidak ditemukan');
 
-        // Fallback to managing branch or first production if none determined
-        if (!$targetBranch) {
-            $fallbackBranchId = $semiFinishedProduct->managing_branch_id ?: Branch::production()->value('id');
-            $targetBranch = $fallbackBranchId ? Branch::find($fallbackBranchId) : null;
-        }
-
-        if (!$targetBranch) {
-            return redirect()->back()->with('error', 'Tidak ada cabang yang valid untuk penyesuaian stok.');
-        }
-
-        // Create or fetch stock record for this branch-product
-        $branchStock = SemiFinishedBranchStock::firstOrCreate(
+        $stock = SemiFinishedBranchStock::firstOrCreate(
             [
-                'branch_id' => $targetBranch->id,
+                'branch_id' => $branch->id,
                 'semi_finished_product_id' => $semiFinishedProduct->id,
             ],
-            [
-                'quantity' => 0,
-            ],
+            ['quantity' => 0]
         );
 
-        $oldStock = (float) $branchStock->quantity;
-        $newStock = $oldStock;
-
-        $type = $request->input('adjustment_type');
-        switch ($type) {
-            case 'add':
-                $branchStock->updateStock($request->input('quantity'), null, 'add');
-                $newStock = $oldStock + (float) $request->input('quantity');
-                break;
-            case 'reduce':
-                if ($request->input('quantity') > $oldStock) {
-                    return redirect()->back()->with('error', 'Jumlah pengurangan tidak boleh lebih besar dari stok saat ini.');
-                }
-                $branchStock->updateStock($request->input('quantity'), null, 'subtract');
-                $newStock = $oldStock - (float) $request->input('quantity');
-                break;
-            case 'set':
-                $branchStock->updateStock($request->input('quantity'), null, 'set');
-                $newStock = (float) $request->input('quantity');
-                break;
-        }
-
-        $adjustmentMessages = [
-            'add' => 'Stok berhasil ditambahkan',
-            'reduce' => 'Stok berhasil dikurangi',
-            'set' => 'Stok berhasil diatur ulang',
-        ];
-
-        return redirect()
-            ->route('semi-finished-stock.index', ['branch_id' => $targetBranch->id])
-            ->with('success', $adjustmentMessages[$type] . '. Stok ' . $semiFinishedProduct->name . ' sekarang: ' . number_format($newStock, 3));
+        $stock->updateStock(
+            $validated['quantity'],
+            null,
+            $validated['adjustment_type']
+        );
+ 
+        return response()->json([
+            'message' => 'Stok berhasil diperbarui',
+            'stock' => $stock->fresh()->quantity
+        ]);
     }
 }

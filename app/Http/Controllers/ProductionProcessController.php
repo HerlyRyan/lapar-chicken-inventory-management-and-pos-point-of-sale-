@@ -20,7 +20,7 @@ class ProductionProcessController extends Controller
         $query = ProductionRequest::with(['requestedBy', 'approvedBy', 'productionStartedBy', 'items.rawMaterial.unit'])
             ->whereIn('status', ['approved', 'in_progress', 'completed'])
             ->orderBy('approved_at', 'asc');
-        
+
         $columns = [
             ['key' => 'request_code', 'label' => 'Kode Pengajuan'],
             ['key' => 'purpose', 'label' => 'Peruntukan'],
@@ -38,9 +38,9 @@ class ProductionProcessController extends Controller
         // Search by request code or purpose
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('request_code', 'like', "%{$search}%")
-                  ->orWhere('purpose', 'like', "%{$search}%");
+                    ->orWhere('purpose', 'like', "%{$search}%");
             });
         }
 
@@ -72,8 +72,8 @@ class ProductionProcessController extends Controller
     public function show(ProductionRequest $productionRequest)
     {
         $productionRequest->load([
-            'requestedBy', 
-            'approvedBy', 
+            'requestedBy',
+            'approvedBy',
             'productionStartedBy',
             'productionCompletedBy',
             'items.rawMaterial.unit',
@@ -137,75 +137,98 @@ class ProductionProcessController extends Controller
      */
     public function complete(Request $request, ProductionRequest $productionRequest)
     {
-        // Only allow completing in-progress requests
+        // 🔍 DEBUG AMAN (boleh dihapus setelah fix)
+        // dd($request);
+
+        // ✅ VALIDASI STATE AWAL (PAKAI RAW STATUS)
         if (!$productionRequest->isInProgress()) {
-            return redirect()->route('production-processes.index')
-                ->with('error', 'Hanya produksi yang sedang berlangsung yang dapat diselesaikan.');
+            return back()->with('error', 'Produksi tidak dalam status berjalan.');
         }
 
-        $request->validate([
-            'production_notes' => 'nullable|string|max:1000',
-            'production_evidence' => 'required|image|mimes:jpeg,png,jpg|max:2048',
-            // Realized outputs for the production
-            'realized_outputs' => 'required|array',
-            'realized_outputs.*' => 'required|integer|min:1',
+        // ✅ VALIDASI REQUEST
+        $validated = $request->validate([
+            'production_notes'     => 'nullable|string|max:1000',
+            'production_evidence'  => 'required|image|mimes:jpeg,png,jpg|max:2048',
+            'realized_outputs'     => 'nullable|array',
+            'realized_outputs.*'   => 'nullable|integer|min:0',
         ]);
 
-        DB::transaction(function () use ($request, $productionRequest) {
-            // Load planned outputs
-            $productionRequest->load('outputs.semiFinishedProduct');
+        // ✅ UPLOAD FILE DI LUAR TRANSACTION
+        $evidencePath = $request->file('production_evidence')
+            ->store('production-evidence', 'public');
 
-            // Upload the production evidence photo
-            if ($request->hasFile('production_evidence')) {
-                $file = $request->file('production_evidence');
-                $filename = 'production_' . $productionRequest->id . '_' . time() . '.' . $file->getClientOriginalExtension();
-                $path = $file->storeAs('production-evidence', $filename, 'public');
-                
-                // Save the path to the production request
-                $productionRequest->evidence_path = $path;
-                $productionRequest->save();
-            }
+        try {
+            DB::transaction(function () use (
+                $productionRequest,
+                $validated,
+                $evidencePath
+            ) {
+                // 🔒 LOCK DATA PRODUKSI
+                $production = ProductionRequest::query()
+                    ->whereKey($productionRequest->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-            foreach ($productionRequest->outputs as $output) {
-                $product = $output->semiFinishedProduct;
-                if (!$product) {
-                    continue;
+                // 📝 UPDATE BUKTI & CATATAN
+                $production->update([
+                    'evidence_path'    => $evidencePath,
+                    'production_notes' => $validated['production_notes'] ?? null,
+                ]);
+
+                // 🔄 LOAD OUTPUT
+                $production->load('outputs.semiFinishedProduct');
+
+                foreach ($production->outputs as $output) {
+                    $product = $output->semiFinishedProduct;
+
+                    if (!$product) {
+                        throw new \RuntimeException(
+                            "Produk semi-finished tidak ditemukan (output_id: {$output->id})"
+                        );
+                    }
+
+                    $actualQty = (int) $validated['realized_outputs'][$output->id];
+
+                    // 📦 UPDATE OUTPUT AKTUAL
+                    $output->update([
+                        'actual_quantity' => $actualQty,
+                    ]);
+
+                    // 🏭 TENTUKAN BRANCH PRODUKSI
+                    $branchId = $product->managing_branch_id
+                        ?? Branch::production()->value('id');
+
+                    if (!$branchId) {
+                        throw new \RuntimeException('Branch produksi tidak ditemukan');
+                    }
+
+                    // ➕ UPDATE STOK
+                    $product->updateStockForBranch(
+                        $branchId,
+                        $actualQty,
+                        null,
+                        'add'
+                    );
                 }
 
-                // Get the realized quantity from the form inputs
-                $outputId = $output->id;
-                $actualQty = isset($request->realized_outputs[$outputId]) 
-                    ? (int) $request->realized_outputs[$outputId] 
-                    : (int) $output->planned_quantity;
+                // ✅ FINAL: UPDATE STATUS
+                $production->update([
+                    'status'                   => "completed",
+                    'production_completed_by'  => auth()->id(),
+                    'production_completed_at'  => now(),
+                ]);
+            });
 
-                // Persist actual quantity
-                $output->actual_quantity = $actualQty;
-                $output->save();
+            return redirect()
+                ->route('production-processes.index')
+                ->with('success', 'Produksi berhasil diselesaikan.');
+        } catch (\Throwable $e) {
+            report($e);
 
-                // Determine production center branch for this product
-                $centerBranchId = $product->managing_branch_id;
-                if (!$centerBranchId) {
-                    $centerBranchId = Branch::production()->value('id');
-                }
-
-                if ($centerBranchId) {
-                    // Update branch stock using helper on model
-                    $product->updateStockForBranch($centerBranchId, $actualQty, null, 'add');
-                }
-            }
-
-            // Mark production as completed
-            $productionRequest->update([
-                'status' => 'completed',
-                'production_completed_by' => Auth::id(),
-                'production_completed_at' => now(),
-                'production_notes' => $request->production_notes
-            ]);
-        });
-
-        return redirect()->route('production-processes.index')
-            ->with('success', 'Produksi berhasil diselesaikan. Hasil produksi telah ditambahkan ke stok pusat produksi.');
+            return back()->with('error', 'Terjadi kesalahan saat menyelesaikan produksi.');
+        }
     }
+
 
     /**
      * Get planned outputs for a production request as JSON
@@ -220,8 +243,8 @@ class ProductionProcessController extends Controller
         }
 
         $productionRequest->load('outputs.semiFinishedProduct.unit');
-        
-        $plannedOutputs = $productionRequest->outputs->map(function($output) {
+
+        $plannedOutputs = $productionRequest->outputs->map(function ($output) {
             return [
                 'id' => $output->id,
                 'product_id' => $output->semi_finished_product_id,

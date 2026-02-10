@@ -111,7 +111,6 @@ class StockTransferController extends Controller
             });
         }
 
-
         // Search functionality
         if ($request->has('search') && !empty($request->search)) {
             $searchTerm = '%' . $request->search . '%';
@@ -388,7 +387,12 @@ class StockTransferController extends Controller
             $stockTransferService->acceptTransfer($stockTransfer, $request->response_notes);
         });
 
-        return back()->with('success', 'Transfer berhasil diterima. Stok telah ditambahkan.');
+        return $request->expectsJson()
+            ? response()->json([
+                'success' => true,
+                'message' => 'Transfer berhasil diterima. Stok telah ditambahkan.'
+            ])
+            : back()->with('success', 'Transfer berhasil diterima. Stok telah ditambahkan.');
     }
 
     /**
@@ -419,25 +423,30 @@ class StockTransferController extends Controller
             $stockTransferService->rejectTransfer($stockTransfer, $request->response_notes);
         });
 
-        return back()->with('success', 'Transfer ditolak. Stok dikembalikan ke cabang asal.');
+        return $request->expectsJson()
+            ? response()->json([
+                'success' => true,
+                'message' => 'Transfer ditolak. Stok dikembalikan ke cabang asal.'
+            ])
+            : back()->with('success', 'Transfer ditolak. Stok dikembalikan ke cabang asal.');
     }
 
     /**
      * Show the form for editing a transfer
      */
-    public function edit(StockTransfer $stockTransfer)
+    public function edit(StockTransfer $stock_transfer)
     {
-        $currentBranchId = app()->bound('current_branch_id') ? app('current_branch_id') : (session('current_branch_id') ?? (Auth::user()->branch_id ?? null));
+        $currentBranchId = session('branch_id');
 
         // Check if user can edit this transfer
-        if ($stockTransfer->from_branch_id !== $currentBranchId) {
+        if ((int) $stock_transfer->from_branch_id !== (int) $currentBranchId) {
             return redirect()->route('stock-transfer.index')
                 ->with('error', 'Anda tidak dapat mengedit transfer dari cabang lain.');
         }
 
         $branches = Branch::retail()->where('id', '!=', $currentBranchId)->get();
 
-        return view('stock-transfer.edit', compact('stockTransfer', 'branches'));
+        return view('stock-transfer.edit', compact('stock_transfer', 'branches'));
     }
 
     /**

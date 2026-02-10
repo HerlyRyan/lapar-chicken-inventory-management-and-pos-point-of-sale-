@@ -169,13 +169,10 @@ Route::middleware('auth')->group(function () {
         Route::post('semi-finished-products/{semiFinishedProduct}/update-stock', [SemiFinishedProductController::class, 'updateStock'])->name('semi-finished-products.update-stock');
         Route::post('semi-finished-products/{semiFinishedProduct}/transfer-stock', [SemiFinishedProductController::class, 'transferStock'])->name('semi-finished-products.transfer-stock');
         Route::get('semi-finished-products/{semiFinishedProduct}/stock-data', [SemiFinishedProductController::class, 'stockData'])->name('semi-finished-products.stock-data');
-        Route::get('api/semi-finished-products', [SemiFinishedProductController::class, 'apiIndex'])->name('api.semi-finished-products');
 
         // Finished Products
         Route::resource('finished-products', FinishedProductController::class);
         Route::patch('finished-products/{finishedProduct}/toggle-status', [FinishedProductController::class, 'toggleStatus'])->name('finished-products.toggle-status');
-        Route::get('api/finished-products', [FinishedProductController::class, 'apiIndex'])->name('api.finished-products');
-
         // ===== PURCHASE MANAGEMENT ROUTES =====
 
         // Purchase Orders
@@ -184,15 +181,11 @@ Route::middleware('auth')->group(function () {
         Route::get('purchase-orders/{purchaseOrder}/print', [PurchaseOrderController::class, 'print'])->name('purchase-orders.print');
 
         // Purchase Order API Routes
-        // Web route deprecated -> redirect to existing API route (preserve supplier_id)
-        Route::get('purchase-orders/materials-by-supplier', function (Request $request) {
-            $supplierId = $request->query('supplier_id');
-            if ($supplierId) {
-                return redirect()->route('api.materials-by-supplier', ['supplier_id' => $supplierId]);
-            }
-            // Fallback: go to API route without supplier (will likely 404)
-            return redirect()->to('/api/materials-by-supplier');
-        })->name('purchase-orders.materials-by-supplier');
+        Route::get(
+            'materials-by-supplier/{supplier_id}',
+            [PurchaseOrderController::class, 'getMaterialsBySupplier']
+        )->name('materials-by-supplier');
+
         // Legacy alias route -> keep redirecting through the web alias (preserve query string)
         Route::get('get-materials-by-supplier', function (Request $request) {
             $qs = $request->getQueryString();
@@ -201,6 +194,10 @@ Route::middleware('auth')->group(function () {
         Route::post('purchase-orders/validate-prices', [PurchaseOrderController::class, 'validateMaterialPrices'])->name('purchase-orders.validate-prices');
     });
 
+    Route::middleware('role:SUPER_ADMIN,MANAGER,KEPALA_TOKO')->group(function () {
+        Route::get('api/finished-products', [FinishedProductController::class, 'apiIndex'])->name('api.finished-products');
+        Route::get('api/semi-finished-products', [SemiFinishedProductController::class, 'apiIndex'])->name('api.semi-finished-products');
+    });
 
     // Stock Management
     Route::get('api/stock/{itemType}/{itemId}/branch/{branchId}', [BranchController::class, 'getItemStock'])->name('api.stock.check');
@@ -325,16 +322,18 @@ Route::middleware('auth')->group(function () {
         return redirect()->to($url . ($qs ? ('?' . $qs) : ''), 307);
     });
 
-    // Semi-Finished Distributions (Kepala Produksi -> Kepala Toko)
-    Route::prefix('semi-finished-distributions')->name('semi-finished-distributions.')->group(function () {
-        Route::get('/', [SemiFinishedDistributionController::class, 'index'])->name('index');
-        Route::get('create', [SemiFinishedDistributionController::class, 'create'])->name('create');
-        Route::post('/', [SemiFinishedDistributionController::class, 'store'])->name('store');
-        // Branch acceptance inbox
-        Route::get('inbox', [SemiFinishedDistributionController::class, 'inbox'])->name('inbox');
-        Route::get('{distribution}', [SemiFinishedDistributionController::class, 'show'])->name('show');
-        Route::post('{distribution}/accept', [SemiFinishedDistributionController::class, 'accept'])->name('accept');
-        Route::post('{distribution}/reject', [SemiFinishedDistributionController::class, 'reject'])->name('reject');
+    Route::middleware('role:SUPER_ADMIN,MANAGER,KEPALA_TOKO,KRU_TOKO,KEPALA_PRODUKSI')->group(function () {
+        // Semi-Finished Distributions (Kepala Produksi -> Kepala Toko)
+        Route::prefix('semi-finished-distributions')->name('semi-finished-distributions.')->group(function () {
+            Route::get('/', [SemiFinishedDistributionController::class, 'index'])->name('index');
+            Route::get('create', [SemiFinishedDistributionController::class, 'create'])->name('create');
+            Route::post('/', [SemiFinishedDistributionController::class, 'store'])->name('store');
+            // Branch acceptance inbox
+            Route::get('inbox', [SemiFinishedDistributionController::class, 'inbox'])->name('inbox');
+            Route::get('{distribution}', [SemiFinishedDistributionController::class, 'show'])->name('show');
+            Route::post('{distribution}/accept', [SemiFinishedDistributionController::class, 'accept'])->name('accept');
+            Route::post('{distribution}/reject', [SemiFinishedDistributionController::class, 'reject'])->name('reject');
+        });
     });
 
     // Material Usage Requests (Centralized Purchasing Flow)

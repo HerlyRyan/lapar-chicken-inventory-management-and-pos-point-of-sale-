@@ -175,35 +175,33 @@
     </div>
 @endsection
 
-@push('scripts')
-    <script>
-        // Ensure phone input contains only digits and provide visual feedback
-        function formatPhoneNumber(input) {
-            let value = input.value.replace(/\D/g, '');
-            input.value = value;
+<script>
+    // Ensure phone input contains only digits and provide visual feedback
+    function formatPhoneNumber(input) {
+        let value = input.value.replace(/\D/g, '');
+        input.value = value;
 
-            const parentDiv = input.closest('.flex');
-            if (!parentDiv) return;
+        const parentDiv = input.closest('.flex');
+        if (!parentDiv) return;
 
-            if (value.length >= 8 && value.length <= 13) {
-                parentDiv.classList.remove('border-red-300', 'ring-2', 'ring-red-200');
-                parentDiv.classList.add('border-green-300', 'ring-2', 'ring-green-200');
-            } else if (value.length > 0) {
-                parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200');
-                parentDiv.classList.add('border-red-300', 'ring-2', 'ring-red-200');
-            } else {
-                parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200', 'border-red-300',
-                    'ring-red-200');
-            }
+        if (value.length >= 8 && value.length <= 13) {
+            parentDiv.classList.remove('border-red-300', 'ring-2', 'ring-red-200');
+            parentDiv.classList.add('border-green-300', 'ring-2', 'ring-green-200');
+        } else if (value.length > 0) {
+            parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200');
+            parentDiv.classList.add('border-red-300', 'ring-2', 'ring-red-200');
+        } else {
+            parentDiv.classList.remove('border-green-300', 'ring-2', 'ring-green-200', 'border-red-300',
+                'ring-red-200');
         }
+    }
 
-        // Prefix phone with country code before submit
-        function preparePhoneNumber() {
-            const phoneInput = document.getElementById('phone');
-            if (phoneInput && phoneInput.value) {
-                phoneInput.value = '62' + phoneInput.value;
-            }
-            return true;
+    // Prefix phone with country code before submit
+    function preparePhoneNumber() {
+        const phoneInput = document.getElementById('phone');
+        if (phoneInput && phoneInput.value) {
+            phoneInput.value = '62' + phoneInput.value;
         }
-    </script>
-@endpush
+        return true;
+    }
+</script>

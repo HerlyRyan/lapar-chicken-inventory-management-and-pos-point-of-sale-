@@ -56,11 +56,13 @@ class RoleController extends Controller
             $query->orderBy($sortBy, $sortDir);
         }
 
-        /** @var \Illuminate\Pagination\LengthAwarePaginator $users */        
+        $query->where('name', '!=', 'Super Admin');
+
+        /** @var \Illuminate\Pagination\LengthAwarePaginator $users */
         $roles = $query->withCount('users', 'permissions')
-                      ->orderBy('name')
-                      ->paginate(15)
-                      ->withQueryString();
+            ->orderBy('name')
+            ->paginate(15)
+            ->withQueryString();
 
         if ($request->ajax()) {
             return response()->json([
@@ -68,7 +70,7 @@ class RoleController extends Controller
                 'links' => (string) $roles->links('vendor.pagination.tailwind'),
             ]);
         }
-        
+
         return view('roles.index', [
             'roles' => $roles->items(),
             'columns' => $columns,
@@ -83,11 +85,11 @@ class RoleController extends Controller
     public function create()
     {
         $permissions = Permission::where('is_active', true)
-                                ->orderBy('group')
-                                ->orderBy('name')
-                                ->get()
-                                ->groupBy('group');
-        
+            ->orderBy('group')
+            ->orderBy('name')
+            ->get()
+            ->groupBy('group');
+
         return view('roles.create', compact('permissions'));
     }
 
@@ -142,15 +144,15 @@ class RoleController extends Controller
             return redirect()->route('roles.index')->with('error', 'Role Super Admin tidak dapat diedit.');
         }
         $permissions = Permission::where('is_active', true)
-                                ->orderBy('name')
-                                ->get()
-                                ->groupBy(function ($item) {
-                                    // Group permissions by the part of their name before the first dot (e.g., 'users.create' -> 'users')
-                                    return explode('.', $item->name)[0];
-                                });
-        
+            ->orderBy('name')
+            ->get()
+            ->groupBy(function ($item) {
+                // Group permissions by the part of their name before the first dot (e.g., 'users.create' -> 'users')
+                return explode('.', $item->name)[0];
+            });
+
         $rolePermissions = $role->permissions->pluck('id')->toArray();
-        
+
         return view('roles.edit', compact('role', 'permissions', 'rolePermissions'));
     }
 

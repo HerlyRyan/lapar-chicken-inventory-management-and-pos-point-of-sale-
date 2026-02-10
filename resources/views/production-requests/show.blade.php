@@ -45,10 +45,9 @@
                         @endif
                         <a href="{{ route('production-requests.index') }}"
                             class="inline-flex items-center px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition-all duration-200 backdrop-blur-sm border border-white/20 group">
-                            <svg class="w-4 h-4 mr-2 transition-transform" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <svg class="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                             </svg>
                             Kembali
                         </a>
@@ -79,7 +78,8 @@
                                 <div class="md:col-span-2 space-y-4 text-sm text-gray-700">
                                     <div class="flex items-start gap-4">
                                         <div class="flex-shrink-0">
-                                            <div class="w-12 h-12 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center font-semibold">
+                                            <div
+                                                class="w-12 h-12 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center font-semibold">
                                                 {{ optional($productionRequest->requestedBy)->initials ?? '-' }}
                                             </div>
                                         </div>
@@ -130,11 +130,13 @@
                                     </div>
 
                                     @if ($productionRequest->purpose || $productionRequest->notes)
-                                        <div class="mt-2 bg-gray-50 border border-gray-100 rounded-lg p-3 text-sm text-gray-700">
+                                        <div
+                                            class="mt-2 bg-gray-50 border border-gray-100 rounded-lg p-3 text-sm text-gray-700">
                                             @if ($productionRequest->purpose)
                                                 <div class="mb-2">
                                                     <div class="text-gray-500 text-xs">Peruntukan</div>
-                                                    <div class="font-medium text-gray-800">{{ $productionRequest->purpose }}</div>
+                                                    <div class="font-medium text-gray-800">
+                                                        {{ $productionRequest->purpose }}</div>
                                                 </div>
                                             @endif
                                             @if ($productionRequest->notes)
@@ -152,22 +154,27 @@
                                     @php
                                         $statusColor = $productionRequest->status_color ?? 'gray';
                                     @endphp
-                                    <span
-                                        class="inline-flex items-center px-3 py-2 rounded-full text-sm font-semibold"
+                                    <span class="inline-flex items-center px-3 py-2 rounded-full text-sm font-semibold"
                                         style="background-color: var(--tw-bg-opacity,1);">
                                         <span class="inline-block mr-2">
                                             <span class="sr-only">Status</span>
-                                            <svg class="w-4 h-4 text-{{ $statusColor }}-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <svg class="w-4 h-4 text-{{ $statusColor }}-600" fill="currentColor"
+                                                viewBox="0 0 20 20">
                                                 <circle cx="10" cy="10" r="10" />
                                             </svg>
                                         </span>
-                                        <span class="text-{{ $statusColor }}-800">{{ $productionRequest->status_label }}</span>
+                                        <span
+                                            class="text-{{ $statusColor }}-800">{{ $productionRequest->status_label }}</span>
                                     </span>
 
                                     <div class="mt-3 text-xs text-gray-400">
-                                        <div>Dibuat: <span class="text-gray-700 font-mono">{{ $productionRequest->created_at->format('d/m/Y H:i') }}</span></div>
+                                        <div>Dibuat: <span
+                                                class="text-gray-700 font-mono">{{ $productionRequest->created_at->format('d/m/Y H:i') }}</span>
+                                        </div>
                                         @if ($productionRequest->updated_at)
-                                            <div class="mt-1">Diperbarui: <span class="text-gray-700 font-mono">{{ $productionRequest->updated_at->format('d/m/Y H:i') }}</span></div>
+                                            <div class="mt-1">Diperbarui: <span
+                                                    class="text-gray-700 font-mono">{{ $productionRequest->updated_at->format('d/m/Y H:i') }}</span>
+                                            </div>
                                         @endif
                                     </div>
                                 </div>
@@ -218,7 +225,8 @@
                                         </tbody>
                                         <tfoot>
                                             <tr>
-                                                <td colspan="4" class="py-3 text-right font-semibold text-gray-700">Total
+                                                <td colspan="4" class="py-3 text-right font-semibold text-gray-700">
+                                                    Total
                                                     Biaya Bahan</td>
                                                 <td class="py-3 text-right font-semibold text-gray-700">Rp
                                                     {{ number_format($productionRequest->total_raw_material_cost, 0, ',', '.') }}
