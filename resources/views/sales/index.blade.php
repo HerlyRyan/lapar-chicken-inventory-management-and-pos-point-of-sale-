@@ -19,10 +19,12 @@
                 <div class="bg-gradient-to-br from-orange-500 to-red-600 p-5 rounded-2xl shadow-md text-white">
                     <p class="text-xs font-bold opacity-80 uppercase tracking-wider">Penjualan Hari Ini</p>
                     <div class="mt-2 flex items-baseline justify-between">
-                        <h3 class="text-2xl font-extrabold">Rp {{ number_format($todaySalesAmount, 0, ',', '.') }}</h3>
+                        <h3 class="text-2xl font-extrabold">
+                            Rp <span x-text="Number($store.table.summary.totalRevenue).toLocaleString('id-ID')"></span>
+                        </h3>
                     </div>
                     <p class="mt-1 text-sm opacity-90">
-                        Total hari ini dari {{ $todaySalesCount }} transaksi
+                        Total hari ini dari <span x-text="$store.table.summary.totalSales"></span> transaksi
                     </p>
                 </div>
 
@@ -33,13 +35,17 @@
                     <div class="flex divide-x divide-gray-100">
                         <div class="flex-1 text-center">
                             <p class="text-xs text-gray-500">Tunai</p>
-                            <p class="font-bold text-green-600">{{ $todayCashCount }} <span
-                                    class="text-[10px] text-gray-400">Tx</span></p>
+                            <p class="font-bold text-green-600">
+                                <span x-text="$store.table.summary.totalCash"></span>
+                                <span class="text-[10px] text-gray-400">Tx</span>
+                            </p>
                         </div>
                         <div class="flex-1 text-center">
                             <p class="text-xs text-gray-500">QRIS</p>
-                            <p class="font-bold text-blue-600">{{ $todayQrisCount }} <span
-                                    class="text-[10px] text-gray-400">Tx</span></p>
+                            <p class="font-bold text-blue-600">
+                                <span x-text="$store.table.summary.totalQris"></span>
+                                <span class="text-[10px] text-gray-400">Tx</span>
+                            </p>
                         </div>
                     </div>
                 </div>

@@ -52,8 +52,7 @@
                     <div
                         class="mb-6 p-4 rounded-xl bg-red-50 border-l-4 border-red-500 flex items-start gap-3 animate-pulse">
                         <i class="bi bi-exclamation-circle-fill text-red-500 mt-0.5"></i>
-                        <p class="text-sm text-red-700 font-medium leading-relaxed">Credential yang Anda masukkan tidak
-                            sesuai.</p>
+                        <p class="text-sm text-red-700 font-medium leading-relaxed">{{ $errors->first() }}</p>
                     </div>
                 @endif
 

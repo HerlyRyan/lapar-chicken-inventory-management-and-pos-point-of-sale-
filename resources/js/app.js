@@ -44,9 +44,11 @@ Alpine.data(
 
         const result = await response.json();
         this.rows = result.data || [];
-        this.totalRevenue = result.totalRevenue || 0;
-        this.totalDailySales = result.totalDailySales || 0;
-        this.totalTransactions = result.totalTransactions || 0;
+        Alpine.store("table").summary.totalRevenue =
+          result.todaySalesAmount || 0;
+        Alpine.store("table").summary.totalSales = result.todaySalesCount || 0;
+        Alpine.store("table").summary.totalCash = result.todayCashCount || 0;
+        Alpine.store("table").summary.totalQris = result.todayQrisCount || 0;
 
         const pagination = document.querySelector(".pagination-wrapper");
         if (pagination) pagination.innerHTML = result.links || "";
@@ -170,6 +172,14 @@ Alpine.store("table", {
   start_date: new Date().toISOString().slice(0, 10),
   end_date: new Date().toISOString().slice(0, 10),
   filters: {},
+
+  summary: {
+    totalRevenue: 0,
+    totalSales: 0,
+    totalCash: 0,
+    totalQris: 0,
+  },
+
   reset() {
     const today = new Date().toISOString().slice(0, 10);
     this.search = "";

@@ -27,9 +27,7 @@ class DashboardController extends Controller
 
         // 🔐 Branch filtering (SEBELUM get)
         if (!$isSuperAdmin && !$isAdmin) {
-            $branchId = app()->bound('current_branch_id')
-                ? app('current_branch_id')
-                : ($user->branch_id ?? null);
+            $branchId = session('branch_id');
 
             if ($branchId) {
                 $query->where('branch_id', $branchId);
@@ -76,9 +74,7 @@ class DashboardController extends Controller
 
         // 🔐 Branch filtering (SEBELUM get)
         if (!$isSuperAdmin && !$isAdmin) {
-            $branchId = app()->bound('current_branch_id')
-                ? app('current_branch_id')
-                : ($user->branch_id ?? null);
+            $branchId = session('branch_id');
 
             if ($branchId) {
                 $query->where('branch_id', $branchId);

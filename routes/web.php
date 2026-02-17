@@ -84,17 +84,36 @@ Route::post('/logout', function (Request $request) {
 Route::middleware('auth')->group(function () {
     Route::middleware('role:SUPER_ADMIN,MANAGER,KEPALA_TOKO,KRU_TOKO')->group(function () {
         Route::get('/dashboard', function (Request $request) {
-            // Clear selected branch
+
+            $user = auth()->user();
+
+            // Clear branch (overview)
             if ($request->clear_dashboard_branch == 1) {
-                session(['branch_id' => 0]);
+                session()->forget('branch_id');
             }
 
-            // Set selected branch
+            // Set branch dari query
             if ($request->has('branch_id')) {
-                session(['branch_id' => $request->branch_id]);
+
+                $branchId = $request->branch_id;
+
+                // Super admin bebas
+                if ($user->hasRole('Super Admin') || $user->hasRole('Manajer')) {
+                    session(['branch_id' => $branchId]);
+                } else {
+                    abort(403);
+                }
             }
 
-            return view('dashboard.index');
+            $selectedBranch = session('branch_id')
+                ? \App\Models\Branch::find(session('branch_id'))
+                : null;
+
+            return view('dashboard.index', [
+                'defaultYear' => now()->year,
+                'defaultMonth' => now()->month,
+                'selectedBranch' => $selectedBranch
+            ]);
         })->name('dashboard');
 
         Route::prefix('dashboard/sales')->group(function () {

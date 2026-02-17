@@ -31,7 +31,7 @@ class AppServiceProvider extends ServiceProvider
         Paginator::defaultView('pagination::bootstrap-5');
         Paginator::defaultSimpleView('pagination::simple-bootstrap-5');
         View::composer('*', function ($view) {
-            $selectedBranchId = session('current_branch_id');
+            $selectedBranchId = session('branch_id');
             $selectedBranch = $selectedBranchId ? Branch::find($selectedBranchId) : null;
             $branchItem = Branch::all();
             $showBranchSelector = true;

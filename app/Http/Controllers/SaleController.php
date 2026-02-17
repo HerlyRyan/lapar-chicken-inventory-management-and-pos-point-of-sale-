@@ -328,6 +328,9 @@ class SaleController extends Controller
             }
         }
 
+        // Simpan base query sebelum paginate
+        $baseQuery = clone $query;
+
         /** @var \Illuminate\Pagination\LengthAwarePaginator $sales */
         $sales = $query->orderBy('created_at', 'desc')->paginate(10);
 
@@ -359,15 +362,36 @@ class SaleController extends Controller
 
         ];
 
-        // === RESPONSE ===
+        // ===============================
+        // SUMMARY CARD (HANYA COMPLETED)
+        // ===============================
+        $summaryQuery = clone $baseQuery;
+        $summaryQuery->where('status', 'completed');
+
+        $todaySalesAmount = (clone $summaryQuery)->sum('final_amount');
+        $todaySalesCount  = (clone $summaryQuery)->count();
+
+        $todayCashCount = (clone $summaryQuery)
+            ->where('payment_method', 'cash')
+            ->count();
+
+        $todayQrisCount = (clone $summaryQuery)
+            ->where('payment_method', 'qris')
+            ->count();
+
+            // === RESPONSE ===
         if ($request->ajax()) {
             return response()->json([
                 'data' => $sales->items(),
                 'links' => (string) $sales->links('vendor.pagination.tailwind'),
+
+                // 🔥 Tambahkan summary
+                'todaySalesAmount' => $todaySalesAmount,
+                'todaySalesCount'  => $todaySalesCount,
+                'todayCashCount'   => $todayCashCount,
+                'todayQrisCount'   => $todayQrisCount,
             ]);
         }
-
-        $completedSales = $sales->where('status', 'completed');
 
         return view('sales.index', [
             'sales' => $sales,
@@ -375,13 +399,10 @@ class SaleController extends Controller
             'columns' => $columns,
             'selects' => $selects,
 
-            // Data Harian (hanya completed)
-            'todaySalesAmount' => $completedSales->sum('final_amount'),
-            'todaySalesCount'  => $completedSales->count(),
-
-            // Detail Metode Bayar Harian (hanya completed)
-            'todayCashCount' => $completedSales->where('payment_method', 'cash')->count(),
-            'todayQrisCount' => $completedSales->where('payment_method', 'qris')->count(),
+            'todaySalesAmount' => $todaySalesAmount,
+            'todaySalesCount'  => $todaySalesCount,
+            'todayCashCount'   => $todayCashCount,
+            'todayQrisCount'   => $todayQrisCount,
         ]);
     }
 

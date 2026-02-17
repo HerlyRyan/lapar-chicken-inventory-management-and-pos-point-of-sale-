@@ -64,7 +64,7 @@
         <div class="flex flex-col gap-8">
 
             {{-- Grafik Tahunan --}}
-            <div x-data="yearlySales()" class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <div x-data="yearlySales({{ $defaultYear }})" class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
                 <div class="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
                     <h2 class="text-xl font-bold text-slate-800 tracking-tight">Analisis Penjualan Tahunan</h2>
                     <select x-model="year" @change="load()"
@@ -85,7 +85,7 @@
             </div>
 
             {{-- Grafik Bulanan & Harian (Tanggal 1-31) --}}
-            <div x-data="monthlySales()" class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <div x-data="monthlySales({{ $defaultYear }}, {{ $defaultMonth }})" class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
                 <div class="p-6 border-b border-slate-50 bg-slate-50/50">
                     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div class="flex items-center gap-3">
@@ -103,14 +103,15 @@
                         <div class="flex gap-2">
                             <select x-model="year" @change="load()"
                                 class="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-600 outline-none focus:border-orange-500">
-                                <template x-for="y in years">
+                                <template x-for="y in years" :key="y">
                                     <option :value="y" x-text="y"></option>
                                 </template>
                             </select>
-                            <select x-model="month" @change="load()"
+                            <select x-model.number="month" @change="load()"
                                 class="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-600 outline-none focus:border-orange-500">
-                                <template x-for="(name, index) in monthNames">
-                                    <option :value="index + 1" x-text="name"></option>
+                                <template x-for="(name, index) in monthNames" :key="index">
+                                    <option :value="index + 1" :selected="month === (index + 1)" x-text="name">
+                                    </option>
                                 </template>
                             </select>
                         </div>
@@ -167,9 +168,9 @@
             }
         });
 
-        function yearlySales() {
+        function yearlySales(defaultYear) {
             return {
-                year: new Date().getFullYear(),
+                year: defaultYear,
                 years: Array.from({
                     length: 5
                 }, (_, i) => new Date().getFullYear() - i),
@@ -241,11 +242,11 @@
             }
         }
 
-        function monthlySales() {
+        function monthlySales(defaultYear, defaultMonth) {
             const now = new Date();
             return {
-                year: now.getFullYear(),
-                month: now.getMonth() + 1,
+                year: defaultYear,
+                month: defaultMonth,
                 monthNames: ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September",
                     "Oktober", "November", "Desember"
                 ],
@@ -323,6 +324,9 @@
                     });
                 },
                 init() {
+                    // this.$nextTick(() => {
+                    //     console.log("Month after render:", this.month);
+                    // });
                     this.load();
                 }
             }

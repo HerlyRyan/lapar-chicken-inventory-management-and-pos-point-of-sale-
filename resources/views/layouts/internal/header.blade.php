@@ -36,7 +36,7 @@
             {{-- 3. Desktop Navigation & Actions --}}
             <div class="hidden lg:flex items-center space-x-4">
                 {{-- Branch Selector --}}
-                @if (Auth::user()->getPrimaryRole()?->name == 'Super Admin')
+                @if (Auth::user()->getPrimaryRole()?->name == 'Super Admin' || Auth::user()->getPrimaryRole()?->name == 'Manajer')
                     {{-- Tampilan untuk Super Admin dengan Dropdown Selector --}}
                     @if (isset($showBranchSelector) && $showBranchSelector && isset($branchItem) && $branchItem->count() > 0)
                         <div x-data="{ open: false }" class="relative">
