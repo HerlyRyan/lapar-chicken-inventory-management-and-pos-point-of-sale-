@@ -202,6 +202,163 @@
                                     <p class="mt-3 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
 
+                                {{-- Target Output Bahan Setengah Jadi --}}
+                                <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+                                    <div
+                                        class="flex items-center justify-between p-4 border-b bg-gradient-to-r from-orange-600 via-orange-700 to-orange-800 px-6 py-6">
+                                        <div class="flex items-center space-x-3">
+                                            <div
+                                                class="w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                                                <i class="bi bi-diagram-3 text-white"></i>
+                                            </div>
+                                            <h3 class="text-lg font-semibold text-white">Target Output Bahan Setengah Jadi
+                                            </h3>
+                                        </div>
+                                        <button type="button" onclick="addOutputRow()"
+                                            class="inline-flex items-center px-3 py-2 rounded-lg border text-sm font-medium text-orange-600 bg-white hover:bg-orange-50">
+                                            <i class="bi bi-plus me-2"></i> Tambah Target Output
+                                        </button>
+                                    </div>
+
+                                    <div class="p-6">
+                                        <div id="outputs-container" class="space-y-4">
+                                            @php
+                                                $outputs = old('outputs', $productionRequest->outputs ?? collect());
+
+                                                if (
+                                                    $outputs instanceof \Illuminate\Support\Collection &&
+                                                    $outputs->isEmpty()
+                                                ) {
+                                                    $outputs = [
+                                                        [
+                                                            'semi_finished_product_id' => '',
+                                                            'planned_quantity' => '',
+                                                            'notes' => '',
+                                                        ],
+                                                    ];
+                                                }
+
+                                                if (is_array($outputs) && count($outputs) === 0) {
+                                                    $outputs = [
+                                                        [
+                                                            'semi_finished_product_id' => '',
+                                                            'planned_quantity' => '',
+                                                            'notes' => '',
+                                                        ],
+                                                    ];
+                                                }
+                                            @endphp
+
+                                            @foreach ($outputs as $oIndex => $output)
+                                                @php
+                                                    $outputProductId = old(
+                                                        "outputs.$oIndex.semi_finished_product_id",
+                                                        is_object($output)
+                                                            ? $output->semi_finished_product_id ?? ''
+                                                            : $output['semi_finished_product_id'] ?? '',
+                                                    );
+                                                    $plannedQty = old(
+                                                        "outputs.$oIndex.planned_quantity",
+                                                        is_object($output)
+                                                            ? $output->planned_quantity ?? ''
+                                                            : $output['planned_quantity'] ?? '',
+                                                    );
+                                                    $outputNotes = old(
+                                                        "outputs.$oIndex.notes",
+                                                        is_object($output)
+                                                            ? $output->notes ?? ''
+                                                            : $output['notes'] ?? '',
+                                                    );
+                                                @endphp
+                                                <div class="output-row group relative bg-gray-50/50 rounded-2xl p-4 sm:p-6 border border-gray-200 hover:border-orange-300 hover:bg-white transition-all duration-300 shadow-sm hover:shadow-md"
+                                                    data-index="{{ $oIndex }}">
+
+                                                    {{-- Grid Atas: Produk & Jumlah --}}
+                                                    <div class="grid grid-cols-12 gap-4 items-start">
+
+                                                        {{-- Pilih Produk Setengah Jadi --}}
+                                                        <div class="col-span-12 lg:col-span-7">
+                                                            <label
+                                                                class="block text-xs font-bold uppercase text-gray-500 mb-2 ml-1">Produk
+                                                                Setengah Jadi <span class="text-red-500">*</span></label>
+                                                            <select
+                                                                name="outputs[{{ $oIndex }}][semi_finished_product_id]"
+                                                                class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 output-product-select transition-all"
+                                                                required onchange="updateOutputUnit({{ $oIndex }})">
+                                                                <option value="">Pilih Produk</option>
+                                                                @foreach ($semiFinishedProducts as $product)
+                                                                    @php
+                                                                        $sel =
+                                                                            (string) $outputProductId ===
+                                                                            (string) $product->id
+                                                                                ? 'selected'
+                                                                                : '';
+                                                                    @endphp
+                                                                    <option value="{{ $product->id }}"
+                                                                        data-unit="{{ optional($product->getRelation('unit'))->name ?? '' }}"
+                                                                        data-unit-abbr="{{ optional($product->getRelation('unit'))->abbreviation ?? '' }}"
+                                                                        {{ $sel }}>
+                                                                        {{ $product->name }} (Min Stok:
+                                                                        {{ number_format($product->minimum_stock ?? 0, 0, ',', '.') }})
+                                                                    </option>
+                                                                @endforeach
+                                                            </select>
+                                                        </div>
+
+                                                        {{-- Jumlah Rencana --}}
+                                                        <div class="col-span-12 lg:col-span-5">
+                                                            <label
+                                                                class="block text-xs font-bold uppercase text-gray-500 mb-2 ml-1">Jumlah
+                                                                Rencana <span class="text-red-500">*</span></label>
+                                                            <div class="relative">
+                                                                <input type="number"
+                                                                    name="outputs[{{ $oIndex }}][planned_quantity]"
+                                                                    value="{{ $plannedQty }}"
+                                                                    class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 font-semibold"
+                                                                    step="1" min="1" required>
+                                                                <p class="mt-1 text-xs text-gray-600 output-unit-info"
+                                                                    id="output-unit-{{ $oIndex }}"></p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {{-- Grid Bawah: Catatan --}}
+                                                    <div class="mt-4 pt-4 border-t border-gray-100">
+                                                        <div class="flex items-start gap-3">
+                                                            <div class="flex-shrink-0 mt-3 hidden sm:block">
+                                                                <i class="bi bi-chat-left-text text-gray-400"></i>
+                                                            </div>
+                                                            <div class="flex-grow">
+                                                                <label
+                                                                    class="block text-[10px] font-bold uppercase text-gray-400 mb-1 ml-1 tracking-widest">Catatan
+                                                                    Tambahan (Opsional)</label>
+                                                                <input type="text"
+                                                                    name="outputs[{{ $oIndex }}][notes]"
+                                                                    value="{{ $outputNotes }}"
+                                                                    class="w-full px-4 py-2 bg-transparent border-b border-gray-200 focus:border-orange-500 focus:ring-0 text-sm placeholder-gray-400 transition-all"
+                                                                    placeholder="Contoh: Harapan hasil produksi atau spesifikasi lainnya...">
+                                                            </div>
+                                                        </div>
+                                                        {{-- Tombol Hapus --}}
+                                                        <div class="col-span-3 lg:col-span-1 flex justify-end pt-7">
+                                                            <button type="button"
+                                                                onclick="removeOutputRow({{ $oIndex }})"
+                                                                class="inline-flex items-center justify-center w-12 h-12 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all disabled:opacity-0"
+                                                                {{ count($outputs) <= 1 ? 'disabled' : '' }}>
+                                                                <i class="bi bi-trash3 text-xl"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+
+                                        @error('outputs')
+                                            <p class="mt-3 text-sm text-red-600">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                </div>
+
                                 {{-- Total Biaya --}}
                                 <div class="mt-6">
                                     <div class="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
@@ -211,153 +368,6 @@
                                     </div>
                                 </div>
                             </form>
-                        </div>
-                    </div>
-
-                    {{-- Target Output Bahan Setengah Jadi --}}
-                    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-                        <div
-                            class="flex items-center justify-between p-4 border-b bg-gradient-to-r from-orange-600 via-orange-700 to-orange-800 px-6 py-6">
-                            <div class="flex items-center space-x-3">
-                                <div
-                                    class="w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                                    <i class="bi bi-diagram-3 text-white"></i>
-                                </div>
-                                <h3 class="text-lg font-semibold text-white">Target Output Bahan Setengah Jadi</h3>
-                            </div>
-                            <button type="button" onclick="addOutputRow()"
-                                class="inline-flex items-center px-3 py-2 rounded-lg border text-sm font-medium text-orange-600 bg-white hover:bg-orange-50">
-                                <i class="bi bi-plus me-2"></i> Tambah Target Output
-                            </button>
-                        </div>
-
-                        <div class="p-6">
-                            <div id="outputs-container" class="space-y-4">
-                                @php
-                                    $outputs = old('outputs', $productionRequest->outputs ?? collect());
-
-                                    if ($outputs instanceof \Illuminate\Support\Collection && $outputs->isEmpty()) {
-                                        $outputs = [
-                                            [
-                                                'semi_finished_product_id' => '',
-                                                'planned_quantity' => '',
-                                                'notes' => '',
-                                            ],
-                                        ];
-                                    }
-
-                                    if (is_array($outputs) && count($outputs) === 0) {
-                                        $outputs = [
-                                            [
-                                                'semi_finished_product_id' => '',
-                                                'planned_quantity' => '',
-                                                'notes' => '',
-                                            ],
-                                        ];
-                                    }
-                                @endphp
-
-                                @foreach ($outputs as $oIndex => $output)
-                                    @php
-                                        $outputProductId = old(
-                                            "outputs.$oIndex.semi_finished_product_id",
-                                            is_object($output)
-                                                ? $output->semi_finished_product_id ?? ''
-                                                : $output['semi_finished_product_id'] ?? '',
-                                        );
-                                        $plannedQty = old(
-                                            "outputs.$oIndex.planned_quantity",
-                                            is_object($output)
-                                                ? $output->planned_quantity ?? ''
-                                                : $output['planned_quantity'] ?? '',
-                                        );
-                                        $outputNotes = old(
-                                            "outputs.$oIndex.notes",
-                                            is_object($output) ? $output->notes ?? '' : $output['notes'] ?? '',
-                                        );
-                                    @endphp
-                                    <div class="output-row group relative bg-gray-50/50 rounded-2xl p-4 sm:p-6 border border-gray-200 hover:border-orange-300 hover:bg-white transition-all duration-300 shadow-sm hover:shadow-md"
-                                        data-index="{{ $oIndex }}">
-
-                                        {{-- Grid Atas: Produk & Jumlah --}}
-                                        <div class="grid grid-cols-12 gap-4 items-start">
-
-                                            {{-- Pilih Produk Setengah Jadi --}}
-                                            <div class="col-span-12 lg:col-span-7">
-                                                <label
-                                                    class="block text-xs font-bold uppercase text-gray-500 mb-2 ml-1">Produk
-                                                    Setengah Jadi <span class="text-red-500">*</span></label>
-                                                <select name="outputs[{{ $oIndex }}][semi_finished_product_id]"
-                                                    class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 output-product-select transition-all"
-                                                    required onchange="updateOutputUnit({{ $oIndex }})">
-                                                    <option value="">Pilih Produk</option>
-                                                    @foreach ($semiFinishedProducts as $product)
-                                                        @php
-                                                            $sel =
-                                                                (string) $outputProductId === (string) $product->id
-                                                                    ? 'selected'
-                                                                    : '';
-                                                        @endphp
-                                                        <option value="{{ $product->id }}"
-                                                            data-unit="{{ optional($product->getRelation('unit'))->name ?? '' }}"
-                                                            data-unit-abbr="{{ optional($product->getRelation('unit'))->abbreviation ?? '' }}"
-                                                            {{ $sel }}>
-                                                            {{ $product->name }} (Min Stok:
-                                                            {{ number_format($product->minimum_stock ?? 0, 0, ',', '.') }})
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-
-                                            {{-- Jumlah Rencana --}}
-                                            <div class="col-span-12 lg:col-span-5">
-                                                <label
-                                                    class="block text-xs font-bold uppercase text-gray-500 mb-2 ml-1">Jumlah
-                                                    Rencana <span class="text-red-500">*</span></label>
-                                                <div class="relative">
-                                                    <input type="number"
-                                                        name="outputs[{{ $oIndex }}][planned_quantity]"
-                                                        value="{{ $plannedQty }}"
-                                                        class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 font-semibold"
-                                                        step="1" min="1" required>
-                                                    <p class="mt-1 text-xs text-gray-600 output-unit-info"
-                                                        id="output-unit-{{ $oIndex }}"></p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {{-- Grid Bawah: Catatan --}}
-                                        <div class="mt-4 pt-4 border-t border-gray-100">
-                                            <div class="flex items-start gap-3">
-                                                <div class="flex-shrink-0 mt-3 hidden sm:block">
-                                                    <i class="bi bi-chat-left-text text-gray-400"></i>
-                                                </div>
-                                                <div class="flex-grow">
-                                                    <label
-                                                        class="block text-[10px] font-bold uppercase text-gray-400 mb-1 ml-1 tracking-widest">Catatan
-                                                        Tambahan (Opsional)</label>
-                                                    <input type="text" name="outputs[{{ $oIndex }}][notes]"
-                                                        value="{{ $outputNotes }}"
-                                                        class="w-full px-4 py-2 bg-transparent border-b border-gray-200 focus:border-orange-500 focus:ring-0 text-sm placeholder-gray-400 transition-all"
-                                                        placeholder="Contoh: Harapan hasil produksi atau spesifikasi lainnya...">
-                                                </div>
-                                            </div>
-                                            {{-- Tombol Hapus --}}
-                                            <div class="col-span-3 lg:col-span-1 flex justify-end pt-7">
-                                                <button type="button" onclick="removeOutputRow({{ $oIndex }})"
-                                                    class="inline-flex items-center justify-center w-12 h-12 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all disabled:opacity-0"
-                                                    {{ count($outputs) <= 1 ? 'disabled' : '' }}>
-                                                    <i class="bi bi-trash3 text-xl"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-
-                            @error('outputs')
-                                <p class="mt-3 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
                         </div>
                     </div>
                 </div>

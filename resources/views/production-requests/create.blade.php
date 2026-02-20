@@ -149,6 +149,102 @@
                                     <p class="mt-3 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
 
+                                {{-- Target Output Bahan Setengah Jadi --}}
+                                <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+                                    <div
+                                        class="flex items-center justify-between p-4 border-b bg-gradient-to-r from-orange-600 via-orange-700 to-red-700 px-6 py-6">
+                                        <div class="flex items-center space-x-3">
+                                            <div
+                                                class="w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                                                <i class="bi bi-diagram-3 text-white"></i>
+                                            </div>
+                                            <h3 class="text-lg font-semibold text-white">Target Output Bahan Setengah Jadi
+                                            </h3>
+                                        </div>
+                                        <button type="button" onclick="addOutputRow()"
+                                            class="inline-flex items-center px-3 py-2 rounded-lg border text-sm font-medium text-green-600 bg-white hover:bg-green-50">
+                                            <i class="bi bi-plus me-2"></i> Tambah Target Output
+                                        </button>
+                                    </div>
+
+                                    <div class="p-6">
+                                        <div id="outputs-container" class="space-y-4">
+                                            {{-- Output Row Card --}}
+                                            <div class="output-row group relative bg-white rounded-2xl p-5 sm:p-6 border border-gray-200 hover:border-emerald-300 hover:shadow-lg transition-all duration-300 mb-4"
+                                                data-index="0">
+
+                                                {{-- Grid Atas: Produk & Jumlah --}}
+                                                <div class="grid grid-cols-12 gap-5 items-start">
+
+                                                    {{-- Pilih Produk Setengah Jadi --}}
+                                                    <div class="col-span-12 lg:col-span-7">
+                                                        <label
+                                                            class="flex items-center text-xs font-bold uppercase text-gray-500 mb-2 ml-1">
+                                                            <i class="bi bi-box-seam me-2 text-emerald-500"></i> Produk
+                                                            Setengah Jadi
+                                                        </label>
+                                                        <select name="outputs[0][semi_finished_product_id]"
+                                                            class="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 focus:bg-white transition-all appearance-none output-product-select"
+                                                            required onchange="updateOutputUnit(0)">
+                                                            <option value="">Cari Produk...</option>
+                                                            @foreach ($semiFinishedProducts as $product)
+                                                                <option value="{{ $product->id }}"
+                                                                    data-unit="{{ optional($product->getRelation('unit'))->name ?? '' }}"
+                                                                    data-unit-abbr="{{ optional($product->getRelation('unit'))->abbreviation ?? '' }}">
+                                                                    {{ $product->name }} (Min Stok:
+                                                                    {{ number_format($product->minimum_stock ?? 0, 0, ',', '.') }})
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+
+                                                    {{-- Jumlah Rencana --}}
+                                                    <div class="col-span-8 lg:col-span-4">
+                                                        <label
+                                                            class="flex items-center text-xs font-bold uppercase text-gray-500 mb-2 ml-1">
+                                                            <i class="bi bi-flag me-2 text-emerald-500"></i> Jumlah Rencana
+                                                        </label>
+                                                        <div class="relative">
+                                                            <input type="number" name="outputs[0][planned_quantity]"
+                                                                class="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 focus:bg-white font-bold text-gray-700 transition-all"
+                                                                step="1" min="1" placeholder="0">
+                                                            <span
+                                                                class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-emerald-600 uppercase tracking-widest output-unit-info"
+                                                                id="output-unit-0">
+                                                                {{-- Satuan akan muncul di sini --}}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {{-- Grid Bawah: Catatan --}}
+                                                <div class="mt-5 pt-4 border-t border-dashed border-gray-100">
+                                                    <div class="flex items-center gap-3">
+                                                        <i class="bi bi-pencil-square text-gray-400"></i>
+                                                        <div class="flex-grow">
+                                                            <input type="text" name="outputs[0][notes]"
+                                                                class="w-full px-0 py-1 bg-transparent border-0 border-b border-transparent focus:border-emerald-500 focus:ring-0 text-sm text-gray-600 placeholder-gray-400 transition-all"
+                                                                placeholder="Tambahkan catatan hasil produksi di sini (Opsional)...">
+                                                        </div>
+                                                    </div>
+                                                    {{-- Tombol Hapus --}}
+                                                    <div class="col-span-4 lg:col-span-1 flex justify-end pt-7">
+                                                        <button type="button" onclick="removeOutputRow(0)"
+                                                            class="inline-flex items-center justify-center w-12 h-12 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all disabled:opacity-0"
+                                                            disabled>
+                                                            <i class="bi bi-trash3 text-xl"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        @error('outputs')
+                                            <p class="mt-3 text-sm text-red-600">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                </div>
+
                                 {{-- Total Biaya --}}
                                 <div class="mt-6">
                                     <div class="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
@@ -160,99 +256,6 @@
                         </div>
                     </div>
 
-                    {{-- Target Output Bahan Setengah Jadi --}}
-                    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-                        <div
-                            class="flex items-center justify-between p-4 border-b bg-gradient-to-r from-orange-600 via-orange-700 to-red-700 px-6 py-6">
-                            <div class="flex items-center space-x-3">
-                                <div
-                                    class="w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                                    <i class="bi bi-diagram-3 text-white"></i>
-                                </div>
-                                <h3 class="text-lg font-semibold text-white">Target Output Bahan Setengah Jadi</h3>
-                            </div>
-                            <button type="button" onclick="addOutputRow()"
-                                class="inline-flex items-center px-3 py-2 rounded-lg border text-sm font-medium text-green-600 bg-white hover:bg-green-50">
-                                <i class="bi bi-plus me-2"></i> Tambah Target Output
-                            </button>
-                        </div>
-
-                        <div class="p-6">
-                            <div id="outputs-container" class="space-y-4">
-                                {{-- Output Row Card --}}
-                                <div class="output-row group relative bg-white rounded-2xl p-5 sm:p-6 border border-gray-200 hover:border-emerald-300 hover:shadow-lg transition-all duration-300 mb-4"
-                                    data-index="0">
-
-                                    {{-- Grid Atas: Produk & Jumlah --}}
-                                    <div class="grid grid-cols-12 gap-5 items-start">
-
-                                        {{-- Pilih Produk Setengah Jadi --}}
-                                        <div class="col-span-12 lg:col-span-7">
-                                            <label
-                                                class="flex items-center text-xs font-bold uppercase text-gray-500 mb-2 ml-1">
-                                                <i class="bi bi-box-seam me-2 text-emerald-500"></i> Produk Setengah Jadi
-                                            </label>
-                                            <select name="outputs[0][semi_finished_product_id]"
-                                                class="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 focus:bg-white transition-all appearance-none output-product-select"
-                                                required onchange="updateOutputUnit(0)">
-                                                <option value="">Cari Produk...</option>
-                                                @foreach ($semiFinishedProducts as $product)
-                                                    <option value="{{ $product->id }}"
-                                                        data-unit="{{ optional($product->getRelation('unit'))->name ?? '' }}"
-                                                        data-unit-abbr="{{ optional($product->getRelation('unit'))->abbreviation ?? '' }}">
-                                                        {{ $product->name }} (Min Stok:
-                                                        {{ number_format($product->minimum_stock ?? 0, 0, ',', '.') }})
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-
-                                        {{-- Jumlah Rencana --}}
-                                        <div class="col-span-8 lg:col-span-4">
-                                            <label
-                                                class="flex items-center text-xs font-bold uppercase text-gray-500 mb-2 ml-1">
-                                                <i class="bi bi-flag me-2 text-emerald-500"></i> Jumlah Rencana
-                                            </label>
-                                            <div class="relative">
-                                                <input type="number" name="outputs[0][planned_quantity]"
-                                                    class="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 focus:bg-white font-bold text-gray-700 transition-all"
-                                                    step="1" min="1" placeholder="0">
-                                                <span
-                                                    class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-emerald-600 uppercase tracking-widest output-unit-info"
-                                                    id="output-unit-0">
-                                                    {{-- Satuan akan muncul di sini --}}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {{-- Grid Bawah: Catatan --}}
-                                    <div class="mt-5 pt-4 border-t border-dashed border-gray-100">
-                                        <div class="flex items-center gap-3">
-                                            <i class="bi bi-pencil-square text-gray-400"></i>
-                                            <div class="flex-grow">
-                                                <input type="text" name="outputs[0][notes]"
-                                                    class="w-full px-0 py-1 bg-transparent border-0 border-b border-transparent focus:border-emerald-500 focus:ring-0 text-sm text-gray-600 placeholder-gray-400 transition-all"
-                                                    placeholder="Tambahkan catatan hasil produksi di sini (Opsional)...">
-                                            </div>
-                                        </div>
-                                        {{-- Tombol Hapus --}}
-                                        <div class="col-span-4 lg:col-span-1 flex justify-end pt-7">
-                                            <button type="button" onclick="removeOutputRow(0)"
-                                                class="inline-flex items-center justify-center w-12 h-12 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all disabled:opacity-0"
-                                                disabled>
-                                                <i class="bi bi-trash3 text-xl"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            @error('outputs')
-                                <p class="mt-3 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
                 </div>
 
                 {{-- Right Sidebar --}}
