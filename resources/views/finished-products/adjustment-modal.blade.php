@@ -7,7 +7,7 @@
     <div x-show="isOpen" x-transition x-trap.noscroll="isOpen"
         class="fixed inset-0 z-50 flex items-center justify-center px-4 sm:px-6">
         <div
-            class="w-full max-w-lg mx-auto bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden transform transition-all max-h-[90vh]">
+            class="w-full max-w-lg mx-auto bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden transform transition-all max-h-[90vh] flex flex-col">
             <!-- Header -->
             <div class="flex items-center justify-between p-4 sm:p-5 bg-gradient-to-r from-orange-500 to-red-600">
                 <div class="flex items-center gap-3">
@@ -36,100 +36,120 @@
             </div>
 
             <!-- Body -->
-            <form @submit.prevent="submit" class="p-5 sm:p-6 space-y-4 sm:space-y-5">
-                <div class="grid grid-cols-1 gap-4">
-                    <!-- Nama Produk -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Nama Produk
-                        </label>
-                        <input type="text" x-model="product.name" readonly
-                            class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent" />
-                    </div>
+            <form @submit.prevent="submit" class="flex-1 flex flex-col min-h-0">
+                <div x-show="isOpen" x-transition x-trap.noscroll="isOpen"
+                    class="fixed inset-0 z-50 flex items-center justify-center px-4 sm:px-6">
 
-                    <!-- Stok Saat Ini -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Stok Saat Ini
-                            </label>
-                            <input type="number" x-model="product.stock" readonly
-                                class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent" />
+                    <div
+                        class="w-full max-w-lg mx-auto bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden transform transition-all max-h-[90vh] flex flex-col">
+
+                        <div
+                            class="flex-shrink-0 flex items-center justify-between p-4 sm:p-5 bg-gradient-to-r from-orange-500 to-red-600">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center text-white shadow-sm">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                            d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 id="modal-title" class="text-white text-lg sm:text-xl font-semibold leading-6">
+                                        Penyesuaian Stok</h3>
+                                    <p class="text-white/80 text-sm mt-0.5">Sesuaikan jumlah stok produk dengan aman</p>
+                                </div>
+                            </div>
+                            <button @click="close"
+                                class="p-2 rounded-md bg-white/10 hover:bg-white/20 text-white transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                         </div>
 
-                        <!-- Jenis Penyesuaian -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Jenis Penyesuaian <span class="text-red-500">*</span>
-                            </label>
-                            <select x-model="adjustmentType" @change="updateAdjustmentUI()"
-                                class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent">
-                                <option value="">Pilih Jenis</option>
-                                <option value="add">Tambah Stok</option>
-                                <option value="reduce">Kurangi Stok</option>
-                                {{-- <option value="set">Atur Ulang Stok</option> --}}
-                            </select>
-                        </div>
+                        <form @submit.prevent="submit" class="flex-1 flex flex-col min-h-0 overflow-hidden">
+
+                            <div class="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 sm:space-y-5">
+                                <div class="grid grid-cols-1 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Nama Produk</label>
+                                        <input type="text" x-model="product.name" readonly
+                                            class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 focus:outline-none" />
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Stok Saat
+                                                Ini</label>
+                                            <input type="number" x-model="product.stock" readonly
+                                                class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 focus:outline-none" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Jenis <span
+                                                    class="text-red-500">*</span></label>
+                                            <select x-model="adjustmentType" @change="updateAdjustmentUI()"
+                                                class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-orange-300">
+                                                <option value="">Pilih Jenis</option>
+                                                <option value="add">Tambah Stok</option>
+                                                <option value="reduce">Kurangi Stok</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah <span
+                                                class="text-red-500">*</span></label>
+                                        <input type="number" x-model="adjustment" @input="previewNewStock()"
+                                            step="0.001" min="0"
+                                            class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-300" />
+                                        <p class="text-xs text-gray-500 mt-1" x-text="adjustmentHelp"></p>
+                                    </div>
+
+                                    <div x-show="previewNewStock() && adjustmentType"
+                                        class="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                        <p class="text-sm font-medium text-blue-900">Stok Baru: <span
+                                                x-text="getNewStockPreview()"></span> unit</p>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Alasan <span
+                                                class="text-red-500">*</span></label>
+                                        <select x-model="reason"
+                                            class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-300">
+                                            <option value="">Pilih Alasan</option>
+                                            <option value="production_output">Hasil Produksi</option>
+                                            <option value="quality_control">Kontrol Kualitas</option>
+                                            <option value="damaged_goods">Barang Rusak</option>
+                                            <option value="expired_goods">Barang Kadaluarsa</option>
+                                            <option value="inventory_correction">Koreksi Inventori</option>
+                                            <option value="other">Lainnya</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+                                        <textarea x-model="note" rows="3"
+                                            class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-300"
+                                            placeholder="Catatan tambahan (opsional)"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div
+                                class="flex-shrink-0 flex items-center justify-end gap-3 p-4 border-t border-gray-100 bg-gray-50">
+                                <button type="button" @click="close"
+                                    class="px-4 py-2 rounded-md bg-white text-gray-700 border border-gray-200 hover:bg-gray-100 transition">
+                                    Batal
+                                </button>
+                                <button type="submit"
+                                    class="px-4 py-2 rounded-md bg-gradient-to-r from-orange-500 to-red-600 text-white font-medium shadow hover:from-orange-600 transition">
+                                    Sesuaikan Stok
+                                </button>
+                            </div>
+                        </form>
                     </div>
-
-                    <!-- Jumlah -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Jumlah <span class="text-red-500">*</span>
-                        </label>
-                        <input type="number" x-model="adjustment" @input="previewNewStock()" step="0.001"
-                            min="0"
-                            class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent" />
-                        <p class="text-xs text-gray-500 mt-1 text-bold" x-text="adjustmentHelp"></p>
-                    </div>
-
-                    <!-- Preview Stok Baru -->
-                    <div x-show="previewNewStock() && adjustmentType"
-                        class="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <p class="text-sm font-medium text-blue-900">
-                            Stok Baru: <span x-text="getNewStockPreview()"></span> unit
-                        </p>
-                    </div>
-
-                    <!-- Alasan -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Alasan <span class="text-red-500">*</span>
-                        </label>
-                        <select x-model="reason"
-                            class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent">
-                            <option value="">Pilih Alasan</option>
-                            <option value="production_output">Hasil Produksi</option>
-                            <option value="quality_control">Kontrol Kualitas</option>
-                            <option value="damaged_goods">Barang Rusak</option>
-                            <option value="expired_goods">Barang Kadaluarsa</option>
-                            <option value="inventory_correction">Koreksi Inventori</option>
-                            <option value="other">Lainnya</option>
-                        </select>
-                    </div>
-
-                    <!-- Catatan -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Catatan
-                        </label>
-                        <textarea x-model="note" rows="3"
-                            class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent"
-                            placeholder="Catatan tambahan (opsional)"></textarea>
-                    </div>
-                </div>
-
-                <!-- Footer -->
-                <div class="flex items-center justify-end gap-3 pt-2 border-t border-gray-100 mt-1">
-                    <button type="button" @click="close"
-                        class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 transition">
-                        Batal
-                    </button>
-
-                    <button type="submit"
-                        class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-gradient-to-r from-orange-500 to-red-600 text-white font-medium shadow hover:from-orange-600 hover:to-red-700 transition">
-                        Sesuaikan Stok
-                    </button>
                 </div>
             </form>
         </div>
@@ -204,13 +224,13 @@
                 let newStock = 0;
                 switch (type) {
                     case 'add':
-                        newStock = this.product.stock + quantity;
+                        newStock = parseFloat(this.product.stock) + quantity;
                         break;
                     case 'reduce':
-                        if (quantity > this.product.stock) {
+                        if (quantity > parseFloat(this.product.stock)) {
                             this.adjustmentHelp = `Quantity melebihi stock terkini`;
                         } else {
-                            newStock = Math.max(0, this.product.stock - quantity);
+                            newStock = Math.max(0, parseFloat(this.product.stock) - quantity);
                         }
 
                         break;

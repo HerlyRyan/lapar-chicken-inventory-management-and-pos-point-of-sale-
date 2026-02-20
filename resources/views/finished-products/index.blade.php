@@ -234,6 +234,17 @@
                                 }">
                                     <x-index.action-buttons :view="true" :edit="true" :delete="true"
                                         :toggle="true" />
+                                    <button type="button"
+                                        @click="$dispatch('open-adjustment-modal', { id: product.id, name:
+                                                                    product.name, stock: product.display_stock_quantity })"
+                                        class="group relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9
+                                                   bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700
+                                                   text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200">
+                                        <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 24 24">
+                                            <path
+                                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
+                                        </svg>
+                                    </button>
                                 </div>
                             </div>
                         </div>
